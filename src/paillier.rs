@@ -1,5 +1,5 @@
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::{Concat, Encoding};
+use crypto_bigint::{Concat, Encoding, NonZero};
 use crypto_bigint::{U1024, U2048, U4096};
 
 fn encrypt(encryption_key: U2048, plaintext: U2048, randomness: U2048) -> U4096 {
@@ -19,6 +19,45 @@ fn encrypt(encryption_key: U2048, plaintext: U2048, randomness: U2048) -> U4096 
 
     ciphertext.retrieve()
 }
+
+// TODO: now we are panicking if the decryption key is 0, I think it's better to return an option.
+fn decrypt(encryption_key: U2048, decryption_key: U2048, ciphertext: U4096) -> U2048 {
+    let N = encryption_key;
+    let N2: U4096 = N.square();
+    let N2_mod = DynResidueParams::new(&N2);
+
+    let c = DynResidue::new(&ciphertext, N2_mod);
+    let d = U2048::ZERO.concat(&decryption_key);
+
+    let cd = c.pow(&U2048::ZERO.concat(&decryption_key)); // $ c^d mod N^2= (1 + N)^{m*d mod N} mod N^2 = (1 + m*d*N) mod N^2 $
+    let (plaintext, rem) = (cd - DynResidue::one(N2_mod))
+        .retrieve()
+        .div_rem(NonZero::new(d).unwrap()); // $ m = ((1 + m*d*N) - 1) / N mod N^2 = d*m mod N = m $
+
+    assert_eq!(rem, U4096::ZERO); // TODO: should we assert this? maybe we just do normal division?
+
+    plaintext
+}
+
+// fn partial_decryption<T: Num + Pow<T, Output = T> + Clone>(
+//     decryption_key: &T,
+//     ciphertext: &T,
+// ) -> T {
+//     ciphertext.clone().pow(decryption_key.clone()) // $ c^d mod N^2= (1 + N)^{m*d mod N} mod N^2 = (1 + m*d*N) mod N^2 $
+// }
+//
+// fn decrypt_from_partial_decryptions<T: Num + Pow<T, Output = T> + Clone>(
+//     partial_decryptions: HashMap<u8, T>,
+//     lagrange_coeffecients: HashMap<u8, T>,
+// ) -> T {
+//     partial_decryptions
+//         .iter()
+//         .fold(T::one(), |acc, (i, partial_decryption)| {
+//             acc * (partial_decryption
+//                 .clone()
+//                 .pow(lagrange_coeffecients.get(i).unwrap().clone())) // TODO: properly handle the case where lagrange_coeffecients isn't defined for i (no item in map)
+//         })
+// }
 
 #[cfg(test)]
 mod tests {
