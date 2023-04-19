@@ -9,3 +9,7 @@ edition = "2021"
 crypto-bigint = "0.5.1"
 
 [dev-dependencies]
+num-bigint = "0.4.3"
+hex = "0.4.3"
+num-traits = "0.2.15"
+num-integer = "0.1.45"
