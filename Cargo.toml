@@ -18,7 +18,7 @@ fiat-crypto = "0.1.20"
 k256 = "0.13.1"
 num-traits = "0.2.15"
 num-bigint = { version = "0.8.2", features = ["i128", "u64_digit", "prime", "zeroize"], default-features = false, package = "num-bigint-dig" }
-bulletproofs = { git = "https://github.com/zkcrypto/bulletproofs.git" }
+#bulletproofs = { git = "https://github.com/zkcrypto/bulletproofs.git" }
 #bulletproofs = { git = "https://github.com/ZenGo-X/bulletproofs.git" }
 crypto-primes = "0.2.0"
 rsa = "0.8.2"

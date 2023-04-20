@@ -5,15 +5,16 @@ use crypto_bigint::{U1024, U2048, U4096};
 
 #[derive(Debug, Clone)]
 pub struct EncryptionKey {
-    pub(in crate::paillier) n: U4096, // the encryption key $ N $ as a 4096-bit number
-    pub(in crate::paillier) n2: U4096, // $ N^2 $
-    pub(in crate::paillier) n_mod_n2: DynResidue<{ U4096::LIMBS }>, // the encryption key $N mod N^2$
-    pub(in crate::paillier) n_mod_params: DynResidueParams<{ U2048::LIMBS }>,
-    pub(in crate::paillier) n2_mod_params: DynResidueParams<{ U4096::LIMBS }>,
+    pub(crate) n: U4096,  // the encryption key $ N $ as a 4096-bit number
+    pub(crate) n2: U4096, // $ N^2 $
+    pub(crate) n_mod_n2: DynResidue<{ U4096::LIMBS }>, // the encryption key $N mod N^2$
+    pub(crate) n_mod_params: DynResidueParams<{ U2048::LIMBS }>,
+    pub(crate) n2_mod_params: DynResidueParams<{ U4096::LIMBS }>,
 }
 
 impl EncryptionKey {
     pub fn new(n: U2048) -> EncryptionKey {
+        // TODO: assure N is non-zero
         let n_mod_params = DynResidueParams::new(&n);
         let n2: U4096 = n.square();
         let n2_mod_params = DynResidueParams::new(&n2);
@@ -29,23 +30,23 @@ impl EncryptionKey {
         }
     }
 
-    pub(in crate::paillier) fn mod_n(&self, x: &U2048) -> DynResidue<{ U2048::LIMBS }> {
+    pub(crate) fn mod_n(&self, x: &U2048) -> DynResidue<{ U2048::LIMBS }> {
         DynResidue::new(x, self.n_mod_params)
     }
 
-    pub(in crate::paillier) fn mod_n2(&self, x: &U4096) -> DynResidue<{ U4096::LIMBS }> {
+    pub(crate) fn mod_n2(&self, x: &U4096) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::new(x, self.n2_mod_params)
     }
 
-    pub(in crate::paillier) fn u2048_mod_n2(&self, x: &U2048) -> DynResidue<{ U4096::LIMBS }> {
+    pub(crate) fn u2048_mod_n2(&self, x: &U2048) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::new(&u2048_to_u4096(x), self.n2_mod_params)
     }
 
-    pub(in crate::paillier) fn one_mod_n2(&self) -> DynResidue<{ U4096::LIMBS }> {
+    pub(crate) fn one_mod_n2(&self) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::one(self.n2_mod_params)
     }
 
-    pub(in crate::paillier) fn to_u2048_mod_n(&self, x: &U4096) -> U2048 {
+    pub(crate) fn to_u2048_mod_n(&self, x: &U4096) -> U2048 {
         // Taking a 4096-bit number under $mod N$ should yield a 2048-bit number;
         // however, the result would still be kept in a 4096-bit U4096 variable.
         // In order to get a U2048, we take only the lower-half (2048-bit) of the number.
