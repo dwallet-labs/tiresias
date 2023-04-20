@@ -57,7 +57,7 @@ mod tests {
     use crate::paillier::tests::RANDOMNESS;
 
     #[test]
-    fn test_encryption() {
+    fn encrypts() {
         let encryption_key = EncryptionKey::new(N);
         assert_eq!(encryption_key.encrypt(PLAINTEXT, RANDOMNESS), CIPHERTEXT)
     }
