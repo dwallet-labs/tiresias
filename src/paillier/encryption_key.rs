@@ -50,12 +50,12 @@ impl EncryptionKey {
     }
 
     pub fn encrypt(&self, plaintext: &U2048, randomness: &U2048) -> U4096 {
-        let m = self.u2048_mod_n2(plaintext);
-        let r = self.u2048_mod_n2(randomness);
-
-        let ciphertext = (((m * self.n_mod_n2) + self.one_mod_n2()) * (r.pow(&self.n))).retrieve(); // $ (m*N + 1) * (r^N) mod N^2 $
-
-        ciphertext
+        (
+            ((self.u2048_mod_n2(plaintext) * self.n_mod_n2) + self.one_mod_n2())  // $ c = (m*N + 1) $
+            * (self.u2048_mod_n2(randomness).pow(&self.n))
+            // $ * (r^N) mod N^2 $
+        )
+        .retrieve()
     }
 }
 
@@ -70,6 +70,7 @@ mod tests {
     #[test]
     fn encrypts() {
         let encryption_key = EncryptionKey::new(N);
+
         assert_eq!(encryption_key.encrypt(&PLAINTEXT, &RANDOMNESS), CIPHERTEXT)
     }
 }
