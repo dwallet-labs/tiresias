@@ -3,6 +3,7 @@ use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
 use crypto_bigint::{Concat, Encoding};
 use crypto_bigint::{U1024, U2048, U4096};
 
+#[derive(Debug, Clone)]
 pub struct EncryptionKey {
     pub(in crate::paillier) n: U4096, // the encryption key as a 4096-bit number
     pub(in crate::paillier) n_mod_n2: DynResidue<{ U4096::LIMBS }>, // the encryption key $N mod N^2$
