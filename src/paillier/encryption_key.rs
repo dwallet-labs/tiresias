@@ -1,6 +1,6 @@
 use crate::paillier::u2048_to_u4096;
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::{Concat, Encoding, Zero};
+use crypto_bigint::{Concat, Encoding};
 use crypto_bigint::{U1024, U2048, U4096};
 
 pub struct EncryptionKey {
@@ -44,9 +44,13 @@ impl EncryptionKey {
 
     pub(in crate::paillier) fn to_u2048_mod_n(&self, x: &U4096) -> U2048 {
         // Taking a 4096-bit number under $mod N$ should yield a 2048-bit number;
-        // but before we can do that, we need to take only the lower-half (2048-bit) of the number, and perform modulus on that.
-        self.mod_n(&U2048::from_le_slice(&x.to_le_bytes()[0..256]))
-            .retrieve()
+        // however, the result would still be kept in a 4096-bit U4096 variable.
+        // In order to get a U2048, we take only the lower-half (2048-bit) of the number.
+        U2048::from_le_slice(
+            &DynResidue::new(x, DynResidueParams::new(&self.n))
+                .retrieve()
+                .to_le_bytes()[0..256],
+        )
     }
 
     pub fn encrypt(&self, plaintext: &U2048, randomness: &U2048) -> U4096 {
