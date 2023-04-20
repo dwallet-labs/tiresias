@@ -15,19 +15,14 @@ impl DecryptionKey {
     }
 
     pub fn decrypt(&self, ciphertext: &U4096) -> U2048 {
-        let c = self.encryption_key.mod_n2(ciphertext);
-
-        let plaintext = c.pow(&self.d); // $ c^d mod N^2 = (1 + N)^{m*d mod N} mod N^2 = (1 + m*d*N) mod N^2 $
-        let plaintext = (plaintext - self.encryption_key.one_mod_n2()).retrieve(); // $ c^d mod N^2 - 1 = m*d*N mod N^2 $
-        let plaintext = plaintext / NonZero::new(N).unwrap(); // $ (c^d mod N^2 - 1) / N = m*d*N / N mod N^2 = m*d mod N $
-        let plaintext = U2048::from_le_slice(&plaintext.to_le_bytes()[0..256]); // Trim zero-padding post-division and convert to U2048
-
-        // Finally take mod N
-        let N = encryption_key;
-        let N_mod = DynResidueParams::new(&N);
-        let plaintext = DynResidue::new(&plaintext, N_mod).retrieve();
-
-        plaintext
+        self.encryption_key.to_u2048_mod_n(
+            &((
+                (self.encryption_key.mod_n2(ciphertext).pow(&self.d) // $ c^d $
+                        - self.encryption_key.one_mod_n2())
+                .retrieve()
+                // $ c^d - 1 mod N^2 = (1 + N)^{m*d mod N} - 1 mod N^2 = (1 + m*d*N - 1) mod N^2 = m*d*N mod N^2 $
+            ) / NonZero::new(self.encryption_key.n).unwrap()), // $ (m*d*N) / N = m*d $
+        ) // $ m*d mod N = m mod N $
     }
 }
 
@@ -44,6 +39,8 @@ mod tests {
 
     #[test]
     fn decrypts() {
-        assert_eq!(PLAINTEXT, decrypt(&N, &D, &CIPHERTEXT));
+        let encryption_key = EncryptionKey::new(N);
+        let decryption_key = DecryptionKey::new(encryption_key, D);
+        assert_eq!(decryption_key.decrypt(&CIPHERTEXT), PLAINTEXT);
     }
 }

@@ -1,13 +1,13 @@
 use crate::paillier::u2048_to_u4096;
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::{Concat, Encoding};
+use crypto_bigint::{Concat, Encoding, Zero};
 use crypto_bigint::{U1024, U2048, U4096};
 
-struct EncryptionKey {
-    n: U4096,                               // the encryption key as a 4096-bit number
-    n_mod_n2: DynResidue<{ U4096::LIMBS }>, // the encryption key $N mod N^2$
-    n_mod_params: DynResidueParams<{ U2048::LIMBS }>,
-    n2_mod_params: DynResidueParams<{ U4096::LIMBS }>,
+pub struct EncryptionKey {
+    pub(in crate::paillier) n: U4096, // the encryption key as a 4096-bit number
+    pub(in crate::paillier) n_mod_n2: DynResidue<{ U4096::LIMBS }>, // the encryption key $N mod N^2$
+    pub(in crate::paillier) n_mod_params: DynResidueParams<{ U2048::LIMBS }>,
+    pub(in crate::paillier) n2_mod_params: DynResidueParams<{ U4096::LIMBS }>,
 }
 
 impl EncryptionKey {
@@ -26,16 +26,27 @@ impl EncryptionKey {
         }
     }
 
-    fn mod_n2(&self, x: &U4096) -> DynResidue<{ U4096::LIMBS }> {
+    pub(in crate::paillier) fn mod_n(&self, x: &U2048) -> DynResidue<{ U2048::LIMBS }> {
+        DynResidue::new(x, self.n_mod_params)
+    }
+
+    pub(in crate::paillier) fn mod_n2(&self, x: &U4096) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::new(x, self.n2_mod_params)
     }
 
-    fn u2048_mod_n2(&self, x: &U2048) -> DynResidue<{ U4096::LIMBS }> {
+    pub(in crate::paillier) fn u2048_mod_n2(&self, x: &U2048) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::new(&u2048_to_u4096(x), self.n2_mod_params)
     }
 
-    fn one_mod_n2(&self) -> DynResidue<{ U4096::LIMBS }> {
+    pub(in crate::paillier) fn one_mod_n2(&self) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::one(self.n2_mod_params)
+    }
+
+    pub(in crate::paillier) fn to_u2048_mod_n(&self, x: &U4096) -> U2048 {
+        // Taking a 4096-bit number under $mod N$ should yield a 2048-bit number;
+        // but before we can do that, we need to take only the lower-half (2048-bit) of the number, and perform modulus on that.
+        self.mod_n(&U2048::from_le_slice(&x.to_le_bytes()[0..256]))
+            .retrieve()
     }
 
     pub fn encrypt(&self, plaintext: &U2048, randomness: &U2048) -> U4096 {
