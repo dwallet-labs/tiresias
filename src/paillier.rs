@@ -1,4 +1,5 @@
 mod decryption_key;
+mod decryption_key_share;
 mod encryption_key;
 
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
