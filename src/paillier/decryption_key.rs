@@ -3,7 +3,8 @@ use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
 use crypto_bigint::{Concat, Encoding, NonZero};
 use crypto_bigint::{U1024, U2048, U4096};
 
-struct DecryptionKey {
+#[derive(Clone)]
+pub struct DecryptionKey {
     encryption_key: EncryptionKey,
     d: U4096,
 }

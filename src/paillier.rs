@@ -5,6 +5,7 @@ use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
 use crypto_bigint::{Concat, Encoding};
 use crypto_bigint::{U1024, U2048, U4096};
 
+pub use decryption_key::DecryptionKey;
 pub use encryption_key::EncryptionKey;
 
 fn u2048_to_u4096(x: &U2048) -> U4096 {
