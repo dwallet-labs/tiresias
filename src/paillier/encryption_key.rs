@@ -26,11 +26,11 @@ impl EncryptionKey {
         }
     }
 
-    fn mod_n2(&self, x: U4096) -> DynResidue<{ U4096::LIMBS }> {
-        DynResidue::new(&x, self.n2_mod_params)
+    fn mod_n2(&self, x: &U4096) -> DynResidue<{ U4096::LIMBS }> {
+        DynResidue::new(x, self.n2_mod_params)
     }
 
-    fn u2048_mod_n2(&self, x: U2048) -> DynResidue<{ U4096::LIMBS }> {
+    fn u2048_mod_n2(&self, x: &U2048) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::new(&u2048_to_u4096(x), self.n2_mod_params)
     }
 
@@ -38,7 +38,7 @@ impl EncryptionKey {
         DynResidue::one(self.n2_mod_params)
     }
 
-    pub fn encrypt(&self, plaintext: U2048, randomness: U2048) -> U4096 {
+    pub fn encrypt(&self, plaintext: &U2048, randomness: &U2048) -> U4096 {
         let m = self.u2048_mod_n2(plaintext);
         let r = self.u2048_mod_n2(randomness);
 
@@ -59,6 +59,6 @@ mod tests {
     #[test]
     fn encrypts() {
         let encryption_key = EncryptionKey::new(N);
-        assert_eq!(encryption_key.encrypt(PLAINTEXT, RANDOMNESS), CIPHERTEXT)
+        assert_eq!(encryption_key.encrypt(&PLAINTEXT, &RANDOMNESS), CIPHERTEXT)
     }
 }
