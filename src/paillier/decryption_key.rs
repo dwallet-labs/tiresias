@@ -44,37 +44,6 @@ fn decrypt(encryption_key: &U2048, decryption_key: &U4096, ciphertext: &U4096) -
     plaintext
 }
 
-// fn decryption_share(encryption_key: &U2048, decryption_key_share: &U2048, ciphertext: &U4096) -> U2048 {
-//         return c^{d_i}
-// }
-
-// fn combine_decryption_shares(decryption_shares: Vec<U2048>) -> U2048 {
-//   sums up all decryption shares, assumes linear (additive) sharing.
-// }
-
-// shamir secret sharing in Z_{N*phi(n)} where phi(n) = ((p-1) * (q-1))
-
-// fn partial_decryption<T: Num + Pow<T, Output = T> + Clone>(
-
-//     decryption_key: &T,
-//     ciphertext: &T,
-// ) -> T {
-//     ciphertext.clone().pow(decryption_key.clone()) // $ c^d mod N^2= (1 + N)^{m*d mod N} mod N^2 = (1 + m*d*N) mod N^2 $
-// }
-//
-// fn decrypt_from_partial_decryptions<T: Num + Pow<T, Output = T> + Clone>(
-//     partial_decryptions: HashMap<u8, T>,
-//     lagrange_coeffecients: HashMap<u8, T>,
-// ) -> T {
-//     partial_decryptions
-//         .iter()
-//         .fold(T::one(), |acc, (i, partial_decryption)| {
-//             acc * (partial_decryption
-//                 .clone()
-//                 .pow(lagrange_coeffecients.get(i).unwrap().clone())) // TODO: properly handle the case where lagrange_coeffecients isn't defined for i (no item in map)
-//         })
-// }
-
 #[cfg(test)]
 mod tests {
     use super::*;
