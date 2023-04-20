@@ -3,7 +3,7 @@ use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
 use crypto_bigint::{Concat, Encoding};
 use crypto_bigint::{U1024, U2048, U4096};
 
-struct EncryptionKey {
+pub struct EncryptionKey {
     n: U4096,                               // the encryption key as a 4096-bit number
     n_mod_n2: DynResidue<{ U4096::LIMBS }>, // the encryption key $N mod N^2$
     n_mod_params: DynResidueParams<{ U2048::LIMBS }>,
@@ -59,6 +59,7 @@ mod tests {
     #[test]
     fn encrypts() {
         let encryption_key = EncryptionKey::new(N);
+
         assert_eq!(encryption_key.encrypt(&PLAINTEXT, &RANDOMNESS), CIPHERTEXT)
     }
 }
