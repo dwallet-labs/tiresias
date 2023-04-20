@@ -13,3 +13,5 @@ num-bigint = "0.4.3"
 hex = "0.4.3"
 num-traits = "0.2.15"
 num-integer = "0.1.45"
+curv-kzen = { version = "0.10.0", features = ["rust-gmp-kzen"]}
+kzen-paillier = "0.4.3"
