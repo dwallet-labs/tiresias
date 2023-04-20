@@ -26,25 +26,36 @@ impl EncryptionKey {
         }
     }
 
-    fn mod_n2(&self, x: &U4096) -> DynResidue<{ U4096::LIMBS }> {
+    pub(in crate::paillier) fn mod_n(&self, x: &U2048) -> DynResidue<{ U2048::LIMBS }> {
+        DynResidue::new(x, self.n_mod_params)
+    }
+
+    pub(in crate::paillier) fn mod_n2(&self, x: &U4096) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::new(x, self.n2_mod_params)
     }
 
-    fn u2048_mod_n2(&self, x: &U2048) -> DynResidue<{ U4096::LIMBS }> {
+    pub(in crate::paillier) fn u2048_mod_n2(&self, x: &U2048) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::new(&u2048_to_u4096(x), self.n2_mod_params)
     }
 
-    fn one_mod_n2(&self) -> DynResidue<{ U4096::LIMBS }> {
+    pub(in crate::paillier) fn one_mod_n2(&self) -> DynResidue<{ U4096::LIMBS }> {
         DynResidue::one(self.n2_mod_params)
     }
 
+    pub(in crate::paillier) fn to_u2048_mod_n(&self, x: &U4096) -> U2048 {
+        // Taking a 4096-bit number under $mod N$ should yield a 2048-bit number;
+        // but before we can do that, we need to take only the lower-half (2048-bit) of the number, and perform modulus on that.
+        self.mod_n(&U2048::from_le_slice(&x.to_le_bytes()[0..256]))
+            .retrieve()
+    }
+
     pub fn encrypt(&self, plaintext: &U2048, randomness: &U2048) -> U4096 {
-        let m = self.u2048_mod_n2(plaintext);
-        let r = self.u2048_mod_n2(randomness);
-
-        let ciphertext = (((m * self.n_mod_n2) + self.one_mod_n2()) * (r.pow(&self.n))).retrieve(); // $ (m*N + 1) * (r^N) mod N^2 $
-
-        ciphertext
+        (
+            ((self.u2048_mod_n2(plaintext) * self.n_mod_n2) + self.one_mod_n2())  // $ c = (m*N + 1) $
+            * (self.u2048_mod_n2(randomness).pow(&self.n))
+            // $ * (r^N) mod N^2 $
+        )
+        .retrieve()
     }
 }
 
