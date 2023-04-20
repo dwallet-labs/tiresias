@@ -7,6 +7,7 @@ use crypto_bigint::{Concat, Encoding};
 use crypto_bigint::{U1024, U2048, U4096};
 
 pub use decryption_key::DecryptionKey;
+pub use decryption_key_share::DecryptionKeyShare;
 pub use encryption_key::EncryptionKey;
 
 fn u2048_to_u4096(x: &U2048) -> U4096 {

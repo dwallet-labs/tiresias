@@ -18,13 +18,42 @@ impl DecryptionKeyShare {
         }
     }
 
-    pub fn decryption_share(&self, ciphertext: &U4096) -> U4096 {
-        todo!()
+    pub fn decryption_share(&self, ciphertext: &U4096, n: u32) -> U4096 {
+        // $ c_i = c^{2n!d_i} $
+        self.encryption_key
+            .mod_n2(ciphertext)
+            .pow(
+                &(self.encryption_key.mod_n2(&U4096::from(2 * n))  // TODO: n!
+                    * self.encryption_key.mod_n2(&self.decryption_key_share))
+                .retrieve(),
+            )
+            .retrieve()
     }
 
     // Now this is for additive sharing, need to do shamir
     pub fn threshold_decrypt(&self, decryption_shares: Vec<U4096>) -> U2048 {
-        todo!()
+        let n = decryption_shares.len() as u32;
+
+        // TODO: doc math
+        let c_prime = decryption_shares
+            .iter()
+            .fold(self.encryption_key.one_mod_n2(), |acc, c| {
+                acc * self.encryption_key.mod_n2(c).pow(&U4096::from(2 * n))
+                // TODO: n!, lambda
+            });
+
+        (self
+            .encryption_key
+            .mod_n(&self.encryption_key.to_u2048_mod_n(
+                &((c_prime - self.encryption_key.one_mod_n2()).retrieve()
+                    / NonZero::new(self.encryption_key.n).unwrap()),
+            ))
+            * self
+                .encryption_key
+                .mod_n(&U2048::from(4 * (n.pow(2))))
+                .invert()
+                .0) // TODO: is it possible that it won't be invertible?
+            .retrieve()
     }
 }
 
@@ -49,8 +78,8 @@ mod tests {
         let decryption_key_share1 = DecryptionKeyShare::new(encryption_key.clone(), d1);
         let decryption_key_share2 = DecryptionKeyShare::new(encryption_key, d2);
 
-        let c1 = decryption_key_share1.decryption_share(&CIPHERTEXT);
-        let c2 = decryption_key_share2.decryption_share(&CIPHERTEXT);
+        let c1 = decryption_key_share1.decryption_share(&CIPHERTEXT, 2);
+        let c2 = decryption_key_share2.decryption_share(&CIPHERTEXT, 2);
 
         let decryption_shares = vec![c1, c2];
 
