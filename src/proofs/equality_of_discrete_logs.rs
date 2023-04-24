@@ -2,9 +2,9 @@ use crate::paillier::EncryptionKey;
 use crate::proofs::{ProofError, TranscriptProtocol};
 use crypto_bigint::consts::U4;
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::RandomMod;
-use crypto_bigint::U4096;
-use crypto_bigint::{Concat, Encoding, NonZero};
+use crypto_bigint::{
+    Concat, Encoding, NonZero, Random, RandomMod, U1024, U128, U2048, U256, U4096, U512,
+};
 use merlin::Transcript;
 use rand_core::CryptoRngCore;
 
@@ -21,15 +21,25 @@ impl ProofOfEqualityOfDiscreteLogs {
     pub fn prove(
         encryption_key: EncryptionKey,
         d: &U4096,
-        a: &U4096,
-        b: &U4096,
         g: &U4096,
         h: &U4096,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
-        let r = U4096::random_mod(rng, &NonZero::new(encryption_key.n).unwrap()); // TODO: account for the security parameter kappa
+        // TODO: just impl' U2304
+        let r: U256 = U256::random(rng); // Sample $r \leftarrow [0,2^{2\kappa}N)$, where k is the security parameter.
+                                         /* OMG is this ugly, can't we do better? */
+        let r: U512 = U256::ZERO.concat(&r);
+        let r: U1024 = U512::ZERO.concat(&r);
+        let r: U2048 = U1024::ZERO.concat(&r);
+        let (lo, hi) =
+            U2048::random_mod(rng, &NonZero::new(encryption_key.n_2048).unwrap()).mul_wide(&r);
+        let r: U4096 = hi.concat(&lo);
+
         let g_hat = encryption_key.mod_n2(g).pow(&r).retrieve();
         let h_hat = encryption_key.mod_n2(h).pow(&r).retrieve();
+
+        let a = encryption_key.mod_n2(g).pow(&d).retrieve();
+        let b = encryption_key.mod_n2(h).pow(&d).retrieve();
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
         transcript.append(b"a", &a);
@@ -37,10 +47,19 @@ impl ProofOfEqualityOfDiscreteLogs {
         transcript.append(b"g_hat", &g_hat);
         transcript.append(b"h_hat", &h_hat);
 
-        let u = transcript.challenge(b"u");
+        let u: U128 = transcript.challenge(b"u");
 
-        // let w = r.wrapping_sub(u.mul_wide(d)); // TODO: how can this be, what's the sizes here?
-        let w = r; // TODO: use above line...
+        /* OMG is this ugly, can't we do better? */
+        let u: U256 = U128::ZERO.concat(&u);
+        let u: U512 = U256::ZERO.concat(&u);
+        let u: U1024 = U512::ZERO.concat(&u);
+        let u: U2048 = U1024::ZERO.concat(&u);
+        let u: U4096 = U2048::ZERO.concat(&u);
+
+        // let w = r.wrapping_sub(&u.wrapping_mul(d));
+        let w = (encryption_key.mod_n2(&r)
+            - (encryption_key.mod_n2(&u) * encryption_key.mod_n2(&d)))
+        .retrieve(); // TODO should this be in naturals?
 
         ProofOfEqualityOfDiscreteLogs {
             a: a.clone(),
@@ -66,9 +85,15 @@ impl ProofOfEqualityOfDiscreteLogs {
         transcript.append(b"g_hat", &self.g_hat);
         transcript.append(b"h_hat", &self.h_hat);
 
-        let u = transcript.challenge(b"u");
+        let u: U128 = transcript.challenge(b"u");
 
-        // TODO: in the paper, no mod is specified for the powers, is N^2 the correct mod?
+        /* OMG is this ugly, can't we do better? */
+        let u: U256 = U128::ZERO.concat(&u);
+        let u: U512 = U256::ZERO.concat(&u);
+        let u: U1024 = U512::ZERO.concat(&u);
+        let u: U2048 = U1024::ZERO.concat(&u);
+        let u: U4096 = U2048::ZERO.concat(&u);
+
         if (encryption_key.mod_n2(&g).pow(&self.w) * encryption_key.mod_n2(&self.a).pow(&u))
             .retrieve()
             == self.g_hat
@@ -94,20 +119,11 @@ mod tests {
     #[test]
     fn valid_proof_verifies() {
         let encryption_key = EncryptionKey::new(N);
-        let a = U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n).unwrap());
-        let b = U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n).unwrap());
         let g = U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n).unwrap());
         let h = U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n).unwrap());
 
-        let proof = ProofOfEqualityOfDiscreteLogs::prove(
-            encryption_key.clone(),
-            &D,
-            &a,
-            &b,
-            &g,
-            &h,
-            &mut OsRng,
-        );
+        let proof =
+            ProofOfEqualityOfDiscreteLogs::prove(encryption_key.clone(), &D, &g, &h, &mut OsRng);
 
         assert!(proof.verify(&encryption_key, &g, &h).is_ok());
     }
@@ -136,15 +152,8 @@ mod tests {
         let g = U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n).unwrap());
         let h = U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n).unwrap());
 
-        let valid_proof = ProofOfEqualityOfDiscreteLogs::prove(
-            encryption_key.clone(),
-            &D,
-            &a,
-            &b,
-            &g,
-            &h,
-            &mut OsRng,
-        );
+        let valid_proof =
+            ProofOfEqualityOfDiscreteLogs::prove(encryption_key.clone(), &D, &g, &h, &mut OsRng);
 
         let mut invalid_proof = valid_proof.clone();
 

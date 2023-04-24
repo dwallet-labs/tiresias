@@ -1,5 +1,5 @@
 use core::fmt;
-use crypto_bigint::{Encoding, U4096};
+use crypto_bigint::{Encoding, Limb, Uint, U4096};
 use merlin::Transcript;
 use std::error::Error;
 
@@ -22,24 +22,28 @@ impl Error for ProofError {
 
 /// Defines a `TranscriptProtocol` trait for using a Merlin transcript.
 pub trait TranscriptProtocol {
-    // TODO: is field element the correct phrase here?
-    /// Append a `field_element` with the given `label`.
-    fn append(&mut self, label: &'static [u8], field_element: &U4096);
+    // TODO: how to call 'x'?
+    /// Append a `x` with the given `label`.
+    fn append<const LIMBS: usize>(&mut self, label: &'static [u8], x: &Uint<LIMBS>)
+    where
+        Uint<LIMBS>: Encoding;
 
     /// Compute a `label`ed challenge variable.
-    fn challenge(&mut self, label: &'static [u8]) -> U4096;
+    fn challenge<const LIMBS: usize>(&mut self, label: &'static [u8]) -> Uint<LIMBS>;
 }
 
 impl TranscriptProtocol for Transcript {
-    fn append(&mut self, label: &'static [u8], field_element: &U4096) {
-        self.append_message(label, &field_element.to_le_bytes());
+    fn append<const LIMBS: usize>(&mut self, label: &'static [u8], x: &Uint<LIMBS>)
+    where
+        Uint<LIMBS>: Encoding,
+    {
+        self.append_message(label, Uint::<LIMBS>::to_le_bytes(&x).as_mut());
     }
 
-    // TODO: this actually needs to be a different size, kappa smth.
-    fn challenge(&mut self, label: &'static [u8]) -> U4096 {
-        let mut buf = [0u8; U4096::BYTES];
-        self.challenge_bytes(label, &mut buf);
+    fn challenge<const LIMBS: usize>(&mut self, label: &'static [u8]) -> Uint<LIMBS> {
+        let mut buf: Vec<u8> = vec![0u8; LIMBS * Limb::BYTES];
+        self.challenge_bytes(label, buf.as_mut_slice());
 
-        U4096::from_le_slice(&buf)
+        Uint::<LIMBS>::from_le_slice(&buf)
     }
 }

@@ -5,8 +5,9 @@ use crypto_bigint::{U1024, U2048, U4096};
 
 #[derive(Debug, Clone)]
 pub struct EncryptionKey {
-    pub(crate) n: U4096,  // the encryption key $ N $ as a 4096-bit number
-    pub(crate) n2: U4096, // $ N^2 $
+    pub(crate) n_2048: U2048, // the encryption key $ N $ as a 4096-bit number
+    pub(crate) n: U4096,      // the encryption key $ N $ as a 4096-bit number
+    pub(crate) n2: U4096,     // $ N^2 $
     pub(crate) n_mod_n2: DynResidue<{ U4096::LIMBS }>, // the encryption key $N mod N^2$
     pub(crate) n_mod_params: DynResidueParams<{ U2048::LIMBS }>,
     pub(crate) n2_mod_params: DynResidueParams<{ U4096::LIMBS }>,
@@ -18,10 +19,12 @@ impl EncryptionKey {
         let n_mod_params = DynResidueParams::new(&n);
         let n2: U4096 = n.square();
         let n2_mod_params = DynResidueParams::new(&n2);
+        let n_2048 = n;
         let n = U2048::ZERO.concat(&n);
         let n_mod_n2 = DynResidue::new(&n, n2_mod_params);
 
         EncryptionKey {
+            n_2048,
             n,
             n2,
             n_mod_n2,
