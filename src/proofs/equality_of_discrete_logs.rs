@@ -115,8 +115,12 @@ impl ProofOfEqualityOfDiscreteLogs {
         let h_hat = U4096::ZERO.concat(&self.h_hat);
 
         // TODO: not important here, but can I even == for BigInt? don't I lose constant-timeness?
-        if (g.pow(&self.w) * a.pow(&u).invert().0).retrieve() == g_hat
-            && (h.pow(&self.w) * b.pow(&u).invert().0).retrieve() == h_hat
+        if (g.pow_bounded_exp(&self.w, 4096 + 128 + 1) * a.pow_bounded_exp(&u, 128).invert().0)
+            .retrieve()
+            == g_hat
+            && (h.pow_bounded_exp(&self.w, 4096 + 128 + 1) * b.pow_bounded_exp(&u, 128).invert().0)
+                .retrieve()
+                == h_hat
         {
             Ok(())
         } else {
