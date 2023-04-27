@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 crypto-bigint = "0.5.1"
 merlin = "3.0.0"
+rand_core = "0.6.4"
 
 [dev-dependencies]
 curv-kzen = { version = "0.10.0", features = ["rust-gmp-kzen"]}
@@ -23,5 +24,5 @@ num-bigint = { version = "0.8.2", features = ["i128", "u64_digit", "prime", "zer
 crypto-primes = "0.2.0"
 rsa = "0.8.2"
 rand = "0.8.5"
-rand_core = "0.6.4"
+
 hex = "0.4.3"

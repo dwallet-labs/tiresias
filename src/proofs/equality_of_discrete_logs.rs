@@ -1,6 +1,5 @@
 use crate::paillier::EncryptionKey;
 use crate::proofs::{ProofError, TranscriptProtocol};
-use crypto_bigint::consts::U4;
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
 use crypto_bigint::{
     Concat, Encoding, Limb, NonZero, Random, RandomMod, U1024, U128, U2048, U256, U4096, U512,
