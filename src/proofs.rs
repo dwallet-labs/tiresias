@@ -22,10 +22,12 @@ impl Error for ProofError {
 
 /// Defines a `TranscriptProtocol` trait for using a Merlin transcript.
 pub trait TranscriptProtocol {
-    // TODO: how to call 'x'?
-    /// Append a `x` with the given `label`.
-    fn append<const LIMBS: usize>(&mut self, label: &'static [u8], x: &Uint<LIMBS>)
-    where
+    /// Append a `statement` with the given `label`.
+    fn append_statement<const LIMBS: usize>(
+        &mut self,
+        label: &'static [u8],
+        statement: &Uint<LIMBS>,
+    ) where
         Uint<LIMBS>: Encoding;
 
     /// Compute a `label`ed challenge variable.
@@ -33,11 +35,14 @@ pub trait TranscriptProtocol {
 }
 
 impl TranscriptProtocol for Transcript {
-    fn append<const LIMBS: usize>(&mut self, label: &'static [u8], x: &Uint<LIMBS>)
-    where
+    fn append_statement<const LIMBS: usize>(
+        &mut self,
+        label: &'static [u8],
+        statement: &Uint<LIMBS>,
+    ) where
         Uint<LIMBS>: Encoding,
     {
-        self.append_message(label, Uint::<LIMBS>::to_le_bytes(&x).as_mut());
+        self.append_message(label, Uint::<LIMBS>::to_le_bytes(&statement).as_mut());
     }
 
     fn challenge<const LIMBS: usize>(&mut self, label: &'static [u8]) -> Uint<LIMBS> {
