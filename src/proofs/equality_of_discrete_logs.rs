@@ -14,7 +14,8 @@ pub struct ProofOfEqualityOfDiscreteLogs {
     b: U4096,
     g_hat: U4096,
     h_hat: U4096,
-    w: U8192,
+    w_hi: U4096,
+    w_lo: U4096,
 }
 
 impl ProofOfEqualityOfDiscreteLogs {
@@ -64,15 +65,20 @@ impl ProofOfEqualityOfDiscreteLogs {
         let (lo, hi) = u.mul_wide(&d);
         let ud = hi.concat(&lo);
         let r: U8192 = U4096::ZERO.concat(&r);
-        // TODO: I think this can never overflow, am I right?
+        // $u$ is a 128-bit number, multiplied by a 4096-bit $d$ => (4096 + 128)-bit number.
+        // Add a (256+4096)-bit $r$ to get $ w = r + u*d $, a (4096 + 128 + 1)-bit number < 8096
+        // => a wrapping_add of U8096 is safe here and will never overflow.
+        // TODO: can we instead actually do r - ud since this will never overflow as r is much bigger?
         let w = r.wrapping_add(&ud);
+        let (w_hi, w_lo) = w.split();
 
         ProofOfEqualityOfDiscreteLogs {
             a: a.clone(),
             b: b.clone(),
             g_hat,
             h_hat,
-            w,
+            w_hi,
+            w_lo,
         }
     }
 
@@ -99,27 +105,35 @@ impl ProofOfEqualityOfDiscreteLogs {
         let u: U2048 = U1024::ZERO.concat(&u);
         let u: U4096 = U2048::ZERO.concat(&u);
 
-        let n2 = U4096::ZERO.concat(&encryption_key.n2);
-        let params = DynResidueParams::new(&n2);
-        let g = U4096::ZERO.concat(&g);
+        let params = DynResidueParams::new(&encryption_key.n2);
         let g = DynResidue::new(&g, params);
-        let h = U4096::ZERO.concat(&h);
         let h = DynResidue::new(&h, params);
-        let a = U4096::ZERO.concat(&self.a);
-        let a = DynResidue::new(&a, params);
-        let b = U4096::ZERO.concat(&self.b);
-        let b = DynResidue::new(&b, params);
-        let u = U4096::ZERO.concat(&u);
-        let g_hat = U4096::ZERO.concat(&self.g_hat);
-        let h_hat = U4096::ZERO.concat(&self.h_hat);
+        let a = DynResidue::new(&self.a, params);
+        let b = DynResidue::new(&self.b, params);
 
         // TODO: not important here, but can I even == for BigInt? don't I lose constant-timeness?
-        if (g.pow_bounded_exp(&self.w, 4096 + 128 + 1) * a.pow_bounded_exp(&u, 128).invert().0)
-            .retrieve()
-            == g_hat
-            && (h.pow_bounded_exp(&self.w, 4096 + 128 + 1) * b.pow_bounded_exp(&u, 128).invert().0)
-                .retrieve()
-                == h_hat
+
+        // We need to raise a 4096-bit number by a power of (4096 + 128 + 1)-bit exponent, but the API does not allow us this
+        // so we split it to two exponentiations, one of the base (lo) 4096 * by the higher (128 + 1) bits * 2^(128 + 1)
+        // $w = w_hi*2^{128+1} + w_lo$ => + $ g^w = g^{w_lo}*g^{{2^128+1}^{w_hi}} $
+        let two_to_the_power_of_129 = U4096::ONE.shl_vartime(128 + 1); // 2^(128 + 1) is a (128 + 1 + 1)-bit number
+
+        let g_to_the_power_of_w = g.pow_bounded_exp(&self.w_lo, 4096)
+            * (g.pow_bounded_exp(&two_to_the_power_of_129, 128 + 1 + 1)
+                .pow_bounded_exp(&self.w_hi, 128 + 1));
+
+        let h_to_the_power_of_w = h.pow_bounded_exp(&self.w_lo, 4096)
+            * (h.pow_bounded_exp(&two_to_the_power_of_129, 128 + 1 + 1)
+                .pow_bounded_exp(&self.w_hi, 128 + 1));
+
+        // We are operating in $Z_{N^2}$ and so every element in the ring except for $p$ or $q$ is invertible [TODO: verify]
+        // Since $p$ and $q$ are secret, randomly finding an un-invertible number is a 1 to 2^2048 chance, which is much more than the statistical security of this proof.
+        // Therefore, it is safe to assume the $a^u$ is invertible
+        let a_to_the_power_of_minus_u = a.pow_bounded_exp(&u, 128).invert().0;
+        let b_to_the_power_of_minus_u = b.pow_bounded_exp(&u, 128).invert().0;
+
+        if (g_to_the_power_of_w * a_to_the_power_of_minus_u).retrieve() == self.g_hat
+            && (h_to_the_power_of_w * b_to_the_power_of_minus_u).retrieve() == self.h_hat
         {
             Ok(())
         } else {
@@ -161,10 +175,8 @@ mod tests {
             b: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
             g_hat: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
             h_hat: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
-            w: U8192::random_mod(
-                &mut OsRng,
-                &NonZero::new(U4096::ZERO.concat(&encryption_key.n2)).unwrap(),
-            ),
+            w_hi: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
+            w_lo: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
         };
 
         assert!(invalid_proof.verify(&encryption_key, &g, &h).is_err());
@@ -198,10 +210,10 @@ mod tests {
         assert!(invalid_proof.verify(&encryption_key, &g, &h).is_err());
 
         invalid_proof = valid_proof;
-        invalid_proof.w = U8192::random_mod(
-            &mut OsRng,
-            &NonZero::new(U4096::ZERO.concat(&encryption_key.n2)).unwrap(),
-        );
+        invalid_proof.w_hi =
+            U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap());
+        invalid_proof.w_lo =
+            U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap());
         assert!(invalid_proof.verify(&encryption_key, &g, &h).is_err());
     }
 }
