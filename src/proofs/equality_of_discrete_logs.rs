@@ -1,5 +1,6 @@
 use crate::paillier::EncryptionKey;
 use crate::proofs::{ProofError, TranscriptProtocol};
+use crypto_bigint::consts::U40;
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
 use crypto_bigint::{
     Concat, Encoding, Limb, NonZero, Random, RandomMod, U1024, U128, U2048, U256, U4096, U512,
@@ -14,8 +15,7 @@ pub struct ProofOfEqualityOfDiscreteLogs {
     b: U4096,
     g_hat: U4096,
     h_hat: U4096,
-    w_hi: U4096,
-    w_lo: U4096,
+    w: U8192, // Use U4362 instead
 }
 
 impl ProofOfEqualityOfDiscreteLogs {
@@ -26,26 +26,27 @@ impl ProofOfEqualityOfDiscreteLogs {
         h: &U4096,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
-        // TODO: just impl' U2304
-        let r: U256 = U256::random(rng); // Sample $r \leftarrow [0,2^{2\kappa}N)$, where k is the security parameter.
-                                         // Note that we use 2048-bit instead of N and that's even better
-                                         /* OMG is this ugly, can't we do better? */
+        let g = encryption_key.mod_n2(g);
+        let h = encryption_key.mod_n2(h);
+
+        let r: U256 = U256::random(rng); // Sample $r \leftarrow [0,2^{2\kappa}N^2)$, where k is the security parameter.
+                                         // Note that we use 4096-bit instead of N^2 and that's even better
         let r: U512 = U256::ZERO.concat(&r);
         let r: U1024 = U512::ZERO.concat(&r);
         let r: U2048 = U1024::ZERO.concat(&r);
-        let r: U4096 = r.concat(&U2048::random(rng));
+        let r: U4096 = U2048::ZERO.concat(&r);
 
-        let g_hat = encryption_key
-            .mod_n2(g)
-            .pow_bounded_exp(&r, 256 + 2048)
-            .retrieve();
-        let h_hat = encryption_key
-            .mod_n2(h)
-            .pow_bounded_exp(&r, 256 + 2048)
-            .retrieve();
+        let r: U8192 = r.concat(&U4096::random(rng)); // TODO: use U4392::random instead of all of this.
+        let (r_hi, r_lo) = r.split();
 
-        let a = encryption_key.mod_n2(g).pow(&d).retrieve();
-        let b = encryption_key.mod_n2(h).pow(&d).retrieve();
+        let g_hat = g.pow_bounded_exp(&r_hi, 256);
+        let g_hat = (g.pow(&r_lo) * (g_hat.pow(&U4096::MAX)) * g_hat).retrieve();
+
+        let h_hat = h.pow_bounded_exp(&r_hi, 256);
+        let h_hat = (h.pow(&r_lo) * (h_hat.pow(&U4096::MAX)) * h_hat).retrieve();
+
+        let a = g.pow(&d).retrieve();
+        let b = h.pow(&d).retrieve();
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
         transcript.append_statement(b"a", &a);
@@ -64,21 +65,18 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         let (lo, hi) = u.mul_wide(&d);
         let ud = hi.concat(&lo);
-        let r: U8192 = U4096::ZERO.concat(&r);
+
         // $u$ is a 128-bit number, multiplied by a 4096-bit $d$ => (4096 + 128)-bit number.
-        // Add a (256+4096)-bit $r$ to get $ w = r + u*d $, a (4096 + 128 + 1)-bit number < 8096
-        // => a wrapping_add of U8096 is safe here and will never overflow.
-        // TODO: can we instead actually do r - ud since this will never overflow as r is much bigger?
-        let w = r.wrapping_add(&ud);
-        let (w_hi, w_lo) = w.split();
+        // $r$ is a (256+4096)-bit number, so to get $ w = r - u*d $, which will never overflow (r is sampled randomly, the probability for r to be < ud < 1/2^128 which is the computational security parameter.
+        // This results in a  a (4096 + 256)-bit number $w$
+        let w: U8192 = r.wrapping_sub(&ud);
 
         ProofOfEqualityOfDiscreteLogs {
             a: a.clone(),
             b: b.clone(),
             g_hat,
             h_hat,
-            w_hi,
-            w_lo,
+            w,
         }
     }
 
@@ -111,29 +109,25 @@ impl ProofOfEqualityOfDiscreteLogs {
         let a = DynResidue::new(&self.a, params);
         let b = DynResidue::new(&self.b, params);
 
-        // TODO: not important here, but can I even == for BigInt? don't I lose constant-timeness?
-
         // We need to raise a 4096-bit number by a power of (4096 + 128 + 1)-bit exponent, but the API does not allow us this
-        // so we split it to two exponentiations, one of the base (lo) 4096 * by the higher (128 + 1) bits * 2^(128 + 1)
+        // so we split it to two exponentiations, one of the base (lo) 4096 * by the higher (256) bits * 2^(4096)
         // $w = w_hi*2^{128+1} + w_lo$ => + $ g^w = g^{w_lo}*g^{{2^128+1}^{w_hi}} $
-        let two_to_the_power_of_129 = U4096::ONE.shl_vartime(128 + 1); // 2^(128 + 1) is a (128 + 1 + 1)-bit number
+        let (w_hi, w_lo) = self.w.split(); // TODO: split at
 
-        let g_to_the_power_of_w = g.pow_bounded_exp(&self.w_lo, 4096)
-            * (g.pow_bounded_exp(&two_to_the_power_of_129, 128 + 1 + 1)
-                .pow_bounded_exp(&self.w_hi, 128 + 1));
+        let g_to_the_power_of_w = g.pow_bounded_exp(&w_hi, 256);
+        let g_to_the_power_of_w =
+            g.pow(&w_lo) * (g_to_the_power_of_w.pow(&U4096::MAX)) * g_to_the_power_of_w;
 
-        let h_to_the_power_of_w = h.pow_bounded_exp(&self.w_lo, 4096)
-            * (h.pow_bounded_exp(&two_to_the_power_of_129, 128 + 1 + 1)
-                .pow_bounded_exp(&self.w_hi, 128 + 1));
+        let h_to_the_power_of_w = h.pow_bounded_exp(&w_hi, 256);
+        let h_to_the_power_of_w =
+            h.pow(&w_lo) * (h_to_the_power_of_w.pow(&U4096::MAX)) * h_to_the_power_of_w;
 
-        // We are operating in $Z_{N^2}$ and so every element in the ring except for $p$ or $q$ is invertible [TODO: verify]
-        // Since $p$ and $q$ are secret, randomly finding an un-invertible number is a 1 to 2^2048 chance, which is much more than the statistical security of this proof.
-        // Therefore, it is safe to assume the $a^u$ is invertible
-        let a_to_the_power_of_minus_u = a.pow_bounded_exp(&u, 128).invert().0;
-        let b_to_the_power_of_minus_u = b.pow_bounded_exp(&u, 128).invert().0;
+        let a_to_the_power_of_u = a.pow_bounded_exp(&u, 128);
+        let b_to_the_power_of_u = b.pow_bounded_exp(&u, 128);
 
-        if (g_to_the_power_of_w * a_to_the_power_of_minus_u).retrieve() == self.g_hat
-            && (h_to_the_power_of_w * b_to_the_power_of_minus_u).retrieve() == self.h_hat
+        // TODO: question - how does this work if the exponent is modulo Nphi(N)? why doesn't it go through modulation
+        if (g_to_the_power_of_w * a_to_the_power_of_u).retrieve() == self.g_hat
+            && (h_to_the_power_of_w * b_to_the_power_of_u).retrieve() == self.h_hat
         {
             Ok(())
         } else {
@@ -175,8 +169,7 @@ mod tests {
             b: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
             g_hat: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
             h_hat: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
-            w_hi: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
-            w_lo: U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap()),
+            w: U8192::random(&mut OsRng),
         };
 
         assert!(invalid_proof.verify(&encryption_key, &g, &h).is_err());
@@ -210,10 +203,7 @@ mod tests {
         assert!(invalid_proof.verify(&encryption_key, &g, &h).is_err());
 
         invalid_proof = valid_proof;
-        invalid_proof.w_hi =
-            U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap());
-        invalid_proof.w_lo =
-            U4096::random_mod(&mut OsRng, &NonZero::new(encryption_key.n2).unwrap());
+        invalid_proof.w = U8192::random(&mut OsRng);
         assert!(invalid_proof.verify(&encryption_key, &g, &h).is_err());
     }
 }
