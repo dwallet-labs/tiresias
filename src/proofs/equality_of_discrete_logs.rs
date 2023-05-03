@@ -1,6 +1,5 @@
 use crate::paillier::EncryptionKey;
 use crate::proofs::{ProofError, TranscriptProtocol};
-use crypto_bigint::consts::U40;
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
 use crypto_bigint::{
     Concat, Encoding, Limb, NonZero, Random, RandomMod, U1024, U128, U2048, U256, U4096, U512,
@@ -29,12 +28,10 @@ impl ProofOfEqualityOfDiscreteLogs {
         let g = encryption_key.mod_n2(g);
         let h = encryption_key.mod_n2(h);
 
-        let r: U256 = U256::random(rng); // Sample $r \leftarrow [0,2^{2\kappa}N^2)$, where k is the security parameter.
-                                         // Note that we use 4096-bit instead of N^2 and that's even better
-        let r: U512 = U256::ZERO.concat(&r);
-        let r: U1024 = U512::ZERO.concat(&r);
-        let r: U2048 = U1024::ZERO.concat(&r);
-        let r: U4096 = U2048::ZERO.concat(&r);
+        // Sample $r \leftarrow [0,2^{2\kappa}N^2)$, where k is the security parameter.
+        // Note that we use 4096-bit instead of N^2 and that's even better
+        // TODO: use specific type
+        let r: U4096 = U256::random(rng).into();
 
         let r: U8192 = r.concat(&U4096::random(rng)); // TODO: use U4392::random instead of all of this.
         let (r_hi, r_lo) = r.split();
@@ -55,20 +52,14 @@ impl ProofOfEqualityOfDiscreteLogs {
         transcript.append_statement(b"h_hat", &h_hat);
 
         let u: U128 = transcript.challenge(b"u");
+        let u: U4096 = u.into(); // TODO: avoid this and multiply with the 128-bit directly, need to add missing type and implement wrapping_sub for different sizes
 
-        /* OMG is this ugly, can't we do better? */
-        let u: U256 = U128::ZERO.concat(&u);
-        let u: U512 = U256::ZERO.concat(&u);
-        let u: U1024 = U512::ZERO.concat(&u);
-        let u: U2048 = U1024::ZERO.concat(&u);
-        let u: U4096 = U2048::ZERO.concat(&u);
-
-        let (lo, hi) = u.mul_wide(&d);
-        let ud = hi.concat(&lo);
+        let ud: U8192 = (u * d).into();
 
         // $u$ is a 128-bit number, multiplied by a 4096-bit $d$ => (4096 + 128)-bit number.
         // $r$ is a (256+4096)-bit number, so to get $ w = r - u*d $, which will never overflow (r is sampled randomly, the probability for r to be < ud < 1/2^128 which is the computational security parameter.
         // This results in a  a (4096 + 256)-bit number $w$
+        // TODO: use specific type
         let w: U8192 = r.wrapping_sub(&ud);
 
         ProofOfEqualityOfDiscreteLogs {
@@ -96,12 +87,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         let u: U128 = transcript.challenge(b"u");
 
-        /* OMG is this ugly, can't we do better? */
-        let u: U256 = U128::ZERO.concat(&u);
-        let u: U512 = U256::ZERO.concat(&u);
-        let u: U1024 = U512::ZERO.concat(&u);
-        let u: U2048 = U1024::ZERO.concat(&u);
-        let u: U4096 = U2048::ZERO.concat(&u);
+        let u: U4096 = u.into(); // TODO: use the right exponent func so no need to have u as 4096-bit
 
         let params = DynResidueParams::new(&encryption_key.n2);
         let g = DynResidue::new(&g, params);
@@ -112,7 +98,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // We need to raise a 4096-bit number by a power of (4096 + 128 + 1)-bit exponent, but the API does not allow us this
         // so we split it to two exponentiations, one of the base (lo) 4096 * by the higher (256) bits * 2^(4096)
         // $w = w_hi*2^{128+1} + w_lo$ => + $ g^w = g^{w_lo}*g^{{2^128+1}^{w_hi}} $
-        let (w_hi, w_lo) = self.w.split(); // TODO: split at
+        let (w_hi, w_lo) = self.w.split();
 
         let g_to_the_power_of_w = g.pow_bounded_exp(&w_hi, 256);
         let g_to_the_power_of_w =
