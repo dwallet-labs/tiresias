@@ -33,14 +33,16 @@ impl ProofOfEqualityOfDiscreteLogs {
         // TODO: use specific type
         let r: U4096 = U256::random(rng).into();
 
-        let r: U8192 = r.concat(&U4096::random(rng)); // TODO: use U4392::random instead of all of this.
+        let r: U8192 = r.concat(&U4096::random(rng)); // TODO: use U4352::random instead of all of this.
         let (r_hi, r_lo) = r.split();
 
-        let g_hat = g.pow_bounded_exp(&r_hi, 256);
-        let g_hat = (g.pow(&r_lo) * (g_hat.pow(&U4096::MAX)) * g_hat).retrieve();
+        let g_hat_hi = (g.pow(&U4096::MAX) * g).pow_bounded_exp(&r_hi, 256);
+        let g_hat_lo = g.pow(&r_lo);
+        let g_hat = (g_hat_lo * g_hat_hi).retrieve();
 
-        let h_hat = h.pow_bounded_exp(&r_hi, 256);
-        let h_hat = (h.pow(&r_lo) * (h_hat.pow(&U4096::MAX)) * h_hat).retrieve();
+        let h_hat_hi = (h.pow(&U4096::MAX) * h).pow_bounded_exp(&r_hi, 256);
+        let h_hat_lo = h.pow(&r_lo);
+        let h_hat = (h_hat_lo * h_hat_hi).retrieve();
 
         let a = g.pow(&d).retrieve();
         let b = h.pow(&d).retrieve();
