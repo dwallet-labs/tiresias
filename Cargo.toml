@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", branch = "all", features = ["cross-size", "rand"] }
+crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "37a1389", features = ["extra-trait-impls", "rand"] }
 merlin = "3.0.0"
 rand_core = "0.6.4"
 
