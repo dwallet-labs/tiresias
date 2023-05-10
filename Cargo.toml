@@ -11,17 +11,3 @@ merlin = "3.0.0"
 rand_core = "0.6.4"
 
 [dev-dependencies]
-curv-kzen = { version = "0.10.0", features = ["rust-gmp-kzen"]}
-criterion = { version = "0.4", features = ["html_reports"] }
-elliptic-curve = { version = "0.13.4", features = ["arithmetic", "group"] }
-fiat-crypto = "0.1.20"
-k256 = "0.13.1"
-num-traits = "0.2.15"
-num-bigint = { version = "0.8.2", features = ["i128", "u64_digit", "prime", "zeroize"], default-features = false, package = "num-bigint-dig" }
-#bulletproofs = { git = "https://github.com/zkcrypto/bulletproofs.git" }
-#bulletproofs = { git = "https://github.com/ZenGo-X/bulletproofs.git" }
-crypto-primes = "0.2.0"
-rsa = "0.8.2"
-rand = "0.8.5"
-
-hex = "0.4.3"
