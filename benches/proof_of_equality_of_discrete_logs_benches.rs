@@ -11,7 +11,7 @@ pub(crate) fn proof_of_equality_of_discrete_logs_benches(c: &mut Criterion) {
     let d = U4096::from_be_hex("19d698592b9ccb2890fb84be46cd2b18c360153b740aeccb606cf4168ee2de399f05273182bf468978508a5f4869cb867b340e144838dfaf4ca9bfd38cd55dc2837688aed2dbd76d95091640c47b2037d3d0ca854ffb4c84970b86f905cef24e876ddc8ab9e04f2a5f171b9c7146776c469f0d90908aa436b710cf4489afc73cd3ee38bb81e80a22d5d9228b843f435c48c5eb40088623a14a12b44e2721b56625da5d56d257bb27662c6975630d51e8f5b930d05fc5ba461a0e158cbda0f3266408c9bf60ff617e39ae49e707cbb40958adc512f3b4b69a5c3dc8b6d34cf45bc9597840057438598623fb65254869a165a6030ec6bec12fd59e192b3c1eefd33ef5d9336e0666aa8f36c6bd2749f86ea82290488ee31bf7498c2c77a8900bae00efcff418b62d41eb93502a245236b89c241ad6272724858122a2ebe1ae7ec4684b29048ba25b3a516c281a93043d58844cf3fa0c6f1f73db5db7ecba179652349dea8df5454e0205e910e0206736051ac4b7c707c3013e190423532e907af2e85e5bb6f6f0b9b58257ca1ec8b0318dd197f30352a96472a5307333f0e6b83f4f775fb302c1e10f21e1fcbfff17e3a4aa8bb6f553d9c6ebc2c884ae9b140dd66f21afc8610418e9f0ba2d14ecfa51ff08744a3470ebe4bb21bd6d65b58ac154630b8331ea620673ffbabb179a971a6577c407a076654a629c7733836c250000");
 
     g.bench_function(
-        "benchmark proof of equality of discrete logs's prove()",
+        "benchmark proof of equality of discrete logs' prove()",
         |bench| {
             bench.iter_batched(
                 || {
@@ -26,7 +26,7 @@ pub(crate) fn proof_of_equality_of_discrete_logs_benches(c: &mut Criterion) {
     );
 
     g.bench_function(
-        "benchmark proof of equality of discrete logs's verify()",
+        "benchmark proof of equality of discrete logs' verify()",
         |bench| {
             bench.iter_batched(
                 || {
