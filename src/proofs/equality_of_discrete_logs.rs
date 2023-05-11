@@ -77,7 +77,6 @@ impl ProofOfEqualityOfDiscreteLogs {
         g: &PaillierModulusSizedNumber,
         h: &PaillierModulusSizedNumber,
     ) -> Result<(), ProofError> {
-        // TODO: need to check not zero for every member?
         let n2 = n.square();
         let g = g.as_ring_element(&n2);
         let h = h.as_ring_element(&n2);
