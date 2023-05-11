@@ -27,8 +27,8 @@ impl AsNaturalNumber for RingElement {
 
 impl AsRingElement for N2 {
     fn as_ring_element(&self, n: &Self) -> RingElement {
-        let ring_params = DynResidueParams::new(&n);
-        DynResidue::new(&self, ring_params)
+        let ring_params = DynResidueParams::new(n);
+        DynResidue::new(self, ring_params)
     }
 }
 
@@ -50,8 +50,7 @@ impl Pow<R> for RingElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crypto_bigint::rand_core::OsRng;
-    use crypto_bigint::{NonZero, Random, U4096, U8192};
+    use crypto_bigint::{NonZero, U4096, U8192};
 
     #[test]
     fn as_natural_number_and_as_natural_number_circles_correctly() {
