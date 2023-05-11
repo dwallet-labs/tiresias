@@ -1,24 +1,32 @@
 use crate::proofs::{ProofError, TranscriptProtocol};
-use crate::traits::{AsNaturalNumber, AsRingElement, Kappa, Pow, RingElement, N, N2, R};
-use crypto_bigint::{NonZero, Random};
+use crate::{
+    AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber, LargeBiPrimeSizedNumber,
+    PaillierModulusSizedNumber, PaillierRingElement, Pow,
+};
+use crypto_bigint::{Concat, NonZero, Random, Uint};
 use merlin::Transcript;
 use rand_core::CryptoRngCore;
 
 #[derive(Debug, Clone)]
 pub struct ProofOfEqualityOfDiscreteLogs {
-    a: NonZero<N2>, // $a \in \mathbb{Z}_{N^2}^*$.
-    b: NonZero<N2>, // $b \in \mathbb{Z}_{N^2}^*$.
-    g_hat: N2,      // $\hat{g} \in \mathbb{Z}_{N^2}$.
-    h_hat: N2,      // $\hat{h} \in \mathbb{Z}_{N^2}$.
-    w: R,           // $w \in \mathbb{Z}$.
+    a: NonZero<PaillierModulusSizedNumber>, // $a \in \mathbb{Z}_{N^2}^*$.
+    b: NonZero<PaillierModulusSizedNumber>, // $b \in \mathbb{Z}_{N^2}^*$.
+    g_hat: PaillierModulusSizedNumber,      // $\hat{g} \in \mathbb{Z}_{N^2}$.
+    h_hat: PaillierModulusSizedNumber,      // $\hat{h} \in \mathbb{Z}_{N^2}$.
+    w: Uint<
+        {
+            PaillierModulusSizedNumber::LIMBS
+                + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
+        },
+    >, // $w \in \mathbb{Z}$.
 }
 
 impl ProofOfEqualityOfDiscreteLogs {
     pub fn prove(
-        n: &N, // TODO: is there a more generalized version of this proof that isn't Paillier-specific? i.e. maybe the ring we are proving on shouldn't be $Z_{N^2|$ but a generic $Z_n$?
-        d: &N2,
-        g: &N2,
-        h: &N2,
+        n: &LargeBiPrimeSizedNumber, // TODO: is there a more generalized version of this proof that isn't Paillier-specific? i.e. maybe the ring we are proving on shouldn't be $Z_{N^2|$ but a generic $Z_n$?
+        d: &PaillierModulusSizedNumber,
+        g: &PaillierModulusSizedNumber,
+        h: &PaillierModulusSizedNumber,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
         let n2 = n.square();
@@ -27,13 +35,34 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         // Sample $r \leftarrow [0,2^{2\kappa}N^2)$, where k is the security parameter.
         // Note that we use 4096-bit instead of N^2 and that's even better
-        let r: R = R::random(rng);
+        let r = Uint::<
+            {
+                PaillierModulusSizedNumber::LIMBS
+                    + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
+            },
+        >::random(rng);
 
-        let g_hat = <RingElement as Pow<R>>::pow(&g, &r).as_natural_number();
-        let h_hat = <RingElement as Pow<R>>::pow(&h, &r).as_natural_number();
+        let g_hat = <PaillierRingElement as Pow<
+            Uint<
+                {
+                    PaillierModulusSizedNumber::LIMBS
+                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
+                },
+            >,
+        >>::pow(&g, &r)
+        .as_natural_number();
+        let h_hat = <PaillierRingElement as Pow<
+            Uint<
+                {
+                    PaillierModulusSizedNumber::LIMBS
+                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
+                },
+            >,
+        >>::pow(&h, &r)
+        .as_natural_number();
 
-        let a: N2 = g.pow(&d).as_natural_number();
-        let b: N2 = h.pow(&d).as_natural_number();
+        let a: PaillierModulusSizedNumber = g.pow(&d).as_natural_number();
+        let b: PaillierModulusSizedNumber = h.pow(&d).as_natural_number();
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
         transcript.append_statement(b"a", &a);
@@ -41,12 +70,12 @@ impl ProofOfEqualityOfDiscreteLogs {
         transcript.append_statement(b"g_hat", &g_hat);
         transcript.append_statement(b"h_hat", &h_hat);
 
-        let u: Kappa = transcript.challenge(b"u");
+        let u: ComputationalSecuritySizedNumber = transcript.challenge(b"u");
 
         // $u$ is a 128-bit number, multiplied by a 4096-bit $d$ => (4096 + 128)-bit number.
         // $r$ is a (256+4096)-bit number, so to get $ w = r - u*d $, which will never overflow (r is sampled randomly, the probability for r to be < ud < 1/2^128 which is the computational security parameter.
         // This results in a  a (4096 + 256)-bit number $w$
-        let w: R = r.wrapping_sub(&((u * d).into()));
+        let w = r.wrapping_sub(&((u * d).into()));
 
         ProofOfEqualityOfDiscreteLogs {
             a: NonZero::new(a).unwrap(),
@@ -57,7 +86,12 @@ impl ProofOfEqualityOfDiscreteLogs {
         }
     }
 
-    pub fn verify(&self, n: &N, g: &N2, h: &N2) -> Result<(), ProofError> {
+    pub fn verify(
+        &self,
+        n: &LargeBiPrimeSizedNumber,
+        g: &PaillierModulusSizedNumber,
+        h: &PaillierModulusSizedNumber,
+    ) -> Result<(), ProofError> {
         // TODO: need to check not zero for every member?
         let n2 = n.square();
         let g = g.as_ring_element(&n2);
@@ -71,10 +105,24 @@ impl ProofOfEqualityOfDiscreteLogs {
         transcript.append_statement(b"g_hat", &self.g_hat);
         transcript.append_statement(b"h_hat", &self.h_hat);
 
-        let u: Kappa = transcript.challenge(b"u");
+        let u: ComputationalSecuritySizedNumber = transcript.challenge(b"u");
 
-        let g_to_the_power_of_w = <RingElement as Pow<R>>::pow(&g, &self.w);
-        let h_to_the_power_of_w = <RingElement as Pow<R>>::pow(&h, &self.w);
+        let g_to_the_power_of_w = <PaillierRingElement as Pow<
+            Uint<
+                {
+                    PaillierModulusSizedNumber::LIMBS
+                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
+                },
+            >,
+        >>::pow(&g, &self.w);
+        let h_to_the_power_of_w = <PaillierRingElement as Pow<
+            Uint<
+                {
+                    PaillierModulusSizedNumber::LIMBS
+                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
+                },
+            >,
+        >>::pow(&h, &self.w);
 
         let a_to_the_power_of_u = a.pow_bounded_exp(&u.into(), 128);
         let b_to_the_power_of_u = b.pow_bounded_exp(&u.into(), 128);
@@ -111,7 +159,7 @@ mod tests {
     }
 
     /* These tests may look silly, for we are trying to create a non-zero from zero,
-    but keeping them here is important - as trying to change e.g. the type of a from NonZero<N2> to N2 will cause a compilation error here,
+    but keeping them here is important - as trying to change e.g. the type of a from NonZero<PaillierModulusSizedNumber> to PaillierModulusSizedNumber will cause a compilation error here,
     and then the following warning should cease this immediately:
         WARNING: NonZero is crucial here: this assures to the verifier that the element is not zero and therefore in the multiplicative group -
                  without this, the proof is broken - don't change!
@@ -121,11 +169,16 @@ mod tests {
     #[should_panic]
     fn cannot_construct_proof_with_zero_a() {
         ProofOfEqualityOfDiscreteLogs {
-            a: NonZero::new(N2::ZERO).unwrap(),
-            b: NonZero::new(N2::ONE).unwrap(),
-            g_hat: N2::ZERO,
-            h_hat: N2::ZERO,
-            w: R::ZERO,
+            a: NonZero::new(PaillierModulusSizedNumber::ZERO).unwrap(),
+            b: NonZero::new(PaillierModulusSizedNumber::ONE).unwrap(),
+            g_hat: PaillierModulusSizedNumber::ZERO,
+            h_hat: PaillierModulusSizedNumber::ZERO,
+            w: Uint::<
+                {
+                    PaillierModulusSizedNumber::LIMBS
+                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
+                },
+            >::ZERO,
         };
     }
 
@@ -133,11 +186,16 @@ mod tests {
     #[should_panic]
     fn cannot_construct_proof_with_zero_b() {
         ProofOfEqualityOfDiscreteLogs {
-            a: NonZero::new(N2::ONE).unwrap(),
-            b: NonZero::new(N2::ZERO).unwrap(),
-            g_hat: N2::ZERO,
-            h_hat: N2::ZERO,
-            w: R::ZERO,
+            a: NonZero::new(PaillierModulusSizedNumber::ONE).unwrap(),
+            b: NonZero::new(PaillierModulusSizedNumber::ZERO).unwrap(),
+            g_hat: PaillierModulusSizedNumber::ZERO,
+            h_hat: PaillierModulusSizedNumber::ZERO,
+            w: Uint::<
+                {
+                    PaillierModulusSizedNumber::LIMBS
+                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
+                },
+            >::ZERO,
         };
     }
 
