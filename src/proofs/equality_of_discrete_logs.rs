@@ -2,6 +2,7 @@ use crate::proofs::{ProofError, TranscriptProtocol};
 use crate::{
     AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber, LargeBiPrimeSizedNumber,
     PaillierModulusSizedNumber, PaillierRingElement, Pow,
+    ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 use crypto_bigint::{Concat, NonZero, Random, Uint};
 use merlin::Transcript;
@@ -13,12 +14,7 @@ pub struct ProofOfEqualityOfDiscreteLogs {
     b: NonZero<PaillierModulusSizedNumber>, // $b \in \mathbb{Z}_{N^2}^*$.
     g_hat: PaillierModulusSizedNumber,      // $\hat{g} \in \mathbb{Z}_{N^2}$.
     h_hat: PaillierModulusSizedNumber,      // $\hat{h} \in \mathbb{Z}_{N^2}$.
-    w: Uint<
-        {
-            PaillierModulusSizedNumber::LIMBS
-                + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
-        },
-    >, // $w \in \mathbb{Z}$.
+    w: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber, // $w \in \mathbb{Z}$.
 }
 
 impl ProofOfEqualityOfDiscreteLogs {
@@ -35,29 +31,14 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         // Sample $r \leftarrow [0,2^{2\kappa}N^2)$, where k is the security parameter.
         // Note that we use 4096-bit instead of N^2 and that's even better
-        let r = Uint::<
-            {
-                PaillierModulusSizedNumber::LIMBS
-                    + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
-            },
-        >::random(rng);
+        let r = ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::random(rng);
 
         let g_hat = <PaillierRingElement as Pow<
-            Uint<
-                {
-                    PaillierModulusSizedNumber::LIMBS
-                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
-                },
-            >,
+            ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
         >>::pow(&g, &r)
         .as_natural_number();
         let h_hat = <PaillierRingElement as Pow<
-            Uint<
-                {
-                    PaillierModulusSizedNumber::LIMBS
-                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
-                },
-            >,
+            ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
         >>::pow(&h, &r)
         .as_natural_number();
 
@@ -108,20 +89,10 @@ impl ProofOfEqualityOfDiscreteLogs {
         let u: ComputationalSecuritySizedNumber = transcript.challenge(b"u");
 
         let g_to_the_power_of_w = <PaillierRingElement as Pow<
-            Uint<
-                {
-                    PaillierModulusSizedNumber::LIMBS
-                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
-                },
-            >,
+            ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
         >>::pow(&g, &self.w);
         let h_to_the_power_of_w = <PaillierRingElement as Pow<
-            Uint<
-                {
-                    PaillierModulusSizedNumber::LIMBS
-                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
-                },
-            >,
+            ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
         >>::pow(&h, &self.w);
 
         let a_to_the_power_of_u = a.pow_bounded_exp(&u.into(), 128);
@@ -173,12 +144,7 @@ mod tests {
             b: NonZero::new(PaillierModulusSizedNumber::ONE).unwrap(),
             g_hat: PaillierModulusSizedNumber::ZERO,
             h_hat: PaillierModulusSizedNumber::ZERO,
-            w: Uint::<
-                {
-                    PaillierModulusSizedNumber::LIMBS
-                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
-                },
-            >::ZERO,
+            w: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::ZERO,
         };
     }
 
@@ -190,12 +156,7 @@ mod tests {
             b: NonZero::new(PaillierModulusSizedNumber::ZERO).unwrap(),
             g_hat: PaillierModulusSizedNumber::ZERO,
             h_hat: PaillierModulusSizedNumber::ZERO,
-            w: Uint::<
-                {
-                    PaillierModulusSizedNumber::LIMBS
-                        + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
-                },
-            >::ZERO,
+            w: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::ZERO,
         };
     }
 
