@@ -1,9 +1,11 @@
 use core::fmt;
-use crypto_bigint::{Encoding, Limb, Uint, U4096};
+use crypto_bigint::{Encoding, Limb, Uint};
 use merlin::Transcript;
 use std::error::Error;
 
 mod equality_of_discrete_logs;
+
+pub use equality_of_discrete_logs::ProofOfEqualityOfDiscreteLogs;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ProofError;

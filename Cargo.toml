@@ -11,3 +11,8 @@ merlin = "3.0.0"
 rand_core = "0.6.4"
 
 [dev-dependencies]
+criterion = { version = "0.4", features = ["html_reports"] }
+
+[[bench]]
+name = "proof_of_equality_of_discrete_logs_benches"
+harness = false

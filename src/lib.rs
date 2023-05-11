@@ -1,2 +1,2 @@
-mod proofs;
+pub mod proofs;
 mod traits;
