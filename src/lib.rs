@@ -1,13 +1,15 @@
+use crypto_bigint::{Concat, U1024, U128, Uint};
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::{Concat, Uint, U1024, U128};
 
 /* Types & Trait (impls) around `crypto_bigint` for internal use */
 
+#[allow(dead_code)]
 pub(crate) type ComputationalSecuritySizedNumber = U128;
 pub(crate) type LargePrimeSizedNumber = U1024;
 pub(crate) type LargeBiPrimeSizedNumber = <LargePrimeSizedNumber as Concat>::Output;
 pub(crate) type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Output;
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
+#[allow(dead_code)]
 pub(crate) type ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = Uint<
     {
         PaillierModulusSizedNumber::LIMBS
@@ -38,8 +40,9 @@ impl AsRingElement for PaillierModulusSizedNumber {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crypto_bigint::NonZero;
+
+    use super::*;
 
     #[test]
     fn as_natural_number_and_as_natural_number_circles_correctly() {
