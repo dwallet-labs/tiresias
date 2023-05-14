@@ -173,41 +173,42 @@ mod tests {
         assert!(invalid_proof.verify(&N, &G, &H).is_err());
 
         // Generate a valid proof, and make sure that if we change any field it fails
-        let mut valid_proof = ProofOfEqualityOfDiscreteLogs::prove(&N, &D, &G, &H, &mut OsRng);
+        let valid_proof = ProofOfEqualityOfDiscreteLogs::prove(&N, &D, &G, &H, &mut OsRng);
+        let mut invalid_proof = valid_proof.clone();
 
-        valid_proof.a = NonZero::new(U4096::ONE).unwrap();
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof.a = NonZero::new(a).unwrap();
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof = ProofOfEqualityOfDiscreteLogs::prove(&N, &D, &G, &H, &mut OsRng);
+        invalid_proof.a = NonZero::new(U4096::ONE).unwrap();
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof.a = NonZero::new(a).unwrap();
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof = valid_proof.clone();
 
-        valid_proof.b = NonZero::new(U4096::ONE).unwrap();
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof.b = NonZero::new(b).unwrap();
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof = ProofOfEqualityOfDiscreteLogs::prove(&N, &D, &G, &H, &mut OsRng);
+        invalid_proof.b = NonZero::new(U4096::ONE).unwrap();
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof.b = NonZero::new(b).unwrap();
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof = valid_proof.clone();
 
-        valid_proof.g_hat = U4096::ZERO;
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof.g_hat = U4096::ONE;
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof.g_hat = g_hat;
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof = ProofOfEqualityOfDiscreteLogs::prove(&N, &D, &G, &H, &mut OsRng);
+        invalid_proof.g_hat = U4096::ZERO;
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof.g_hat = U4096::ONE;
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof.g_hat = g_hat;
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof = valid_proof.clone();
 
-        valid_proof.h_hat = U4096::ZERO;
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof.h_hat = U4096::ONE;
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof.h_hat = h_hat;
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof = ProofOfEqualityOfDiscreteLogs::prove(&N, &D, &G, &H, &mut OsRng);
+        invalid_proof.h_hat = U4096::ZERO;
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof.h_hat = U4096::ONE;
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof.h_hat = h_hat;
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof = valid_proof;
 
-        valid_proof.w = U4352::ZERO;
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof.w = U4352::ONE;
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
-        valid_proof.w = w;
-        assert!(valid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof.w = U4352::ZERO;
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof.w = U4352::ONE;
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
+        invalid_proof.w = w;
+        assert!(invalid_proof.verify(&N, &G, &H).is_err());
     }
 }
