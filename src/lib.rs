@@ -1,5 +1,5 @@
-use crypto_bigint::{Concat, U1024, U128, Uint};
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
+use crypto_bigint::{Concat, Uint, U1024, U128};
 
 /* Types & Trait (impls) around `crypto_bigint` for internal use */
 
