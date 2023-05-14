@@ -17,6 +17,7 @@ pub(crate) type ProofOfEqualityOfDiscreteLogsRandomizerSizedNumber = Uint<
     },
 >;
 
+/// Retrieve the minimal natural number in the congruence class.
 pub(crate) trait AsNaturalNumber {
     fn as_natural_number(&self) -> PaillierModulusSizedNumber;
 }
