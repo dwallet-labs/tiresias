@@ -21,6 +21,7 @@ pub(crate) trait AsNaturalNumber {
     fn as_natural_number(&self) -> PaillierModulusSizedNumber;
 }
 
+/// Represent this natural number as the minimal member of the congruence class. i.e. as a member of the ring $\mathbb{Z}_{n}$
 pub(crate) trait AsRingElement {
     fn as_ring_element(&self, n: &Self) -> PaillierRingElement;
 }
