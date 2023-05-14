@@ -23,7 +23,7 @@ pub struct ProofOfEqualityOfDiscreteLogs {
 impl ProofOfEqualityOfDiscreteLogs {
     /// create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a = g^d$ and $b = g^d$ in zero-knowledge (i.e. without revealing the secret discrete log `d`).
     pub fn prove(
-        n: &LargeBiPrimeSizedNumber, // TODO: is there a more generalized version of this proof that isn't Paillier-specific? i.e. maybe the ring we are proving on shouldn't be $Z_{N^2|$ but a generic $Z_n$?
+        n: &LargeBiPrimeSizedNumber,
         d: &PaillierModulusSizedNumber,
         g: &PaillierModulusSizedNumber,
         h: &PaillierModulusSizedNumber,
@@ -58,7 +58,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         let u: ComputationalSecuritySizedNumber = transcript.challenge(b"u");
 
         // $u$ is a 128-bit number, multiplied by a 4096-bit $d$ => (4096 + 128)-bit number.
-        // $r$ is a (256+4096)-bit number, so to get $ w = r - u*d $, which will never overflow (r is sampled randomly, the probability for r to be < ud < 1/2^128 which is the computational security parameter.
+        // $r$ is a (256+4096)-bit number, so to get $ w = r - u*d $, which will never overflow (r is sampled randomly, the probability for r to be < u*d is < 1/2^128 which is the computational security parameter.
         // This results in a  a (4096 + 256)-bit number $w$
         let w = r.wrapping_sub(&((u * d).into()));
 
