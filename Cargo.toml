@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "ba4bf87", features = ["extra-trait-impls", "rand"] }
+crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "ba4bf87", features = ["extra-trait-impls", "rand", "serde"] }
 merlin = "3.0.0"
 rand_core = "0.6.4"
 serde = "1.0.163"

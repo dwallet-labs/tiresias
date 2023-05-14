@@ -1,10 +1,10 @@
 use crate::proofs::{ProofError, TranscriptProtocol};
 use crate::{
     AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber, LargeBiPrimeSizedNumber,
-    PaillierModulusSizedNumber, PaillierRingElement, Pow,
+    PaillierModulusSizedNumber, PaillierRingElement,
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
-use crypto_bigint::{NonZero, Random};
+use crypto_bigint::{NonZero, Pow, Random};
 use merlin::Transcript;
 use rand_core::CryptoRngCore;
 use serde::{Deserialize, Serialize};
