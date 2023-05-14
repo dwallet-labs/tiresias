@@ -1,76 +1,43 @@
-use crate::paillier::u2048_to_u4096;
-use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::{Concat, Encoding};
-use crypto_bigint::{U1024, U2048, U4096};
+use crate::{
+    AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber,
+    PaillierRingElement,
+};
+use crypto_bigint::Pow;
 
 #[derive(Debug, Clone)]
 pub struct EncryptionKey {
-    pub(in crate::paillier) n: U4096, // the encryption key as a 4096-bit number
-    pub(in crate::paillier) n_mod_n2: DynResidue<{ U4096::LIMBS }>, // the encryption key $N mod N^2$
-    pub(in crate::paillier) n_mod_params: DynResidueParams<{ U2048::LIMBS }>,
-    pub(in crate::paillier) n2_mod_params: DynResidueParams<{ U4096::LIMBS }>,
+    n: LargeBiPrimeSizedNumber,
+    n2: PaillierModulusSizedNumber,
 }
 
 impl EncryptionKey {
-    pub fn new(n: U2048) -> EncryptionKey {
-        let n_mod_params = DynResidueParams::new(&n);
-        let n2: U4096 = n.square();
-        let n2_mod_params = DynResidueParams::new(&n2);
-        let n = U2048::ZERO.concat(&n);
-        let n_mod_n2 = DynResidue::new(&n, n2_mod_params);
-
-        EncryptionKey {
-            n,
-            n_mod_n2,
-            n_mod_params,
-            n2_mod_params,
-        }
+    pub fn new(n: LargeBiPrimeSizedNumber) -> EncryptionKey {
+        EncryptionKey { n, n2: n.square() }
     }
 
-    pub(in crate::paillier) fn mod_n(&self, x: &U2048) -> DynResidue<{ U2048::LIMBS }> {
-        DynResidue::new(x, self.n_mod_params)
-    }
+    pub fn encrypt(
+        &self,
+        plaintext: &LargeBiPrimeSizedNumber,
+        randomness: &LargeBiPrimeSizedNumber,
+    ) -> PaillierModulusSizedNumber {
+        let n: PaillierRingElement =
+            PaillierModulusSizedNumber::from(self.n).as_ring_element(&self.n2);
+        let one: PaillierRingElement = PaillierModulusSizedNumber::ONE.as_ring_element(&self.n2);
+        let m: PaillierRingElement =
+            PaillierModulusSizedNumber::from(plaintext).as_ring_element(&self.n2);
+        let r: PaillierRingElement =
+            PaillierModulusSizedNumber::from(randomness).as_ring_element(&self.n2);
 
-    pub(in crate::paillier) fn mod_n2(&self, x: &U4096) -> DynResidue<{ U4096::LIMBS }> {
-        DynResidue::new(x, self.n2_mod_params)
-    }
-
-    pub(in crate::paillier) fn u2048_mod_n2(&self, x: &U2048) -> DynResidue<{ U4096::LIMBS }> {
-        DynResidue::new(&u2048_to_u4096(x), self.n2_mod_params)
-    }
-
-    pub(in crate::paillier) fn one_mod_n2(&self) -> DynResidue<{ U4096::LIMBS }> {
-        DynResidue::one(self.n2_mod_params)
-    }
-
-    pub(in crate::paillier) fn to_u2048_mod_n(&self, x: &U4096) -> U2048 {
-        // Taking a 4096-bit number under $mod N$ should yield a 2048-bit number;
-        // however, the result would still be kept in a 4096-bit U4096 variable.
-        // In order to get a U2048, we take only the lower-half (2048-bit) of the number.
-        U2048::from_le_slice(
-            &DynResidue::new(x, DynResidueParams::new(&self.n))
-                .retrieve()
-                .to_le_bytes()[0..256],
-        )
-    }
-
-    pub fn encrypt(&self, plaintext: &U2048, randomness: &U2048) -> U4096 {
-        (
-            ((self.u2048_mod_n2(plaintext) * self.n_mod_n2) + self.one_mod_n2())  // $ c = (m*N + 1) $
-            * (self.u2048_mod_n2(randomness).pow(&self.n))
-            // $ * (r^N) mod N^2 $
-        )
-        .retrieve()
+        ((m * n + one)
+            * <LargeBiPrimeSizedNumber as Pow<PaillierModulusSizedNumber>>::pow(&r, &self.n))
+        .as_natural_number() // $ c = (m*N + 1) * (r^N) mod N^2 $
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::paillier::tests::CIPHERTEXT;
-    use crate::paillier::tests::N;
-    use crate::paillier::tests::PLAINTEXT;
-    use crate::paillier::tests::RANDOMNESS;
+    use crate::tests::{CIPHERTEXT, N, PLAINTEXT, RANDOMNESS};
 
     #[test]
     fn encrypts() {
