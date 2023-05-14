@@ -1,11 +1,12 @@
 use core::fmt;
-use crypto_bigint::{Encoding, Limb, Uint};
-use merlin::Transcript;
 use std::error::Error;
 
-mod equality_of_discrete_logs;
+use crypto_bigint::{Encoding, Limb, Uint};
 
 pub use equality_of_discrete_logs::ProofOfEqualityOfDiscreteLogs;
+use merlin::Transcript;
+
+mod equality_of_discrete_logs;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ProofError;
@@ -41,7 +42,7 @@ impl TranscriptProtocol for Transcript {
     ) where
         Uint<LIMBS>: Encoding,
     {
-        self.append_message(label, Uint::<LIMBS>::to_le_bytes(&statement).as_mut());
+        self.append_message(label, Uint::<LIMBS>::to_le_bytes(statement).as_mut());
     }
 
     fn challenge<const LIMBS: usize>(&mut self, label: &'static [u8]) -> Uint<LIMBS> {
