@@ -6,9 +6,10 @@ edition = "2021"
 [dependencies]
 crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "ba4bf87", features = ["extra-trait-impls", "rand_core", "serde"], default-features = false }
 merlin = { version = "3.0.0", default-features = false }
-serde = "1.0.163"
+serde = { version = "1.0.163", features = ["derive"] }
 
 [dev-dependencies]
+rand_core = { version = "0.6.4", features = ["std"] }
 criterion = { version = "0.4", features = ["html_reports"] }
 
 [[bench]]
