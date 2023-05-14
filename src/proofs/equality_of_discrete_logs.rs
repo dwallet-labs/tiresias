@@ -51,6 +51,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         let b: PaillierModulusSizedNumber = h.pow(&d).as_natural_number();
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
+        transcript.append_statement(b"n", &n);
+        transcript.append_statement(b"g", &g);
+        transcript.append_statement(b"h", &h);
         transcript.append_statement(b"a", &a);
         transcript.append_statement(b"b", &b);
         transcript.append_statement(b"g_hat", &g_hat);
@@ -86,6 +89,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         let b = self.b.as_ring_element(&n2);
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
+        transcript.append_statement(b"n", &n);
+        transcript.append_statement(b"g", &g);
+        transcript.append_statement(b"h", &h);
         transcript.append_statement(b"a", &self.a);
         transcript.append_statement(b"b", &self.b);
         transcript.append_statement(b"g_hat", &self.g_hat);
