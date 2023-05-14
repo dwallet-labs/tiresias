@@ -60,7 +60,7 @@ impl EncryptionKey {
 
         // $ c = (m*N + 1) * (r^N) mod N^2 $
         (
-            (m * n + one) * // $ (m*N + 1) * $ 
+            (m * n + one) * // $ (m*N + 1) * $
                 <PaillierRingElement as Pow<LargeBiPrimeSizedNumber>>::pow(&r, &self.n)
             // $ (r^N) $
         )
