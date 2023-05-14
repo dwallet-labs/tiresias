@@ -3,7 +3,7 @@ use crypto_bigint::{Concat, Uint, U1024, U128};
 
 pub mod proofs;
 
-/* Types & Trait (impls) around `crypto_bigint` for internal use */
+// Types & Trait (impls) around `crypto_bigint` for internal use.
 
 pub(crate) type ComputationalSecuritySizedNumber = U128;
 pub(crate) type LargePrimeSizedNumber = U1024;
@@ -17,10 +17,12 @@ pub(crate) type ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = Uint<
     },
 >;
 
+/// Retrieve the minimal natural number in the congruence class.
 pub(crate) trait AsNaturalNumber {
     fn as_natural_number(&self) -> PaillierModulusSizedNumber;
 }
 
+/// Represent this natural number as the minimal member of the congruence class. i.e. as a member of the ring $\mathbb{Z}_{n}$
 pub(crate) trait AsRingElement {
     fn as_ring_element(&self, n: &Self) -> PaillierRingElement;
 }
