@@ -9,9 +9,8 @@ pub(crate) type LargePrimeSizedNumber = U1024;
 pub(crate) type LargeBiPrimeSizedNumber = <LargePrimeSizedNumber as Concat>::Output;
 pub(crate) type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Output;
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
-pub(crate) type ProofOfEqualityOfDiscreteLogsRandomizerSizedNumber = Uint<
 #[allow(dead_code)]
-pub(crate) type ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = Uint<
+pub(crate) type ProofOfEqualityOfDiscreteLogsRandomizerSizedNumber = Uint<
     {
         PaillierModulusSizedNumber::LIMBS
             + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
