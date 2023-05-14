@@ -11,6 +11,7 @@ serde = { version = "1.0.163", features = ["derive"] }
 [dev-dependencies]
 rand_core = { version = "0.6.4", features = ["std"] }
 criterion = { version = "0.4", features = ["html_reports"] }
+rstest = "0.17.0"
 
 [[bench]]
 name = "proof_of_equality_of_discrete_logs_benches"
