@@ -14,10 +14,8 @@ use crate::{
 /// A proof of equality of the discrete logs of `self.a` and `self.b`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofOfEqualityOfDiscreteLogs {
-    a: NonZero<PaillierModulusSizedNumber>, // $a \in \mathbb{Z}_{N^2}^*$.
-    b: NonZero<PaillierModulusSizedNumber>, // $b \in \mathbb{Z}_{N^2}^*$.
-    g_hat: PaillierModulusSizedNumber,      // $\hat{g} \in \mathbb{Z}_{N^2}$.
-    h_hat: PaillierModulusSizedNumber,      // $\hat{h} \in \mathbb{Z}_{N^2}$.
+    g_hat: PaillierModulusSizedNumber, // $\hat{g} \in \mathbb{Z}_{N^2}$.
+    h_hat: PaillierModulusSizedNumber, // $\hat{h} \in \mathbb{Z}_{N^2}$.
     w: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber, // $w \in \mathbb{Z}$.
 }
 
@@ -52,8 +50,8 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
         transcript.append_statement(b"n", &n);
-        transcript.append_statement(b"g", &g);
-        transcript.append_statement(b"h", &h);
+        transcript.append_statement(b"g", &g.as_natural_number());
+        transcript.append_statement(b"h", &h.as_natural_number());
         transcript.append_statement(b"a", &a);
         transcript.append_statement(b"b", &b);
         transcript.append_statement(b"g_hat", &g_hat);
@@ -66,13 +64,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // This results in a  a (4096 + 256)-bit number $w$
         let w = r.wrapping_sub(&((u * d).into()));
 
-        ProofOfEqualityOfDiscreteLogs {
-            a: NonZero::new(a).unwrap(),
-            b: NonZero::new(b).unwrap(),
-            g_hat,
-            h_hat,
-            w,
-        }
+        ProofOfEqualityOfDiscreteLogs { g_hat, h_hat, w }
     }
 
     /// verify that `self` represents a valid proof of equality of discrete logs of `self.a` and `self.b`.
@@ -81,19 +73,21 @@ impl ProofOfEqualityOfDiscreteLogs {
         n: &LargeBiPrimeSizedNumber,
         g: &PaillierModulusSizedNumber,
         h: &PaillierModulusSizedNumber,
+        a: &NonZero<PaillierModulusSizedNumber>,
+        b: &NonZero<PaillierModulusSizedNumber>,
     ) -> Result<(), ProofError> {
         let n2 = n.square();
         let g = g.as_ring_element(&n2);
         let h = h.as_ring_element(&n2);
-        let a = self.a.as_ring_element(&n2);
-        let b = self.b.as_ring_element(&n2);
+        let a = a.as_ring_element(&n2);
+        let b = b.as_ring_element(&n2);
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
         transcript.append_statement(b"n", &n);
-        transcript.append_statement(b"g", &g);
-        transcript.append_statement(b"h", &h);
-        transcript.append_statement(b"a", &self.a);
-        transcript.append_statement(b"b", &self.b);
+        transcript.append_statement(b"g", &g.as_natural_number());
+        transcript.append_statement(b"h", &h.as_natural_number());
+        transcript.append_statement(b"a", &a.as_natural_number());
+        transcript.append_statement(b"b", &b.as_natural_number());
         transcript.append_statement(b"g_hat", &self.g_hat);
         transcript.append_statement(b"h_hat", &self.h_hat);
 
@@ -136,30 +130,6 @@ mod tests {
         let proof = ProofOfEqualityOfDiscreteLogs::prove(&N, &D, &G, &H, &mut OsRng);
 
         assert!(proof.verify(&N, &G, &H).is_ok());
-    }
-
-    #[test]
-    #[should_panic]
-    fn cannot_construct_proof_with_zero_a() {
-        ProofOfEqualityOfDiscreteLogs {
-            a: NonZero::new(PaillierModulusSizedNumber::ZERO).unwrap(),
-            b: NonZero::new(PaillierModulusSizedNumber::ONE).unwrap(),
-            g_hat: PaillierModulusSizedNumber::ZERO,
-            h_hat: PaillierModulusSizedNumber::ZERO,
-            w: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::ZERO,
-        };
-    }
-
-    #[test]
-    #[should_panic]
-    fn cannot_construct_proof_with_zero_b() {
-        ProofOfEqualityOfDiscreteLogs {
-            a: NonZero::new(PaillierModulusSizedNumber::ONE).unwrap(),
-            b: NonZero::new(PaillierModulusSizedNumber::ZERO).unwrap(),
-            g_hat: PaillierModulusSizedNumber::ZERO,
-            h_hat: PaillierModulusSizedNumber::ZERO,
-            w: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::ZERO,
-        };
     }
 
     #[test]
