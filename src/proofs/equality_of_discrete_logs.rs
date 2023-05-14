@@ -24,7 +24,7 @@ pub struct ProofOfEqualityOfDiscreteLogs {
 impl ProofOfEqualityOfDiscreteLogs {
     /// create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a = g^d$ and $b = g^d$ in zero-knowledge (i.e. without revealing the secret discrete log `d`).
     pub fn prove(
-        n: &LargeBiPrimeSizedNumber, // TODO: is there a more generalized version of this proof that isn't Paillier-specific? i.e. maybe the ring we are proving on shouldn't be $Z_{N^2|$ but a generic $Z_n$?
+        n: &LargeBiPrimeSizedNumber,
         d: &PaillierModulusSizedNumber,
         g: &PaillierModulusSizedNumber,
         h: &PaillierModulusSizedNumber,
@@ -132,13 +132,6 @@ mod tests {
         assert!(proof.verify(&N, &G, &H).is_ok());
     }
 
-    /* These tests may look silly, for we are trying to create a non-zero from zero,
-    but keeping them here is important - as trying to change e.g. the type of a from NonZero<PaillierModulusSizedNumber> to PaillierModulusSizedNumber will cause a compilation error here,
-    and then the following warning should cease this immediately:
-        WARNING: NonZero is crucial here: this assures to the verifier that the element is not zero and therefore in the multiplicative group -
-                 without this, the proof is broken - don't change!
-        // TODO: should I keep these kind of comments?
-    */
     #[test]
     #[should_panic]
     fn cannot_construct_proof_with_zero_a() {
