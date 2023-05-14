@@ -3,9 +3,7 @@ name = "threshold-paillier"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-crypto-bigint = "0.5.1"
+crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "ba4bf87", features = ["extra-trait-impls", "rand_core"], default-features = false }
 
 [dev-dependencies]
