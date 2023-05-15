@@ -23,16 +23,15 @@ impl DecryptionKey {
         let n = NonZero::new(PaillierModulusSizedNumber::from(&self.encryption_key.n)).unwrap();
 
         // $ D(c,d)=\left(\frac{(c^{d}\mod(N^{2}))-1}{N}\right)\mod(N) $
-        let (_, lo): (LargeBiPrimeSizedNumber, LargeBiPrimeSizedNumber) = ((c
+        let (_, lo): (LargeBiPrimeSizedNumber, LargeBiPrimeSizedNumber) = (((c
             .pow(&self.secret_key)
             .as_natural_number()
             .wrapping_sub(&PaillierModulusSizedNumber::ONE))
             / n)
+            % n)
             .split();
 
-        let n = NonZero::new(self.encryption_key.n).unwrap();
-
-        lo % n
+        lo
     }
 }
 
