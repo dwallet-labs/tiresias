@@ -14,9 +14,9 @@ use crate::{
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ProofOfEqualityOfDiscreteLogs {
     base_randomizer: PaillierModulusSizedNumber,
-    // The base randomizer $\hat{g} \in \mathbb{Z}_{N^2}$.
+    // The base randomizer $\hat{g} \in \mathbb{Z}_{N^2}^*$.
     ciphertext_randomizer: PaillierModulusSizedNumber,
-    // The ciphertext randomizer $\hat{h} \in \mathbb{Z}_{N^2}$.
+    // The ciphertext randomizer $\hat{h} \in \mathbb{Z}_{N^2}^*$.
     response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber, // The response $w \in \mathbb{Z}$.
 }
 
@@ -40,7 +40,7 @@ impl ProofOfEqualityOfDiscreteLogs {
             decryption_share.as_ring_element(n2) * decryption_share.as_ring_element(n2);
 
         // Sample $r \leftarrow [0,2^{2\kappa}N^2)$, where k is the security parameter.
-        // Note that we use 4096-bit instead of N^2 and that's even better
+        // Note that we use 4096-bit instead of N^2 and that's even better.
         let randomizer = ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::random(rng);
 
         let base_randomizer = <PaillierRingElement as Pow<
@@ -72,9 +72,9 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         let challenge: ComputationalSecuritySizedNumber = transcript.challenge(b"challenge");
 
-        // $u$ is a 128-bit number, multiplied by a 4096-bit $d$ => (4096 + 128)-bit number.
+        // $u*d$ is a 128-bit number $u$, multiplied by a 4096-bit number $d$ => (4096 + 128)-bit number.
         // $r$ is a (256+4096)-bit number, so to get $ w = r - u*d $, which will never overflow (r is sampled randomly, the probability for r to be < u*d is < 1/2^128 which is the computational security parameter.
-        // This results in a  a (4096 + 256)-bit number $w$
+        // This results in a (4096 + 256)-bit number $w$
         let response = randomizer.wrapping_sub(&((challenge * secret_key_share).into()));
 
         ProofOfEqualityOfDiscreteLogs {
@@ -94,8 +94,6 @@ impl ProofOfEqualityOfDiscreteLogs {
         public_verification_key: &PaillierModulusSizedNumber, // The public verification key $a = g^d$
         decryption_share: &PaillierModulusSizedNumber,        // The decryption share $b = h^d$
     ) -> Result<(), ProofError> {
-        let n2 = n.square();
-
         // Sanity checks
         if base == &PaillierModulusSizedNumber::ZERO
             || ciphertext == &PaillierModulusSizedNumber::ZERO
@@ -107,7 +105,9 @@ impl ProofOfEqualityOfDiscreteLogs {
             return Err(ProofError {});
         }
 
-        // The paper assumes that $a, b, g, h\in QR_{N}$ as part of the setup.
+        let n2 = n.square();
+
+        // The paper assumes that $a, b, g, h\in QR_{N}$ after the setup.
         // In order to eliminate problems from the caller's side, we perform the squaring ourselves
         // to assure it is in the quadratic residue group.
         let base_squared = base.as_ring_element(&n2) * base.as_ring_element(&n2);
@@ -120,7 +120,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // Every square number except for zero that is not co-primed to $N^2$ yields factorization of $N$,
         // Therefore checking that a square number is not zero sufficiently assures they belong to the quadratic-residue group.
         //
-        // Note that if we'd have perform this check prior to squaring, it wouldn't have suffice;
+        // Note that if we'd have perform this check (only) prior to squaring, it wouldn't have suffice;
         // take e.g. g = N != 0 -> g^2 = N^2 mod N^2 = 0 (accepting this value would have allowed bypassing of the proof).
         if base_squared == PaillierModulusSizedNumber::ZERO.as_ring_element(&n2)
             || ciphertext_squared == PaillierModulusSizedNumber::ZERO.as_ring_element(&n2)
