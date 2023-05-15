@@ -71,7 +71,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         let challenge: ComputationalSecuritySizedNumber = transcript.challenge(b"challenge");
 
-        // $u$ is a 128-bit number, multiplied by a 4096-bit $d$ => (4096 + 128)-bit number.
+        // $u*d$ is a 128-bit number $u$, multiplied by a 4096-bit number $d$ => (4096 + 128)-bit number.
         // $r$ is a (256+4096)-bit number, so to get $ w = r - u*d $, which will never overflow (r is sampled randomly, the probability for r to be < u*d is < 1/2^128 which is the computational security parameter.
         // This results in a  a (4096 + 256)-bit number $w$
         let response = randomizer.wrapping_sub(&((challenge * secret_key_share).into()));
