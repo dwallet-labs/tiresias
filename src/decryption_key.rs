@@ -1,6 +1,7 @@
+use crate::{AsNaturalNumber, AsRingElement};
 use crate::{EncryptionKey, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
+use crypto_bigint::NonZero;
 
-#[derive(Clone)]
 pub struct DecryptionKey {
     encryption_key: EncryptionKey,
     secret_key: PaillierModulusSizedNumber,
@@ -18,33 +19,36 @@ impl DecryptionKey {
     }
 
     pub fn decrypt(&self, ciphertext: &PaillierModulusSizedNumber) -> LargeBiPrimeSizedNumber {
-        ciphertext.as_ring_element(self.encryption_key.n2);
-        self.encryption_key.to_u2048_mod_n(
-            &((
-                (self.encryption_key.mod_n2(ciphertext).pow(&self.secret_key) // $ c^d $
-                        - self.encryption_key.one_mod_n2())
-                .retrieve()
-                // $ c^d - 1 mod N^2 = (1 + N)^{m*d mod N} - 1 mod N^2 = (1 + m*d*N - 1) mod N^2 = m*d*N mod N^2 $
-            ) / NonZero::new(self.encryption_key.n).unwrap()), // $ (m*d*N) / N = m*d $
-        ) // $ m*d mod N = m mod N $
+        let c = ciphertext.as_ring_element(&self.encryption_key.n2);
+        let n = NonZero::new(PaillierModulusSizedNumber::from(&self.encryption_key.n)).unwrap();
+
+        // $ D(c,d)=\left(\frac{(c^{d}\mod(N^{2}))-1}{N}\right)\mod(N) $
+        let (_, lo): (LargeBiPrimeSizedNumber, LargeBiPrimeSizedNumber) = ((c
+            .pow(&self.secret_key)
+            .as_natural_number()
+            .wrapping_sub(&PaillierModulusSizedNumber::ONE))
+            / n)
+            .split();
+
+        let n = NonZero::new(self.encryption_key.n).unwrap();
+
+        lo % n
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crypto_bigint::CheckedSub;
 
-    use crate::paillier::tests::CIPHERTEXT;
-    use crate::paillier::tests::D;
-    use crate::paillier::tests::N;
-    use crate::paillier::tests::PLAINTEXT;
-    use crate::paillier::tests::RANDOMNESS;
+    use crate::tests::CIPHERTEXT;
+    use crate::tests::N;
+    use crate::tests::PLAINTEXT;
+    use crate::tests::SECRET_KEY_SHARE;
 
     #[test]
     fn decrypts() {
         let encryption_key = EncryptionKey::new(N);
-        let decryption_key = DecryptionKey::new(encryption_key, D);
+        let decryption_key = DecryptionKey::new(encryption_key, SECRET_KEY_SHARE);
         assert_eq!(decryption_key.decrypt(&CIPHERTEXT), PLAINTEXT);
     }
 }
