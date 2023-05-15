@@ -14,7 +14,7 @@ use crate::{
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofOfEqualityOfDiscreteLogs {
     base_randomizer: PaillierModulusSizedNumber,
-    // The base randomizer $\hat{g} \in \mathbb{Z}_{N^2}$.
+    // The base randomizer $\hat{g} \in \mathbb{Z}_{N^2}^*$.
     ciphertext_randomizer: PaillierModulusSizedNumber,
     // The ciphertext randomizer $\hat{h} \in \mathbb{Z}_{N^2}$.
     response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber, // The response $w \in \mathbb{Z}$.
