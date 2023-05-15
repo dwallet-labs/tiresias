@@ -39,7 +39,7 @@ impl ProofOfEqualityOfDiscreteLogs {
             decryption_share.as_ring_element(&n2) * decryption_share.as_ring_element(&n2);
 
         // Sample $r \leftarrow [0,2^{2\kappa}N^2)$, where k is the security parameter.
-        // Note that we use 4096-bit instead of N^2 and that's even better
+        // Note that we use 4096-bit instead of N^2 and that's even better.
         let randomizer = ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::random(rng);
 
         let base_randomizer = <PaillierRingElement as Pow<
