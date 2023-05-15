@@ -12,7 +12,7 @@ use crate::{
 
 /// A proof of equality of the discrete logs of `self.base_randomizer` and `self.ciphertext_randomizer`
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ProofOfEqualityOfDiscreteLogs {
+pub struct ProofOfEqualityOfDiscreteLogs {
     base_randomizer: PaillierModulusSizedNumber,
     // The base randomizer $\hat{g} \in \mathbb{Z}_{N^2}^*$.
     ciphertext_randomizer: PaillierModulusSizedNumber,
@@ -23,7 +23,7 @@ pub(crate) struct ProofOfEqualityOfDiscreteLogs {
 impl ProofOfEqualityOfDiscreteLogs {
     /// create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a = g^d$ and $b = g^d$ in zero-knowledge (i.e. without revealing the secret discrete log `d`).
     #[allow(dead_code)]
-    pub(crate) fn prove(
+    pub fn prove(
         n2: &PaillierModulusSizedNumber,               // The Paillier modulus
         secret_key_share: &PaillierModulusSizedNumber, // The witness $d$ (the secret-key share in threshold decryption)
         base: &PaillierModulusSizedNumber,             // The base $g$
@@ -86,7 +86,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
     /// verify that `self` represents a valid proof of equality of discrete logs of `public_verification_key` and `decryption_share` with respect to the bases `base` and `ciphertext` respectively.
     #[allow(dead_code)]
-    pub(crate) fn verify(
+    pub fn verify(
         &self,
         n: &LargeBiPrimeSizedNumber,             // The Paillier modulus
         base: &PaillierModulusSizedNumber,       // The base $g$
@@ -205,11 +205,14 @@ mod tests {
     fn valid_proof_verifies() {
         let n2 = N.square();
 
-        let public_verification_key = BASE.as_ring_element(&n2).pow(&SECRET_KEY_SHARE).retrieve();
+        let public_verification_key = BASE
+            .as_ring_element(&n2)
+            .pow(&SECRET_KEY_SHARE)
+            .as_natural_number();
         let decryption_share = CIPHERTEXT
             .as_ring_element(&n2)
             .pow(&SECRET_KEY_SHARE)
-            .retrieve();
+            .as_natural_number();
 
         let proof = ProofOfEqualityOfDiscreteLogs::prove(
             &n2,
@@ -260,11 +263,14 @@ mod tests {
             )
             .is_err());
 
-        let public_verification_key = BASE.as_ring_element(&n2).pow(&SECRET_KEY_SHARE).retrieve();
+        let public_verification_key = BASE
+            .as_ring_element(&n2)
+            .pow(&SECRET_KEY_SHARE)
+            .as_natural_number();
         let decryption_share = CIPHERTEXT
             .as_ring_element(&n2)
             .pow(&SECRET_KEY_SHARE)
-            .retrieve();
+            .as_natural_number();
 
         // Try to fool verification with zeroed out fields
         let crafted_proof = ProofOfEqualityOfDiscreteLogs {
