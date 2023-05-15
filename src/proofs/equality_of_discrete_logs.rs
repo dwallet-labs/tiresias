@@ -22,7 +22,6 @@ pub struct ProofOfEqualityOfDiscreteLogs {
 
 impl ProofOfEqualityOfDiscreteLogs {
     /// create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a = g^d$ and $b = g^d$ in zero-knowledge (i.e. without revealing the secret discrete log `d`).
-    #[allow(dead_code)]
     pub fn prove(
         n2: &PaillierModulusSizedNumber,               // The Paillier modulus
         secret_key_share: &PaillierModulusSizedNumber, // The witness $d$ (the secret-key share in threshold decryption)
@@ -85,7 +84,6 @@ impl ProofOfEqualityOfDiscreteLogs {
     }
 
     /// verify that `self` represents a valid proof of equality of discrete logs of `public_verification_key` and `decryption_share` with respect to the bases `base` and `ciphertext` respectively.
-    #[allow(dead_code)]
     pub fn verify(
         &self,
         n: &LargeBiPrimeSizedNumber,             // The Paillier modulus
