@@ -1,24 +1,27 @@
-use crate::paillier::EncryptionKey;
-use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::{Concat, Encoding, NonZero};
-use crypto_bigint::{U1024, U2048, U4096};
+use crate::{EncryptionKey, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
 #[derive(Clone)]
 pub struct DecryptionKey {
     encryption_key: EncryptionKey,
-    d: U4096,
+    secret_key: PaillierModulusSizedNumber,
 }
 
 impl DecryptionKey {
-    pub fn new(encryption_key: EncryptionKey, d: U4096) -> DecryptionKey {
-        // TODO: should we do any validation checks here?
-        DecryptionKey { encryption_key, d }
+    pub fn new(
+        encryption_key: EncryptionKey,
+        secret_key: PaillierModulusSizedNumber,
+    ) -> DecryptionKey {
+        DecryptionKey {
+            encryption_key,
+            secret_key,
+        }
     }
 
-    pub fn decrypt(&self, ciphertext: &U4096) -> U2048 {
+    pub fn decrypt(&self, ciphertext: &PaillierModulusSizedNumber) -> LargeBiPrimeSizedNumber {
+        ciphertext.as_ring_element(self.encryption_key.n2);
         self.encryption_key.to_u2048_mod_n(
             &((
-                (self.encryption_key.mod_n2(ciphertext).pow(&self.d) // $ c^d $
+                (self.encryption_key.mod_n2(ciphertext).pow(&self.secret_key) // $ c^d $
                         - self.encryption_key.one_mod_n2())
                 .retrieve()
                 // $ c^d - 1 mod N^2 = (1 + N)^{m*d mod N} - 1 mod N^2 = (1 + m*d*N - 1) mod N^2 = m*d*N mod N^2 $
