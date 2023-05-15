@@ -23,6 +23,7 @@ impl Error for ProofError {
     }
 }
 
+/// A transcript protocol for fiat-shamir transforms of interactive to non-interactive proofs.
 trait TranscriptProtocol {
     fn append_statement<const LIMBS: usize>(
         &mut self,
