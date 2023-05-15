@@ -28,9 +28,13 @@ impl EncryptionKey {
         let r: PaillierRingElement =
             PaillierModulusSizedNumber::from(randomness).as_ring_element(&self.n2);
 
-        ((m * n + one)
-            * <LargeBiPrimeSizedNumber as Pow<PaillierModulusSizedNumber>>::pow(&r, &self.n))
-        .as_natural_number() // $ c = (m*N + 1) * (r^N) mod N^2 $
+        // $ c = (m*N + 1) * (r^N) mod N^2 $
+        (
+            (m * n + one) * // $ (m*N + 1) * $ 
+                <PaillierRingElement as Pow<LargeBiPrimeSizedNumber>>::pow(&r, &self.n)
+            // $ (r^N) $
+        )
+        .as_natural_number()
     }
 }
 
