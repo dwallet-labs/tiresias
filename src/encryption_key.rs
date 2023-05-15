@@ -6,8 +6,8 @@ use crypto_bigint::Pow;
 
 #[derive(Debug, Clone)]
 pub struct EncryptionKey {
-    n: LargeBiPrimeSizedNumber,
-    n2: PaillierModulusSizedNumber,
+    pub n: LargeBiPrimeSizedNumber,
+    pub n2: PaillierModulusSizedNumber,
 }
 
 impl EncryptionKey {
