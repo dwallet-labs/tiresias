@@ -92,7 +92,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         public_verification_key: &PaillierModulusSizedNumber, // The public verification key $a = g^d$
         decryption_share: &PaillierModulusSizedNumber,        // The decryption share $b = h^d$
     ) -> Result<(), ProofError> {
-        // The paper assumes that $a, b, g, h\in QR_{N}$ as part of the setup.
+        // The paper assumes that $a, b, g, h\in QR_{N}$ after the setup.
         // In order to eliminate problems from the caller's side, we perform the squaring ourselves
         // to assure it is in the quadratic residue group.
         let n2 = n.square();
