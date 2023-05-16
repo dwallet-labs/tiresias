@@ -32,16 +32,16 @@ impl ProofOfEqualityOfDiscreteLogs {
     ) -> ProofOfEqualityOfDiscreteLogs {
         let base_squared = base
             .as_ring_element(n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
         let ciphertext_squared = ciphertext
             .as_ring_element(n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
         let public_verification_key_squared = public_verification_key
             .as_ring_element(n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
         let decryption_share_squared = decryption_share
             .as_ring_element(n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
 
         // Sample $r \leftarrow [0,2^{2\kappa}N^2)$, where k is the security parameter.
         // Note that we use 4096-bit instead of N^2 and that's even better.
@@ -106,16 +106,16 @@ impl ProofOfEqualityOfDiscreteLogs {
         // to assure it is in the quadratic residue group.
         let base_squared = base
             .as_ring_element(&n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
         let ciphertext_squared = ciphertext
             .as_ring_element(&n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
         let public_verification_key_squared = public_verification_key
             .as_ring_element(&n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
         let decryption_share_squared = decryption_share
             .as_ring_element(&n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
 
         // Every square number except for zero that is not co-primed to $N^2$ yields factorization of $N$,
         // Therefore checking that a square number is not zero sufficiently assures they belong to the quadratic-residue group.
