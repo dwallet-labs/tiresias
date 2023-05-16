@@ -5,7 +5,7 @@ use crate::{
 use crypto_bigint::rand_core::CryptoRngCore;
 use crypto_bigint::{Pow, Random};
 
-/// A Paillier encryption key, holding both `n` ($N$) and `n2` ($N^2$)
+/// A Paillier public encryption key, holding both the bi-prime `n` ($N=PQ$) and the Paillier modulus `n2` ($N^2$)
 #[derive(Debug, Clone)]
 pub struct EncryptionKey {
     pub n: LargeBiPrimeSizedNumber,
@@ -101,7 +101,6 @@ mod tests {
     #[test]
     fn encrypts() {
         let encryption_key = EncryptionKey::new(N);
-
         assert_eq!(
             encryption_key.encrypt_with_randomness(&PLAINTEXT, &RANDOMNESS),
             CIPHERTEXT

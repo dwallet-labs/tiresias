@@ -5,7 +5,6 @@ mod encryption_key;
 
 pub use encryption_key::EncryptionKey;
 
-#[allow(dead_code)]
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
 /// Set to a U128 for 128-bit security.
 pub type ComputationalSecuritySizedNumber = U128;
