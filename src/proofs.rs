@@ -3,7 +3,6 @@ use std::error::Error;
 
 use crypto_bigint::{Encoding, Limb, Uint};
 
-pub(crate) use equality_of_discrete_logs::ProofOfEqualityOfDiscreteLogs;
 use merlin::Transcript;
 
 pub(crate) mod equality_of_discrete_logs;
