@@ -8,7 +8,7 @@ use merlin::Transcript;
 pub(crate) mod equality_of_discrete_logs;
 
 #[derive(Debug, Clone, Copy)]
-/// An error generated for an invalid proof during verification.  
+/// An error generated for an invalid proof during verification.
 pub struct ProofError;
 
 impl fmt::Display for ProofError {
