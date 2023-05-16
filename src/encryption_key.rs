@@ -15,9 +15,7 @@ pub struct EncryptionKey {
 impl EncryptionKey {
     /// Create a new encryption key from the Paillier associated bi-prime `n` ($N$).
     ///
-    /// Performs no validation: assuring `n` is valid requires knowledge of the factors `P` and `Q`, which therefore requires knowledge of the secret key.
-    /// This API is used for encryption, which should be accessible for everyone, and therefore we can't assume knowledge of the secret key.
-    /// Passing an invalid `n` as a parameter will yield invalid Paillier ciphertexts upon encryption.
+    /// Performs no validation for `n`
     ///
     /// ## Example
     /// ```rust
