@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "ba4bf87", features = ["extra-trait-impls", "rand_core"], default-features = false }
+crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "f82973d", features = ["extra-trait-impls", "rand_core", "serde"], default-features = false }
 
 [dev-dependencies]
+rand_core = { version = "0.6.4", features = ["std"] }
