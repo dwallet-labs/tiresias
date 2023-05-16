@@ -4,7 +4,7 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
-pub(crate) use tests::proof_of_equality_of_discrete_logs_benches;
+pub(crate) use benches::proof_of_equality_of_discrete_logs_benches;
 
 use crate::proofs::{ProofError, TranscriptProtocol};
 use crate::{
@@ -201,12 +201,9 @@ impl ProofOfEqualityOfDiscreteLogs {
 
 #[cfg(test)]
 mod tests {
-    use rand_core::OsRng;
-
     use super::*;
     use crate::tests::{BASE, CIPHERTEXT, N, SECRET_KEY};
-    use criterion::{criterion_group, BatchSize, Criterion};
-    use crypto_bigint::{NonZero, RandomMod};
+    use rand_core::OsRng;
 
     #[test]
     fn valid_proof_verifies() {
@@ -436,6 +433,15 @@ mod tests {
             )
             .is_err());
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+
+    use criterion::{criterion_group, BatchSize, Criterion};
+    use crypto_bigint::{NonZero, RandomMod};
+    use rand_core::OsRng;
 
     fn benchmark_proof_of_equality_of_discrete_logs(c: &mut Criterion) {
         let mut g = c.benchmark_group("proof of equality of discrete logs benches");
@@ -459,12 +465,12 @@ mod tests {
 
                         let public_verification_key = base
                             .as_ring_element(&n2)
-                            .pow(&SECRET_KEY)
+                            .pow(&secret_key_share)
                             .as_natural_number();
                         let decryption_share = ciphertext
                             .as_ring_element(&n2)
                             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-                            .pow(&SECRET_KEY)
+                            .pow(&secret_key_share)
                             .as_natural_number();
                         (
                             secret_key_share,
@@ -512,12 +518,12 @@ mod tests {
 
                         let public_verification_key = base
                             .as_ring_element(&n2)
-                            .pow(&SECRET_KEY)
+                            .pow(&secret_key_share)
                             .as_natural_number();
                         let decryption_share = ciphertext
                             .as_ring_element(&n2)
                             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-                            .pow(&SECRET_KEY)
+                            .pow(&secret_key_share)
                             .as_natural_number();
                         (
                             n,
