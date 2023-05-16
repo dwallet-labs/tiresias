@@ -1,14 +1,15 @@
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
 use crypto_bigint::{Concat, Uint, U1024, U128};
 
+#[cfg(test)]
+use criterion::criterion_main;
+
 mod decryption_key;
 mod encryption_key;
-pub mod proofs;
+pub(crate) mod proofs;
 
 pub use decryption_key::DecryptionKey;
 pub use encryption_key::EncryptionKey;
-
-// Types & Trait (impls) around `crypto_bigint` for internal use.
 
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
 /// Set to a U128 for 128-bit security.
@@ -79,3 +80,6 @@ mod tests {
         assert_eq!(x.as_ring_element(&N2).as_natural_number(), x);
     }
 }
+
+#[cfg(test)]
+criterion_main!(proofs::equality_of_discrete_logs::proof_of_equality_of_discrete_logs_benches);
