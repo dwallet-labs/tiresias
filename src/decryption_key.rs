@@ -2,12 +2,18 @@ use crate::{AsNaturalNumber, AsRingElement};
 use crate::{EncryptionKey, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 use crypto_bigint::NonZero;
 
+/// A paillier decryption key.
+/// Holds both the `secret_key` and its corresponding `encryption_key`
+///
 pub struct DecryptionKey {
     encryption_key: EncryptionKey,
     secret_key: PaillierModulusSizedNumber,
 }
 
 impl DecryptionKey {
+    /// Create a `DecryptionKey` from a previously-generated `secret_key` and its corresponding `encryption_key`.
+    /// Performs no validations
+    ///
     pub fn new(
         encryption_key: EncryptionKey,
         secret_key: PaillierModulusSizedNumber,
@@ -18,6 +24,9 @@ impl DecryptionKey {
         }
     }
 
+    /// Decrypts `ciphertext`
+    /// Performs no validation (that the `ciphertext` is a valid Paillier ciphertext encrypted for `self.encryption_key.n`) - supplying a wrong ciphertext will return an undefined result.
+    ///
     pub fn decrypt(&self, ciphertext: &PaillierModulusSizedNumber) -> LargeBiPrimeSizedNumber {
         let c = ciphertext.as_ring_element(&self.encryption_key.n2);
         let n = NonZero::new(PaillierModulusSizedNumber::from(&self.encryption_key.n)).unwrap();
