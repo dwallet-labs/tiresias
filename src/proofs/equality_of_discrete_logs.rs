@@ -33,9 +33,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         let base_squared = base
             .as_ring_element(n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
-        let ciphertext_squared = ciphertext
+        let ciphertext_biquadrated = ciphertext
             .as_ring_element(n2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(4u8), 3);
         let public_verification_key_squared = public_verification_key
             .as_ring_element(n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
@@ -51,17 +51,19 @@ impl ProofOfEqualityOfDiscreteLogs {
             ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
         >>::pow(&base_squared, &randomizer)
         .as_natural_number();
-        let ciphertext_squared_randomizer = <PaillierRingElement as Pow<
+        let ciphertext_biquadrated_randomizer = <PaillierRingElement as Pow<
             ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
-        >>::pow(&ciphertext_squared, &randomizer)
+        >>::pow(
+            &ciphertext_biquadrated, &randomizer
+        )
         .as_natural_number();
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
         transcript.append_statement(b"N (squared)", n2);
         transcript.append_statement(b"base (squared)", &base_squared.as_natural_number());
         transcript.append_statement(
-            b"ciphertext (squared)",
-            &ciphertext_squared.as_natural_number(),
+            b"ciphertext (biquadrated)",
+            &ciphertext_biquadrated.as_natural_number(),
         );
         transcript.append_statement(
             b"public verification key (squared)",
@@ -73,8 +75,8 @@ impl ProofOfEqualityOfDiscreteLogs {
         );
         transcript.append_statement(b"base (squared) randomizer", &base_squared_randomizer);
         transcript.append_statement(
-            b"ciphertext (squared) randomizer",
-            &ciphertext_squared_randomizer,
+            b"ciphertext (biquadrated) randomizer",
+            &ciphertext_biquadrated_randomizer,
         );
 
         let challenge: ComputationalSecuritySizedNumber = transcript.challenge(b"challenge");
@@ -107,9 +109,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         let base_squared = base
             .as_ring_element(&n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
-        let ciphertext_squared = ciphertext
+        let ciphertext_biquadrated = ciphertext
             .as_ring_element(&n2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(4u8), 3);
         let public_verification_key_squared = public_verification_key
             .as_ring_element(&n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
@@ -123,7 +125,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // Note that if we'd have perform this check prior to squaring, it wouldn't have suffice;
         // take e.g. g = N != 0 -> g^2 = N^2 mod N^2 = 0 (accepting this value would have allowed bypassing of the proof).
         if base_squared == PaillierModulusSizedNumber::ZERO.as_ring_element(&n2)
-            || ciphertext_squared == PaillierModulusSizedNumber::ZERO.as_ring_element(&n2)
+            || ciphertext_biquadrated == PaillierModulusSizedNumber::ZERO.as_ring_element(&n2)
             || public_verification_key_squared
                 == PaillierModulusSizedNumber::ZERO.as_ring_element(&n2)
             || decryption_share_squared == PaillierModulusSizedNumber::ZERO.as_ring_element(&n2)
@@ -135,11 +137,11 @@ impl ProofOfEqualityOfDiscreteLogs {
             ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
         >>::pow(&base_squared, &self.response);
 
-        let ciphertext_squared_raised_to_the_response = <PaillierRingElement as Pow<
-            ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
-        >>::pow(
-            &ciphertext_squared, &self.response
-        );
+        let ciphertext_biquadrated_raised_to_the_response =
+            <PaillierRingElement as Pow<ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber>>::pow(
+                &ciphertext_biquadrated,
+                &self.response,
+            );
 
         let public_verification_key_squared_raised_to_the_challenge =
             <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
@@ -159,7 +161,7 @@ impl ProofOfEqualityOfDiscreteLogs {
             .as_natural_number();
 
         // The ciphertext randomizer $\hat{h} \in \mathbb{Z}_{N^2}^*$.
-        let ciphertext_squared_randomizer = (ciphertext_squared_raised_to_the_response
+        let ciphertext_biquadrated_randomizer = (ciphertext_biquadrated_raised_to_the_response
             * decryption_share_squared_raised_to_the_challenge)
             .as_natural_number();
 
@@ -167,8 +169,8 @@ impl ProofOfEqualityOfDiscreteLogs {
         transcript.append_statement(b"N (squared)", &n2);
         transcript.append_statement(b"base (squared)", &base_squared.as_natural_number());
         transcript.append_statement(
-            b"ciphertext (squared)",
-            &ciphertext_squared.as_natural_number(),
+            b"ciphertext (biquadrated)",
+            &ciphertext_biquadrated.as_natural_number(),
         );
         transcript.append_statement(
             b"public verification key (squared)",
@@ -180,8 +182,8 @@ impl ProofOfEqualityOfDiscreteLogs {
         );
         transcript.append_statement(b"base (squared) randomizer", &base_squared_randomizer);
         transcript.append_statement(
-            b"ciphertext (squared) randomizer",
-            &ciphertext_squared_randomizer,
+            b"ciphertext (biquadrated) randomizer",
+            &ciphertext_biquadrated_randomizer,
         );
 
         let challenge: ComputationalSecuritySizedNumber = transcript.challenge(b"challenge");
@@ -213,6 +215,7 @@ mod tests {
             .as_natural_number();
         let decryption_share = CIPHERTEXT
             .as_ring_element(&n2)
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
             .pow(&SECRET_KEY_SHARE)
             .as_natural_number();
 
@@ -246,23 +249,23 @@ mod tests {
     ) -> ProofOfEqualityOfDiscreteLogs {
         let base_squared = base
             .as_ring_element(n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
-        let ciphertext_squared = ciphertext
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
+        let ciphertext_biquadrated = ciphertext
             .as_ring_element(n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(4u8), 3);
         let public_verification_key_squared = public_verification_key
             .as_ring_element(n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
         let decryption_share_squared = decryption_share
             .as_ring_element(n2)
-            .pow(&PaillierModulusSizedNumber::from(2u8));
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
         transcript.append_statement(b"N (squared)", n2);
         transcript.append_statement(b"base (squared)", &base_squared.as_natural_number());
         transcript.append_statement(
-            b"ciphertext (squared)",
-            &ciphertext_squared.as_natural_number(),
+            b"ciphertext (biquadrated)",
+            &ciphertext_biquadrated.as_natural_number(),
         );
         transcript.append_statement(
             b"public verification key (squared)",
@@ -277,7 +280,7 @@ mod tests {
             &PaillierModulusSizedNumber::ZERO,
         );
         transcript.append_statement(
-            b"ciphertext (squared) randomizer",
+            b"ciphertext (biquadrated) randomizer",
             &PaillierModulusSizedNumber::ZERO,
         );
 
@@ -324,6 +327,7 @@ mod tests {
             .as_natural_number();
         let decryption_share = CIPHERTEXT
             .as_ring_element(&n2)
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
             .pow(&SECRET_KEY_SHARE)
             .as_natural_number();
 
