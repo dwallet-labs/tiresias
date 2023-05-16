@@ -12,11 +12,6 @@ serde = { version = "1.0.163", features = ["derive"] }
 rand_core = { version = "0.6.4", features = ["std"] }
 criterion = { version = "0.4", features = ["html_reports"] }
 
-#[[bench]]
-#path = "src/proof_of_equality_of_discrete_logs_benches.rs"
-#name = "proof_of_equality_of_discrete_logs_benches"
-#harness = false
-
 [[bench]]
 path = "src/lib.rs"
 name = "proof_of_equality_of_discrete_logs_benches_main"
