@@ -7,12 +7,23 @@ mod encryption_key;
 pub use decryption_key::DecryptionKey;
 pub use encryption_key::EncryptionKey;
 
-/* Types & Trait (impls) around `crypto_bigint` for internal use */
 #[allow(dead_code)]
-pub(crate) type ComputationalSecuritySizedNumber = U128;
-pub(crate) type LargePrimeSizedNumber = U1024;
-pub(crate) type LargeBiPrimeSizedNumber = <LargePrimeSizedNumber as Concat>::Output;
-pub(crate) type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Output;
+/// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
+/// Set to a U128 for 128-bit security.
+pub type ComputationalSecuritySizedNumber = U128;
+
+/// A type alias for an unsigned integer of the size of the Paillier large prime factors.
+/// Set to a U1024 for 128-bit security.
+pub type LargePrimeSizedNumber = U1024;
+
+/// A type alias for an unsigned integer of the size of the Paillier associated bi-prime `n` ($N$) (double the size of the Paillier large prime factors).
+/// Set to a U2048 for 128-bit security.
+pub type LargeBiPrimeSizedNumber = <LargePrimeSizedNumber as Concat>::Output;
+
+/// A type alias for an unsigned integer of the size of the Paillier modulus ($N^2$) (double the size of the Paillier associated bi-prime `n` ($N$)).
+/// Set to a U4096 for 128-bit security.
+pub type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Output;
+
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
 #[allow(dead_code)]
 pub(crate) type ProofOfEqualityOfDiscreteLogsRandomizerSizedNumber = Uint<
