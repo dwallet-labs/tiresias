@@ -47,6 +47,7 @@ impl DecryptionKey {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand_core::OsRng;
 
     use crate::tests::CIPHERTEXT;
     use crate::tests::N;
@@ -58,5 +59,11 @@ mod tests {
         let encryption_key = EncryptionKey::new(N);
         let decryption_key = DecryptionKey::new(encryption_key, SECRET_KEY_SHARE);
         assert_eq!(decryption_key.decrypt(&CIPHERTEXT), PLAINTEXT);
+
+        let plaintext = LargeBiPrimeSizedNumber::from(42u8);
+        let ciphertext = decryption_key
+            .encryption_key
+            .encrypt(&plaintext, &mut OsRng);
+        assert_eq!(decryption_key.decrypt(&ciphertext), plaintext);
     }
 }

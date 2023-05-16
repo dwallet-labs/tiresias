@@ -7,4 +7,4 @@ edition = "2021"
 crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "f82973d", features = ["extra-trait-impls", "rand_core", "serde"], default-features = false }
 
 [dev-dependencies]
-hex = "0.4.3"
+rand_core = { version = "0.6.4", features = ["std"] }
