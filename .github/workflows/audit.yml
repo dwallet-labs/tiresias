@@ -7,11 +7,17 @@ on:
     paths:
       - 'Cargo.toml'
   pull_request:
+  workflow_dispatch:
 
 jobs:
   audit:
     name: Security Audit
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      issues-reason: to create issues
+      checks: write
+      checks-reason: to create check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3

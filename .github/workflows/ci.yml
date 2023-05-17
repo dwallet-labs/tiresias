@@ -106,6 +106,7 @@ jobs:
           args: --no-deps --document-private-items --all-features --examples
 
   benchmarks:
+    if: push.branch == 'main'
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
