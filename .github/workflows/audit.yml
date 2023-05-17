@@ -14,10 +14,10 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-latest
     permissions:
+      # to create issues
       issues: write
-      issues-reason: to create issues
+      # to create check
       checks: write
-      checks-reason: to create check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
