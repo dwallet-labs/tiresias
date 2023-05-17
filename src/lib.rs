@@ -1,8 +1,9 @@
-use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::{Concat, Uint, U1024, U128};
-
 #[cfg(feature = "benchmarking")]
 use criterion::criterion_group;
+use crypto_bigint::{
+    modular::runtime_mod::{DynResidue, DynResidueParams},
+    Concat, Uint, U1024, U128,
+};
 
 mod decryption_key;
 mod encryption_key;
@@ -19,12 +20,12 @@ pub type ComputationalSecuritySizedNumber = U128;
 /// Set to a U1024 for 112-bit security.
 pub type LargePrimeSizedNumber = U1024;
 
-/// A type alias for an unsigned integer of the size of the Paillier associated bi-prime `n` ($N$) (double the size of the Paillier large prime factors).
-/// Set to a U2048 for 112-bit security.
+/// A type alias for an unsigned integer of the size of the Paillier associated bi-prime `n` ($N$)
+/// (double the size of the Paillier large prime factors). Set to a U2048 for 112-bit security.
 pub type LargeBiPrimeSizedNumber = <LargePrimeSizedNumber as Concat>::Output;
 
-/// A type alias for an unsigned integer of the size of the Paillier modulus ($N^2$) (double the size of the Paillier associated bi-prime `n` ($N$)).
-/// Set to a U4096 for 112-bit security.
+/// A type alias for an unsigned integer of the size of the Paillier modulus ($N^2$) (double the
+/// size of the Paillier associated bi-prime `n` ($N$)). Set to a U4096 for 112-bit security.
 pub type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Output;
 
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
@@ -40,7 +41,8 @@ pub(crate) trait AsNaturalNumber {
     fn as_natural_number(&self) -> PaillierModulusSizedNumber;
 }
 
-/// Represent this natural number as the minimal member of the congruence class. i.e. as a member of the ring $\mathbb{Z}_{n}$
+/// Represent this natural number as the minimal member of the congruence class. i.e. as a member of
+/// the ring $\mathbb{Z}_{n}$
 pub(crate) trait AsRingElement {
     fn as_ring_element(&self, n: &Self) -> PaillierRingElement;
 }

@@ -1,37 +1,45 @@
-use crypto_bigint::rand_core::CryptoRngCore;
-use crypto_bigint::{Pow, Random};
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
+use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "benchmarking")]
-pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
-
-use crate::proofs::{ProofError, TranscriptProtocol};
 use crate::{
+    proofs::{ProofError, TranscriptProtocol},
     AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber, LargeBiPrimeSizedNumber,
     PaillierModulusSizedNumber, PaillierRingElement,
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 
 /// A proof of equality of discrete logs
-/// This is an optimized form of the proof which does not include the base (squared) & ciphertext (squared) randomizers.
-/// Instead, it includes the challenge, from which the verifier can recover the randomizers and verify the challenge.
+/// This is an optimized form of the proof which does not include the base (squared) & ciphertext
+/// (squared) randomizers. Instead, it includes the challenge, from which the verifier can recover
+/// the randomizers and verify the challenge.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ProofOfEqualityOfDiscreteLogs {
-    challenge: ComputationalSecuritySizedNumber, // The challenge $u \in \mathbb{Z}$.
-    response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber, // The response $w \in \mathbb{Z}$.
+    // The challenge $u \in \mathbb{Z}$.
+    challenge: ComputationalSecuritySizedNumber,
+    // The response $w \in \mathbb{Z}$.
+    response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 }
 
 impl ProofOfEqualityOfDiscreteLogs {
-    /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a = g^d$ and $b = g^d$ in zero-knowledge (i.e. without revealing the secret discrete log `d`).
+    /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
+    /// = g^d$ and $b = g^d$ in zero-knowledge (i.e. without revealing the secret discrete log `d`).
     #[allow(dead_code)]
     pub(crate) fn prove(
-        n2: &PaillierModulusSizedNumber,               // The Paillier modulus
-        secret_key_share: &PaillierModulusSizedNumber, // The witness $d$ (the secret-key share in threshold decryption)
-        base: &PaillierModulusSizedNumber,             // The base $g$
-        ciphertext: &PaillierModulusSizedNumber,       // The ciphertext $h$
-        public_verification_key: &PaillierModulusSizedNumber, // The public verification key $a = g^d$
-        decryption_share: &PaillierModulusSizedNumber,        // The decryption share $b = h^d$
+        // The Paillier modulus
+        n2: &PaillierModulusSizedNumber,
+        // The witness $d$ (the secret-key share in threshold decryption)
+        secret_key_share: &PaillierModulusSizedNumber,
+        // The base $g$
+        base: &PaillierModulusSizedNumber,
+        // The ciphertext $h$
+        ciphertext: &PaillierModulusSizedNumber,
+        // The public verification key $a = g^d$
+        public_verification_key: &PaillierModulusSizedNumber,
+        // The decryption share $b = h^d$
+        decryption_share: &PaillierModulusSizedNumber,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
         let base_squared = base
@@ -85,9 +93,11 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         let challenge: ComputationalSecuritySizedNumber = transcript.challenge(b"challenge");
 
-        // $u*d$ is a 128-bit number $u$, multiplied by a 4096-bit number $d$ => (4096 + 128)-bit number.
-        // $r$ is a (256+4096)-bit number, so to get $ w = r - u*d $, which will never overflow (r is sampled randomly, the probability for r to be < u*d is < 1/2^128 which is the computational security parameter.
-        // This results in a (4096 + 256)-bit number $w$
+        // $u*d$ is a 128-bit number $u$, multiplied by a 4096-bit number $d$ => (4096 + 128)-bit
+        // number. $r$ is a (256+4096)-bit number, so to get $ w = r - u*d $, which will
+        // never overflow (r is sampled randomly, the probability for r to be < u*d is < 1/2^128
+        // which is the computational security parameter. This results in a (4096 + 256)-bit
+        // number $w$
         let response = randomizer.wrapping_sub(&((challenge * secret_key_share).into()));
 
         ProofOfEqualityOfDiscreteLogs {
@@ -96,15 +106,22 @@ impl ProofOfEqualityOfDiscreteLogs {
         }
     }
 
-    /// verify that `self` represents a valid proof of equality of discrete logs of `public_verification_key` and `decryption_share` with respect to the bases `base` and `ciphertext` respectively.
+    /// verify that `self` represents a valid proof of equality of discrete logs of
+    /// `public_verification_key` and `decryption_share` with respect to the bases `base` and
+    /// `ciphertext` respectively.
     #[allow(dead_code)]
     pub(crate) fn verify(
         &self,
-        n: &LargeBiPrimeSizedNumber, // The Paillier associated bi-prime $N$
-        base: &PaillierModulusSizedNumber, // The base $g$
-        ciphertext: &PaillierModulusSizedNumber, // The ciphertext $h$
-        public_verification_key: &PaillierModulusSizedNumber, // The public verification key $a = g^d$
-        decryption_share: &PaillierModulusSizedNumber,        // The decryption share $b = h^d$
+        // The Paillier associated bi-prime $N$
+        n: &LargeBiPrimeSizedNumber,
+        // The base $g$
+        base: &PaillierModulusSizedNumber,
+        // The ciphertext $h$
+        ciphertext: &PaillierModulusSizedNumber,
+        // The public verification key $a = g^d$
+        public_verification_key: &PaillierModulusSizedNumber,
+        // The decryption share $b = h^d$
+        decryption_share: &PaillierModulusSizedNumber,
     ) -> Result<(), ProofError> {
         let n2 = n.square();
 
@@ -124,11 +141,13 @@ impl ProofOfEqualityOfDiscreteLogs {
             .as_ring_element(&n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
 
-        // Every square number except for zero that is not co-primed to $N^2$ yields factorization of $N$,
-        // Therefore checking that a square number is not zero sufficiently assures they belong to the quadratic-residue group.
+        // Every square number except for zero that is not co-primed to $N^2$ yields factorization
+        // of $N$, Therefore checking that a square number is not zero sufficiently assures
+        // they belong to the quadratic-residue group.
         //
         // Note that if we'd have perform this check prior to squaring, it wouldn't have suffice;
-        // take e.g. g = N != 0 -> g^2 = N^2 mod N^2 = 0 (accepting this value would have allowed bypassing of the proof).
+        // take e.g. g = N != 0 -> g^2 = N^2 mod N^2 = 0 (accepting this value would have allowed
+        // bypassing of the proof).
         if base_squared == PaillierModulusSizedNumber::ZERO.as_ring_element(&n2)
             || ciphertext_biquadrated == PaillierModulusSizedNumber::ZERO.as_ring_element(&n2)
             || public_verification_key_squared
@@ -201,9 +220,10 @@ impl ProofOfEqualityOfDiscreteLogs {
 
 #[cfg(test)]
 mod tests {
+    use rand_core::OsRng;
+
     use super::*;
     use crate::tests::{BASE, CIPHERTEXT, N, SECRET_KEY};
-    use rand_core::OsRng;
 
     #[test]
     fn valid_proof_verifies() {
@@ -437,11 +457,11 @@ mod tests {
 
 #[cfg(feature = "benchmarking")]
 mod benches {
-    use super::*;
-
     use criterion::{BatchSize, Criterion};
     use crypto_bigint::{NonZero, RandomMod};
     use rand_core::OsRng;
+
+    use super::*;
 
     pub(crate) fn benchmark_proof_of_equality_of_discrete_logs(c: &mut Criterion) {
         let mut g = c.benchmark_group("proof of equality of discrete logs benches");

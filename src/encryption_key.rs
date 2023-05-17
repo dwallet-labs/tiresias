@@ -1,11 +1,12 @@
+use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
+
 use crate::{
     AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber,
     PaillierRingElement,
 };
-use crypto_bigint::rand_core::CryptoRngCore;
-use crypto_bigint::{Pow, Random};
 
-/// A Paillier public encryption key, holding both the bi-prime `n` ($N=PQ$) and the Paillier modulus `n2` ($N^2$)
+/// A Paillier public encryption key, holding both the bi-prime `n` ($N=PQ$) and the Paillier
+/// modulus `n2` ($N^2$)
 #[derive(Debug, Clone)]
 pub struct EncryptionKey {
     pub n: LargeBiPrimeSizedNumber,
@@ -30,7 +31,8 @@ impl EncryptionKey {
 
     /// Encrypt `plaintext` to `self.n` using `randomness`.
     ///
-    /// This is the deterministic variant of the Paillier encryption scheme, as it takes the randomness as an input.
+    /// This is the deterministic variant of the Paillier encryption scheme, as it takes the
+    /// randomness as an input.
     ///
     /// ## Example
     /// ```rust
@@ -69,7 +71,8 @@ impl EncryptionKey {
 
     /// Encrypt `plaintext` to `self.n`.
     ///
-    /// This is the probabilistic variant of the Paillier encryption scheme, that samples randomness from `rng`.
+    /// This is the probabilistic variant of the Paillier encryption scheme, that samples randomness
+    /// from `rng`.
     ///
     /// ## Example
     /// ```rust
