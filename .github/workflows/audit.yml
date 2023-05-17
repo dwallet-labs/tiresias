@@ -5,9 +5,16 @@ on:
     - cron: '0 0 * * *'
   push:
     paths:
-      - 'Cargo.toml'
+      # Run if workflow changes
+      - '.github/workflows/audit.yml'
+      # Run on changed dependencies
+      - '**/Cargo.toml'
+      # Run if the configuration file changes
+      - '**/audit.toml'
   pull_request:
   workflow_dispatch:
+
+permissions: read-all
 
 jobs:
   audit:
@@ -16,14 +23,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install latest nightly Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          profile: minimal
-          override: true
       - uses: Swatinem/rust-cache@v2
-      - uses: actions-rs/audit-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Audit Rust Dependencies
+        uses: actions-rust-lang/audit@v1
+
 
