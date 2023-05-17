@@ -7,8 +7,6 @@ on:
     paths:
       - 'Cargo.toml'
   pull_request:
-    paths:
-      - 'Cargo.toml'
 
 jobs:
   audit:
