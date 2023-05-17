@@ -8,9 +8,15 @@ crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "f
 merlin = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.163", features = ["derive"] }
 
+# For benchmarking
+criterion = { version = "0.4", features = ["html_reports"], optional = true }
+rand_core = { version = "0.6.4", features = ["std"], optional = true }
+
 [dev-dependencies]
 rand_core = { version = "0.6.4", features = ["std"] }
-criterion = { version = "0.4", features = ["html_reports"] }
+
+[features]
+benchmarking = ["dep:criterion", "dep:rand_core"]
 
 [[bench]]
 path = "src/lib.rs"

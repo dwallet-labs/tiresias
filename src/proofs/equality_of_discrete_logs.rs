@@ -3,7 +3,7 @@ use crypto_bigint::{Pow, Random};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
-#[cfg(test)]
+#[cfg(feature = "benchmarking")]
 pub(crate) use benches::proof_of_equality_of_discrete_logs_benches;
 
 use crate::proofs::{ProofError, TranscriptProtocol};
@@ -435,7 +435,7 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(feature = "benchmarking")]
 mod benches {
     use super::*;
 

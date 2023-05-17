@@ -1,7 +1,7 @@
 use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
 use crypto_bigint::{Concat, Uint, U1024, U128};
 
-#[cfg(test)]
+#[cfg(feature = "benchmarking")]
 use criterion::criterion_main;
 
 mod decryption_key;
@@ -81,5 +81,5 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(feature = "benchmarking")]
 criterion_main!(proofs::equality_of_discrete_logs::proof_of_equality_of_discrete_logs_benches);
