@@ -16,9 +16,10 @@ rand_core = { version = "0.6.4", features = ["std"], optional = true }
 rand_core = { version = "0.6.4", features = ["std"] }
 
 [features]
+# This feature is for internal-use only (for benchmarking) and exists due to limitations of benchmarking non-public functions in Rust.
+# There will be no SemVer support for this feature.
 benchmarking = ["dep:criterion", "dep:rand_core"]
 
 [[bench]]
-path = "src/lib.rs"
-name = "proof_of_equality_of_discrete_logs_benches_main"
+name = "benches"
 harness = false
