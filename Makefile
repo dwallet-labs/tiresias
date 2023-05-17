@@ -1,3 +1,8 @@
+setup:
+	rustup update
+	rustup component add clippy
+	cargo install cargo-audit
+
 build:
 	cargo build --release
 
@@ -19,3 +24,5 @@ doc:
 bench:
 	cargo bench --features benchmarking
 
+audit:
+	cargo audit
