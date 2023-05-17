@@ -1,6 +1,7 @@
+use crypto_bigint::NonZero;
+
 use crate::{AsNaturalNumber, AsRingElement};
 use crate::{EncryptionKey, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
-use crypto_bigint::NonZero;
 
 /// A paillier decryption key.
 /// Holds both the `secret_key` and its corresponding `encryption_key`
@@ -70,13 +71,14 @@ impl DecryptionKey {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rand_core::OsRng;
 
     use crate::tests::CIPHERTEXT;
     use crate::tests::N;
     use crate::tests::PLAINTEXT;
     use crate::tests::SECRET_KEY;
+
+    use super::*;
 
     #[test]
     fn decrypts() {

@@ -5,6 +5,21 @@ edition = "2021"
 
 [dependencies]
 crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "f82973d", features = ["extra-trait-impls", "rand_core", "serde"], default-features = false }
+merlin = { version = "3.0.0", default-features = false }
+serde = { version = "1.0.163", features = ["derive"] }
+
+# For benchmarking
+criterion = { version = "0.4", features = ["html_reports"], optional = true }
+rand_core = { version = "0.6.4", features = ["std"], optional = true }
 
 [dev-dependencies]
 rand_core = { version = "0.6.4", features = ["std"] }
+
+[features]
+# This feature is for internal-use only (for benchmarking) and exists due to limitations of benchmarking non-public functions in Rust.
+# There will be no SemVer support for this feature.
+benchmarking = ["dep:criterion", "dep:rand_core"]
+
+[[bench]]
+name = "benches"
+harness = false
