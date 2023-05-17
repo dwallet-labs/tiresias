@@ -106,7 +106,7 @@ jobs:
           args: --no-deps --document-private-items --all-features --examples
 
   benchmarks:
-    if: push.branch == 'main'
+    if: github.event_name != 'pull_request'
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
