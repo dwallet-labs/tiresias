@@ -1,13 +1,11 @@
-use crypto_bigint::rand_core::CryptoRngCore;
-use crypto_bigint::{Pow, Random};
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
+use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "benchmarking")]
-pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
-
-use crate::proofs::{ProofError, TranscriptProtocol};
 use crate::{
+    proofs::{ProofError, TranscriptProtocol},
     AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber, LargeBiPrimeSizedNumber,
     PaillierModulusSizedNumber, PaillierRingElement,
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
@@ -224,9 +222,8 @@ impl ProofOfEqualityOfDiscreteLogs {
 mod tests {
     use rand_core::OsRng;
 
-    use crate::tests::{BASE, CIPHERTEXT, N, SECRET_KEY};
-
     use super::*;
+    use crate::tests::{BASE, CIPHERTEXT, N, SECRET_KEY};
 
     #[test]
     fn valid_proof_verifies() {

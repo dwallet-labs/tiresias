@@ -1,8 +1,9 @@
-use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::{Concat, Uint, U1024, U128};
-
 #[cfg(feature = "benchmarking")]
 use criterion::criterion_group;
+use crypto_bigint::{
+    modular::runtime_mod::{DynResidue, DynResidueParams},
+    Concat, Uint, U1024, U128,
+};
 
 mod decryption_key;
 mod encryption_key;

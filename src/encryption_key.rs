@@ -1,5 +1,4 @@
-use crypto_bigint::rand_core::CryptoRngCore;
-use crypto_bigint::{Pow, Random};
+use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
 
 use crate::{
     AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber,
@@ -99,9 +98,8 @@ impl EncryptionKey {
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::{CIPHERTEXT, N, PLAINTEXT, RANDOMNESS};
-
     use super::*;
+    use crate::tests::{CIPHERTEXT, N, PLAINTEXT, RANDOMNESS};
 
     #[test]
     fn encrypts() {
