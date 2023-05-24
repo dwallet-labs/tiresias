@@ -1,5 +1,8 @@
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
+
 use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
@@ -409,31 +412,64 @@ impl ProofOfEqualityOfDiscreteLogs {
             })
             .collect();
 
-        // TODO: parallelize
-        let batched_ciphertext = ciphertexts_and_decryption_shares
+        let randomizers_ciphertexts_and_decryption_shares: Vec<(
+            (PaillierModulusSizedNumber, PaillierModulusSizedNumber),
+            ComputationalSecuritySizedNumber,
+        )> = ciphertexts_and_decryption_shares
             .iter()
             .zip(randomizers.iter())
+            .map(|((a, b), c)| ((*a, *b), *c))
+            .collect();
+
+        #[cfg(not(feature = "parallel"))]
+        let randomizers_ciphertexts_and_decryption_shares_iter =
+            randomizers_ciphertexts_and_decryption_shares.iter();
+        #[cfg(feature = "parallel")]
+        let randomizers_ciphertexts_and_decryption_shares_iter =
+            randomizers_ciphertexts_and_decryption_shares.par_iter();
+
+        let batched_ciphertext = randomizers_ciphertexts_and_decryption_shares_iter
+            .clone()
             .map(|((ciphertext, _), randomizer)| {
                 <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
                     &ciphertext.as_ring_element(n2),
                     randomizer,
                 )
-            })
+            });
+
+        #[cfg(not(feature = "parallel"))]
+        let batched_ciphertext = batched_ciphertext
             .reduce(|x, y| x * y)
             .unwrap()
             .as_natural_number();
+        #[cfg(feature = "parallel")]
+        let batched_ciphertext = batched_ciphertext
+            .reduce(
+                || PaillierModulusSizedNumber::ONE.as_ring_element(n2),
+                |x, y| x * y,
+            )
+            .as_natural_number();
 
-        let batched_decryption_share = ciphertexts_and_decryption_shares
-            .iter()
-            .zip(randomizers.iter())
-            .map(|((_, decryption_share), randomizer)| {
+        let batched_decryption_share = randomizers_ciphertexts_and_decryption_shares_iter.map(
+            |((_, decryption_share), randomizer)| {
                 <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
                     &decryption_share.as_ring_element(n2),
                     randomizer,
                 )
-            })
+            },
+        );
+
+        #[cfg(not(feature = "parallel"))]
+        let batched_decryption_share = batched_decryption_share
             .reduce(|x, y| x * y)
             .unwrap()
+            .as_natural_number();
+        #[cfg(feature = "parallel")]
+        let batched_decryption_share = batched_decryption_share
+            .reduce(
+                || PaillierModulusSizedNumber::ONE.as_ring_element(n2),
+                |x, y| x * y,
+            )
             .as_natural_number();
 
         let batched_ciphertext_biquadrated = batched_ciphertext
