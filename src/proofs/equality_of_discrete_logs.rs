@@ -28,6 +28,8 @@ pub(crate) struct ProofOfEqualityOfDiscreteLogs {
 impl ProofOfEqualityOfDiscreteLogs {
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
     /// = g^d$ and $b = g^d$ in zero-knowledge (i.e. without revealing the secret discrete log `d`).
+    ///
+    /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
     #[allow(dead_code)]
     pub(crate) fn prove(
         // The Paillier modulus
@@ -113,6 +115,8 @@ impl ProofOfEqualityOfDiscreteLogs {
     /// verify that `self` represents a valid proof of equality of discrete logs of
     /// `public_verification_key` and `decryption_share` with respect to the bases `base` and
     /// `ciphertext` respectively.
+    ///
+    /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
     #[allow(dead_code)]
     pub(crate) fn verify(
         &self,
@@ -283,6 +287,8 @@ impl ProofOfEqualityOfDiscreteLogs {
     ///
     /// This is done in zero-knowledge (i.e. without revealing the secret discrete log `d`).
     ///
+    /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
+    ///
     /// # Panics
     ///
     /// Panics if the `ciphertexts_and_decryption_shares` is empty
@@ -325,6 +331,9 @@ impl ProofOfEqualityOfDiscreteLogs {
     /// verify that `self` represents a valid (batched) proof of equality of discrete logs of
     /// $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$ with respects to the
     /// bases $g$ and $h_i$ respectively.    
+    ///
+    /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
+    ///
     /// # Panics
     ///
     /// Panics if the `ciphertexts_and_decryption_shares` is empty
