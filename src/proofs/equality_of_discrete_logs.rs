@@ -17,9 +17,9 @@ use crate::{
 /// `self.ciphertext_squared_randomizer`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ProofOfEqualityOfDiscreteLogs {
-    // The base (squared) randomizer $\hat{g} \in \mathbb{Z}_{N^2}^*$.
+    // The base (squared) randomizer $u \in \mathbb{Z}_{N^2}^*$.
     base_squared_randomizer: PaillierModulusSizedNumber,
-    // The ciphertext (biquadrated) randomizer $\hat{h} \in \mathbb{Z}_{N^2}^*$.
+    // The ciphertext (biquadrated) randomizer $v \in \mathbb{Z}_{N^2}^*$.
     ciphertext_biquadrated_randomizer: PaillierModulusSizedNumber,
     // The response $z \in \mathbb{Z}$.
     response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
