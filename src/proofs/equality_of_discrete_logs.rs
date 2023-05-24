@@ -206,7 +206,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         let decryption_share_squared_raised_to_the_challenge =
             <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
-                &decryption_share_squared.as_ring_element(&n2),
+                &decryption_share_squared.as_ring_element(n2),
                 &challenge,
             );
 
