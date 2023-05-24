@@ -1,10 +1,9 @@
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
-
 use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
 use merlin::Transcript;
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -14,7 +13,8 @@ use crate::{
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 
-/// A proof of equality of the discrete logs of `self.base_squared_randomizer` and `self.ciphertext_squared_randomizer`
+/// A proof of equality of the discrete logs of `self.base_squared_randomizer` and
+/// `self.ciphertext_squared_randomizer`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ProofOfEqualityOfDiscreteLogs {
     // The base (squared) randomizer $\hat{g} \in \mathbb{Z}_{N^2}^*$.
@@ -169,7 +169,8 @@ impl ProofOfEqualityOfDiscreteLogs {
         // Note that if we'd have perform this check prior to squaring, it wouldn't have suffice;
         // take e.g. g = N != 0 -> g^2 = N^2 mod N^2 = 0 (accepting this value would have allowed
         // bypassing of the proof).
-        // TODO: correct this (how to check self.ciphertext_biquadrated_randomizer and self.base_squared_randomizer)
+        // TODO: correct this (how to check self.ciphertext_biquadrated_randomizer and
+        // self.base_squared_randomizer)
         if base_squared == PaillierModulusSizedNumber::ZERO
             || ciphertext_biquadrated == PaillierModulusSizedNumber::ZERO
             || public_verification_key_squared == PaillierModulusSizedNumber::ZERO
@@ -276,8 +277,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         )
     }
 
-    /// Create a `BatchedProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
-    /// = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$ with respects to the bases $g$ and $h_i$ respectively.
+    /// Create a `BatchedProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete
+    /// logs of $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$ with
+    /// respects to the bases $g$ and $h_i$ respectively.
     ///
     /// This is done in zero-knowledge (i.e. without revealing the secret discrete log `d`).
     ///
@@ -294,7 +296,8 @@ impl ProofOfEqualityOfDiscreteLogs {
         base: &PaillierModulusSizedNumber,
         // The public verification key $a = g^d$
         public_verification_key: &PaillierModulusSizedNumber,
-        // The squared ciphertexts ${{h_i}}_i$ and their matching decryption shares ${{b_i}}_i = {{h_i^d}}_i$
+        // The squared ciphertexts ${{h_i}}_i$ and their matching decryption shares ${{b_i}}_i =
+        // {{h_i^d}}_i$
         squared_ciphertexts_and_decryption_shares: Vec<(
             PaillierModulusSizedNumber,
             PaillierModulusSizedNumber,
@@ -320,8 +323,8 @@ impl ProofOfEqualityOfDiscreteLogs {
     }
 
     /// verify that `self` represents a valid (batched) proof of equality of discrete logs of
-    /// $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$ with respects to the bases $g$ and $h_i$ respectively.
-    ///    
+    /// $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$ with respects to the
+    /// bases $g$ and $h_i$ respectively.    
     /// # Panics
     ///
     /// Panics if the `ciphertexts_and_decryption_shares` is empty
@@ -334,7 +337,8 @@ impl ProofOfEqualityOfDiscreteLogs {
         base: &PaillierModulusSizedNumber,
         // The public verification key $a = g^d$
         public_verification_key: &PaillierModulusSizedNumber,
-        // The ciphertexts ${{h_i}}_i$ and their matching decryption shares ${{b_i}}_i = {{h_i^d}}_i$
+        // The ciphertexts ${{h_i}}_i$ and their matching decryption shares ${{b_i}}_i =
+        // {{h_i^d}}_i$
         squared_ciphertexts_and_decryption_shares: Vec<(
             PaillierModulusSizedNumber,
             PaillierModulusSizedNumber,
@@ -496,8 +500,8 @@ impl ProofOfEqualityOfDiscreteLogs {
             &batched_decryption_share_squared,
         );
 
-        // TODO: check if Merlin already handles this [i.e. adds the challenge to the transcript], if so remove this?
-        // TODO: should we even add these to the transcript?
+        // TODO: check if Merlin already handles this [i.e. adds the challenge to the transcript],
+        // if so remove this? TODO: should we even add these to the transcript?
         randomizers.iter().for_each(|randomizer| {
             transcript.append_statement(b"randomizer", randomizer);
         });
@@ -778,10 +782,11 @@ mod tests {
 
 #[cfg(feature = "benchmarking")]
 mod benches {
+    use std::iter;
+
     use criterion::Criterion;
     use crypto_bigint::{NonZero, RandomMod};
     use rand_core::OsRng;
-    use std::iter;
 
     use super::*;
 
