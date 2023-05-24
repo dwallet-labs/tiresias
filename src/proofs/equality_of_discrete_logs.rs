@@ -90,13 +90,11 @@ impl ProofOfEqualityOfDiscreteLogs {
             )
             .as_natural_number();
 
-        transcript.append_statement(b"base (squared) randomizer", &base_squared_randomizer);
-        transcript.append_statement(
-            b"ciphertext (biquadrated) randomizer",
-            &ciphertext_biquadrated_randomizer,
+        let challenge = Self::compute_challenge(
+            base_squared_randomizer,
+            ciphertext_biquadrated_randomizer,
+            transcript,
         );
-
-        let challenge: ComputationalSecuritySizedNumber = transcript.challenge(b"challenge");
 
         // $e*d$ is a 128-bit number $ee$, multiplied by a 4096-bit number $d$ => (4096 + 128)-bit
         // number. $r$ is a (256+4096)-bit number, so to get $ z = r - e*d $, which will
@@ -174,8 +172,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         // take e.g. g = N != 0 -> g^2 = N^2 mod N^2 = 0 (accepting this value would have allowed
         // bypassing of the proof).
         //
-        // For self.ciphertext_biquadrated_randomizer and self.base_squared_randomizer checking it is non-zero is sufficient
-        // and we don't have to check their in the quadratic-residue group otherwise the proof verification formula will fail
+        // For self.ciphertext_biquadrated_randomizer and self.base_squared_randomizer checking it
+        // is non-zero is sufficient and we don't have to check their in the
+        // quadratic-residue group otherwise the proof verification formula will fail
         if base_squared == PaillierModulusSizedNumber::ZERO
             || ciphertext_biquadrated == PaillierModulusSizedNumber::ZERO
             || public_verification_key_squared == PaillierModulusSizedNumber::ZERO
@@ -198,13 +197,11 @@ impl ProofOfEqualityOfDiscreteLogs {
                 &self.response,
             );
 
-        transcript.append_statement(b"base (squared) randomizer", &self.base_squared_randomizer);
-        transcript.append_statement(
-            b"ciphertext (biquadrated) randomizer",
-            &self.ciphertext_biquadrated_randomizer,
+        let challenge = Self::compute_challenge(
+            self.base_squared_randomizer,
+            self.ciphertext_biquadrated_randomizer,
+            transcript,
         );
-
-        let challenge: ComputationalSecuritySizedNumber = transcript.challenge(b"challenge");
 
         let public_verification_key_squared_raised_to_the_challenge =
             <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
@@ -525,6 +522,22 @@ impl ProofOfEqualityOfDiscreteLogs {
             batched_decryption_share_squared,
             transcript,
         )
+    }
+
+    fn compute_challenge(
+        base_squared_randomizer: PaillierModulusSizedNumber,
+        ciphertext_biquadrated_randomizer: PaillierModulusSizedNumber,
+        transcript: &mut Transcript,
+    ) -> ComputationalSecuritySizedNumber {
+        transcript.append_statement(b"base (squared) randomizer", &base_squared_randomizer);
+        transcript.append_statement(
+            b"ciphertext (biquadrated) randomizer",
+            &ciphertext_biquadrated_randomizer,
+        );
+
+        let challenge: ComputationalSecuritySizedNumber = transcript.challenge(b"challenge");
+
+        challenge
     }
 }
 
