@@ -173,12 +173,15 @@ impl ProofOfEqualityOfDiscreteLogs {
         // Note that if we'd have perform this check prior to squaring, it wouldn't have suffice;
         // take e.g. g = N != 0 -> g^2 = N^2 mod N^2 = 0 (accepting this value would have allowed
         // bypassing of the proof).
-        // TODO: correct this (how to check self.ciphertext_biquadrated_randomizer and
-        // self.base_squared_randomizer)
+        //
+        // For self.ciphertext_biquadrated_randomizer and self.base_squared_randomizer checking it is non-zero is sufficient
+        // and we don't have to check their in the quadratic-residue group otherwise the proof verification formula will fail
         if base_squared == PaillierModulusSizedNumber::ZERO
             || ciphertext_biquadrated == PaillierModulusSizedNumber::ZERO
             || public_verification_key_squared == PaillierModulusSizedNumber::ZERO
             || decryption_share_squared == PaillierModulusSizedNumber::ZERO
+            || self.base_squared_randomizer == PaillierModulusSizedNumber::ZERO
+            || self.ciphertext_biquadrated_randomizer == PaillierModulusSizedNumber::ZERO
         {
             return Err(ProofError {});
         }
