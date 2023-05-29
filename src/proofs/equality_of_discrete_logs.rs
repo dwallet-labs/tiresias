@@ -1127,7 +1127,7 @@ mod tests {
             Error::ProofVerificationError()
         );
 
-        let mut invalid_batched_proof = valid_batched_proof;
+        let mut invalid_batched_proof = valid_batched_proof.clone();
         invalid_batched_proof.base_randomizer = wrong_base_randomizer;
         assert_eq!(
             invalid_batched_proof
