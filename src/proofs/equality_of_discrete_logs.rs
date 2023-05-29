@@ -395,8 +395,8 @@ impl ProofOfEqualityOfDiscreteLogs {
             .iter()
             .for_each(|(decryption_share_base, decryption_share)| {
                 transcript
-                    .append_statement(b"The decryption share base $h$", &decryption_share_base);
-                transcript.append_statement(b"The decryption share $b=h^x$", &decryption_share);
+                    .append_statement(b"The decryption share base $h$", decryption_share_base);
+                transcript.append_statement(b"The decryption share $b=h^x$", decryption_share);
             });
 
         (
@@ -543,7 +543,7 @@ impl ProofOfEqualityOfDiscreteLogs {
     /// let public_verification_key = DynResidue::new(&base, params)
     ///         .pow(&decryption_key_share)
     ///         .retrieve();
-    /// let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(n2, decryption_key_share, base, public_verification_key, vec![(decryption_share_base, decryption_share)], &mut OsRng);
+    /// let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(n2, decryption_key_share, base, public_verification_key, vec![(decryption_share_base, decryption_share)], &mut OsRng).unwrap();
     /// assert!(proof.batch_verify(n2, base, public_verification_key, vec![(decryption_share_base, decryption_share)]).is_ok());
     /// ```
     pub fn batch_verify(
@@ -1127,7 +1127,7 @@ mod tests {
             Error::ProofVerificationError()
         );
 
-        let mut invalid_batched_proof = valid_batched_proof.clone();
+        let mut invalid_batched_proof = valid_batched_proof;
         invalid_batched_proof.base_randomizer = wrong_base_randomizer;
         assert_eq!(
             invalid_batched_proof
@@ -1189,7 +1189,7 @@ mod tests {
             Error::ProofVerificationError()
         );
 
-        invalid_batched_proof = valid_batched_proof.clone();
+        invalid_batched_proof = valid_batched_proof;
         invalid_batched_proof.response = wrong_response;
         assert_eq!(
             invalid_batched_proof
