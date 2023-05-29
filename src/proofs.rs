@@ -9,22 +9,6 @@ mod equality_of_discrete_logs;
 pub(crate) use equality_of_discrete_logs::benchmark_proof_of_equality_of_discrete_logs;
 pub use equality_of_discrete_logs::ProofOfEqualityOfDiscreteLogs;
 
-#[derive(Debug, Clone, Copy)]
-/// An error generated for an invalid proof during verification.
-pub struct ProofError;
-
-impl fmt::Display for ProofError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ProofError")
-    }
-}
-
-impl Error for ProofError {
-    fn description(&self) -> &str {
-        "Verification failure!"
-    }
-}
-
 /// A transcript protocol for fiat-shamir transforms of interactive to non-interactive proofs.
 trait TranscriptProtocol {
     fn append_statement<const LIMBS: usize>(
