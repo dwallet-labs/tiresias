@@ -12,18 +12,21 @@ use crate::{
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 
-/// A proof of equality of discrete logs, which is utilized to prove the validity of threshold decryptions by the parties.
+/// A proof of equality of discrete logs, which is utilized to prove the validity of threshold
+/// decryptions by the parties.
 ///
 /// This proves the following language:
-///         $L_{\EDL^2}[N,\tilde g,a;x] = \{(\tilde h,b) \mid \tilde h\in \ZZ_{N^2}^* \wedge a=\tilde g^{2x} \wedge b=\tilde h^{2x} \}$
+///         $L_{\EDL^2}[N,\tilde g,a;x] = \{(\tilde h,b) \mid \tilde h\in \ZZ_{N^2}^* \wedge
+/// a=\tilde g^{2x} \wedge b=\tilde h^{2x} \}$
 ///
 /// Where, for the usecase of threshold Paillier:
-///     - $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup, and we set $\tilde{g}={g'}^{\Delta_n}$
+///     - $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup, and we set
+///       $\tilde{g}={g'}^{\Delta_n}$
 ///     - For prover $P_j$, $a$ is the public verification key $v_j=g^{n!d_j}$.
 ///     - For prover $P_j$, the witness $x$ is simply its secret key share $d_j$.
 ///     - $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
-///     - For prover $P_j$, $b$ is set to the decryption share of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
-///
+///     - For prover $P_j$, $b$ is set to the decryption share of $\ct$, namely,
+///       $\ct_j=\ct^{2n!d_j}$.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofOfEqualityOfDiscreteLogs {
     // The base randomizer $u=g^r \in \mathbb{Z}_{N^2}^*$.
@@ -50,14 +53,18 @@ impl ProofOfEqualityOfDiscreteLogs {
     /// = g^d$ and $b = h^d$ in zero-knowledge (i.e. without revealing the witness `d`).
     /// Where, for the usecase of threshold Paillier:
     ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
-    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup.
-    ///       The proof is constructed over $g=\tilde{g}^{2} \in\QR_{N^2}$, which is the actual `base` for the proof.
-    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$.
-    ///       The proof is constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
-    ///       The proof is constructed over $h=\tilde{h}^2 \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
-    ///       The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
+    ///       sampled and published in the setup. The proof is constructed over $g=\tilde{g}^{2}
+    ///       \in\QR_{N^2}$, which is the actual `base` for the proof.
+    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$. The proof is
+    ///       constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual
+    ///       `decryption_share_base` for the proof.
+    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
+    ///       ciphertext to be decrypted. The proof is constructed over $h=\tilde{h}^2
+    ///       \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely,
+    ///       $\ct_j=\ct^{2n!d_j}$. The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$,
+    ///       which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
     ///
@@ -98,7 +105,8 @@ impl ProofOfEqualityOfDiscreteLogs {
         witness: PaillierModulusSizedNumber,
         // The base $\tilde{g}$
         base: PaillierModulusSizedNumber,
-        // The decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted
+        // The decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
+        // ciphertext to be decrypted
         decryption_share_base: PaillierModulusSizedNumber,
         // The public verification key $v_j=g^{n!d_j}$
         public_verification_key: PaillierModulusSizedNumber,
@@ -170,21 +178,25 @@ impl ProofOfEqualityOfDiscreteLogs {
         }
     }
 
-    /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a = g^d$ and $b = h^d$
-    /// in zero-knowledge (i.e. without revealing the witness `d`)
+    /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
+    /// = g^d$ and $b = h^d$ in zero-knowledge (i.e. without revealing the witness `d`)
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
     ///
     /// Verify that `self` proves the equality of the discrete logs of $a = g^d$ and $b = h^d$.
     /// Where, for the usecase of threshold Paillier:
     ///     - For prover $P_j$, the witness $x$ is simply its secret key share $d_j$.
-    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup.
-    ///       The proof is constructed over $g=\tilde{g}^{2} \in\QR_{N^2}$, which is the actual `base` for the proof.
-    ///     - For prover $P_j$, the `public_verification_key` $v_j=g^{n!d_j}$.
-    ///       The proof is constructed over $a=\tilde{g}^2x=v_j^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
-    ///       The proof is constructed over $h=\tilde{h}^2 \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
-    ///       The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
+    ///       sampled and published in the setup. The proof is constructed over $g=\tilde{g}^{2}
+    ///       \in\QR_{N^2}$, which is the actual `base` for the proof.
+    ///     - For prover $P_j$, the `public_verification_key` $v_j=g^{n!d_j}$. The proof is
+    ///       constructed over $a=\tilde{g}^2x=v_j^2x \in\QR_{N^2}$, which is the actual
+    ///       `decryption_share_base` for the proof.
+    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
+    ///       ciphertext to be decrypted. The proof is constructed over $h=\tilde{h}^2
+    ///       \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely,
+    ///       $\ct_j=\ct^{2n!d_j}$. The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$,
+    ///       which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
     ///
@@ -217,7 +229,7 @@ impl ProofOfEqualityOfDiscreteLogs {
     ///         .pow(&decryption_key_share)
     ///         .retrieve();
     /// let proof = ProofOfEqualityOfDiscreteLogs::prove(n2, decryption_key_share, base, decryption_share_base, public_verification_key, decryption_share, &mut OsRng);
-    /// assert!(proof.verify(n2, base, &ecryption_share_base, public_verification_key, decryption_share).is_ok());
+    /// assert!(proof.verify(n2, base, decryption_share_base, public_verification_key, decryption_share).is_ok());
     /// ```
     pub fn verify(
         &self,
@@ -225,7 +237,8 @@ impl ProofOfEqualityOfDiscreteLogs {
         n2: PaillierModulusSizedNumber,
         // The base $\tilde{g}$
         base: PaillierModulusSizedNumber,
-        // The decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted
+        // The decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
+        // ciphertext to be decrypted
         decryption_share_base: PaillierModulusSizedNumber,
         // The public verification key $v_j=g^{n!d_j}$
         public_verification_key: PaillierModulusSizedNumber,
@@ -396,19 +409,24 @@ impl ProofOfEqualityOfDiscreteLogs {
 
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs
     /// of $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$
-    /// with respects to the bases $g$ and $h_i$ respectively in zero-knowledge (i.e. without revealing the witness `d`)
-    /// for every (`decryption_share_base`, `decryption_share`) in `decryption_shares_and_bases`.
+    /// with respects to the bases $g$ and $h_i$ respectively in zero-knowledge (i.e. without
+    /// revealing the witness `d`) for every (`decryption_share_base`, `decryption_share`) in
+    /// `decryption_shares_and_bases`.
     ///
     /// Where, for the usecase of threshold Paillier:
     ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
-    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup.
-    ///       The proof is constructed over $g=\tilde{g}^{2} \in\QR_{N^2}$, which is the actual `base` for the proof.
-    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$.
-    ///       The proof is constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
-    ///       The proof is constructed over $h=\tilde{h}^2 \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
-    ///       The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
+    ///       sampled and published in the setup. The proof is constructed over $g=\tilde{g}^{2}
+    ///       \in\QR_{N^2}$, which is the actual `base` for the proof.
+    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$. The proof is
+    ///       constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual
+    ///       `decryption_share_base` for the proof.
+    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
+    ///       ciphertext to be decrypted. The proof is constructed over $h=\tilde{h}^2
+    ///       \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely,
+    ///       $\ct_j=\ct^{2n!d_j}$. The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$,
+    ///       which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
     ///
@@ -451,8 +469,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         base: PaillierModulusSizedNumber,
         // The public verification key $v_j=g^{n!d_j}$
         public_verification_key: PaillierModulusSizedNumber,
-        // The decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$ are the ciphertexts to be decrypted
-        // and their matching decryption shares ${\ct^i_j}_i = {{\tilde{h_i}^d}}_i$
+        // The decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$
+        // are the ciphertexts to be decrypted and their matching decryption shares
+        // ${\ct^i_j}_i = {{\tilde{h_i}^d}}_i$
         decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
         rng: &mut impl CryptoRngCore,
     ) -> Result<ProofOfEqualityOfDiscreteLogs> {
@@ -476,18 +495,23 @@ impl ProofOfEqualityOfDiscreteLogs {
 
     /// Verify that `self` proves the equality of the discrete logs
     /// of $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$
-    /// with respects to the bases $g$ and $h_i$ for every (`decryption_share_base`, `decryption_share`) in `decryption_shares_and_bases`.
+    /// with respects to the bases $g$ and $h_i$ for every (`decryption_share_base`,
+    /// `decryption_share`) in `decryption_shares_and_bases`.
     ///
     /// Where, for the usecase of threshold Paillier:
     ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
-    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup.
-    ///       The proof is constructed over $g=\tilde{g}^{2} \in\QR_{N^2}$, which is the actual `base` for the proof.
-    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$.
-    ///       The proof is constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
-    ///       The proof is constructed over $h=\tilde{h}^2 \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
-    ///       The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
+    ///       sampled and published in the setup. The proof is constructed over $g=\tilde{g}^{2}
+    ///       \in\QR_{N^2}$, which is the actual `base` for the proof.
+    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$. The proof is
+    ///       constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual
+    ///       `decryption_share_base` for the proof.
+    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
+    ///       ciphertext to be decrypted. The proof is constructed over $h=\tilde{h}^2
+    ///       \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely,
+    ///       $\ct_j=\ct^{2n!d_j}$. The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$,
+    ///       which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
     ///
@@ -530,8 +554,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         base: PaillierModulusSizedNumber,
         // The public verification key $v_j=g^{n!d_j}$
         public_verification_key: PaillierModulusSizedNumber,
-        // The decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$ are the ciphertexts to be decrypted
-        // and their matching decryption shares ${\ct^i_j}_i = {{\tilde{h_i}^d}}_i$
+        // The decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$
+        // are the ciphertexts to be decrypted and their matching decryption shares
+        // ${\ct^i_j}_i = {{\tilde{h_i}^d}}_i$
         decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
     ) -> Result<()> {
         let (
@@ -651,7 +676,8 @@ impl ProofOfEqualityOfDiscreteLogs {
             )
             .as_natural_number();
 
-        // TODO: do I need to add them to the transcript? they are a direct equation of previously added values
+        // TODO: do I need to add them to the transcript? they are a direct equation of previously
+        // added values
         transcript.append_statement(
             b"batched decryption share base",
             &batched_decryption_share_base,
@@ -696,8 +722,10 @@ mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::tests::{BASE, CIPHERTEXT, N, SECRET_KEY};
-    use crate::LargeBiPrimeSizedNumber;
+    use crate::{
+        tests::{BASE, CIPHERTEXT, N, SECRET_KEY},
+        LargeBiPrimeSizedNumber,
+    };
 
     #[test]
     fn valid_proof_verifies() {
@@ -734,7 +762,8 @@ mod tests {
             &mut OsRng,
         );
 
-        // TODO: @dolevmu this test passes, and from my understanding of the proof it should - so why did you ask me to raise base by n!?
+        // TODO: @dolevmu this test passes, and from my understanding of the proof it should - so
+        // why did you ask me to raise base by n!?
         assert!(proof
             .verify(
                 n2,
@@ -1181,12 +1210,12 @@ mod tests {
 mod benches {
     use std::iter;
 
-    use crate::LargeBiPrimeSizedNumber;
     use criterion::Criterion;
     use crypto_bigint::{NonZero, RandomMod};
     use rand_core::OsRng;
 
     use super::*;
+    use crate::LargeBiPrimeSizedNumber;
 
     pub(crate) fn benchmark_proof_of_equality_of_discrete_logs(c: &mut Criterion) {
         let mut g = c.benchmark_group("proof of equality of discrete logs benches");

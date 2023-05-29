@@ -1,6 +1,3 @@
-use core::fmt;
-use std::error::Error;
-
 use crypto_bigint::{Encoding, Limb, Uint};
 use merlin::Transcript;
 
