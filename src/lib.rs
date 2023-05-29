@@ -7,7 +7,8 @@ use crypto_bigint::{
 
 mod decryption_key;
 mod encryption_key;
-pub(crate) mod proofs;
+mod proofs;
+pub use proofs::ProofOfEqualityOfDiscreteLogs;
 
 pub use decryption_key::DecryptionKey;
 pub use encryption_key::EncryptionKey;
@@ -86,5 +87,5 @@ mod tests {
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,
-    proofs::equality_of_discrete_logs::benchmark_proof_of_equality_of_discrete_logs
+    proofs::benchmark_proof_of_equality_of_discrete_logs
 );

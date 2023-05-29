@@ -13,53 +13,76 @@ use crate::{
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 
-/// A proof of equality of the discrete logs of `self.base_squared_randomizer` and
-/// `self.ciphertext_squared_randomizer`
+/// A proof of equality of discrete logs, which is utilized to prove the validity of threshold decryptions by the parties.
+///
+/// This proves the following language:
+///         $L_{\EDL^2}[N,\tilde g,a;x] = \{(\tilde h,b) \mid \tilde h\in \ZZ_{N^2}^* \wedge a=\tilde g^{2x} \wedge b=\tilde h^{2x} \}$
+///
+/// Where, for the usecase of threshold Paillier:
+///     - $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup, and we set $\tilde{g}={g'}^{\Delta_n}$
+///     - For prover $P_j$, $a$ is the public verification key $v_j=g^{n!d_j}$.
+///     - For prover $P_j$, the witness $x$ is simply its secret key share $d_j$.
+///     - $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
+///     - For prover $P_j$, $b$ is set to the decryption share of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
+///
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ProofOfEqualityOfDiscreteLogs {
-    // The base (squared) randomizer $u \in \mathbb{Z}_{N^2}^*$.
-    base_squared_randomizer: PaillierModulusSizedNumber,
-    // The ciphertext (biquadrated) randomizer $v \in \mathbb{Z}_{N^2}^*$.
-    ciphertext_biquadrated_randomizer: PaillierModulusSizedNumber,
+pub struct ProofOfEqualityOfDiscreteLogs {
+    // The base randomizer $u=g^r \in \mathbb{Z}_{N^2}^*$.
+    base_randomizer: PaillierModulusSizedNumber,
+    // The decryption share base randomizer $v=h^r \in \mathbb{Z}_{N^2}^*$.
+    decryption_share_base_randomizer: PaillierModulusSizedNumber,
     // The response $z \in \mathbb{Z}$.
     response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 }
 
 impl ProofOfEqualityOfDiscreteLogs {
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
-    /// = g^d$ and $b = g^d$ in zero-knowledge (i.e. without revealing the secret discrete log `d`).
+    /// = g^d$ and $b = h^d$ in zero-knowledge (i.e. without revealing the witness `d`).
+    /// Where, for the usecase of threshold Paillier:
+    ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
+    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup.
+    ///       The proof is constructed over $g=\tilde{g}^{2} \in\QR_{N^2}$, which is the actual `base` for the proof.
+    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$.
+    ///       The proof is constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
+    ///       The proof is constructed over $h=\tilde{h}^2 \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
+    ///       The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
-    #[allow(dead_code)]
-    pub(crate) fn prove(
+    ///
+    /// ## Example
+    /// TODO
+    // TODO: do I want everything being passed by-ref?
+    pub fn prove(
         // The Paillier modulus
         n2: &PaillierModulusSizedNumber,
-        // The witness $d$ (the secret-key share in threshold decryption)
-        secret_key_share: &PaillierModulusSizedNumber,
-        // The base $g$
+        // The witness $d$ (the secret key share in threshold decryption)
+        witness: &PaillierModulusSizedNumber,
+        // The base $\tilde{g}$
         base: &PaillierModulusSizedNumber,
-        // The ciphertext squared $h$
-        ciphertext_squared: &PaillierModulusSizedNumber,
-        // The public verification key $a = g^d$
+        // The decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted
+        decryption_share_base: &PaillierModulusSizedNumber,
+        // The public verification key $v_j=g^{n!d_j}$
         public_verification_key: &PaillierModulusSizedNumber,
-        // The decryption share $b = h^d$
+        // The decryption share $\ct_j=\ct^{2n!d_j}$
         decryption_share: &PaillierModulusSizedNumber,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
-        let (base_squared, ciphertext_biquadrated, _, _, mut transcript) =
-            Self::setup_single_protocol(
-                n2,
-                base,
-                ciphertext_squared,
-                public_verification_key,
-                decryption_share,
-            );
+        let (base, _, decryption_shares_and_bases, mut transcript) = Self::setup_protocol(
+            n2,
+            base,
+            public_verification_key,
+            vec![(*decryption_share_base, *decryption_share)],
+        );
+
+        let (decryption_share_base, _) = decryption_shares_and_bases.first().unwrap();
 
         Self::prove_inner(
             n2,
-            secret_key_share,
-            base_squared,
-            ciphertext_biquadrated,
+            witness,
+            base,
+            *decryption_share_base,
             &mut transcript,
             rng,
         )
@@ -67,9 +90,9 @@ impl ProofOfEqualityOfDiscreteLogs {
 
     fn prove_inner(
         n2: &PaillierModulusSizedNumber,
-        secret_key_share: &PaillierModulusSizedNumber,
-        base_squared: PaillierModulusSizedNumber,
-        ciphertext_biquadrated: PaillierModulusSizedNumber,
+        witness: &PaillierModulusSizedNumber,
+        base: PaillierModulusSizedNumber,
+        decryption_share_base: PaillierModulusSizedNumber,
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
@@ -77,80 +100,89 @@ impl ProofOfEqualityOfDiscreteLogs {
         // Note that we use 4096-bit instead of N^2 and that's even better.
         let randomizer = ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::random(rng);
 
-        let base_squared_randomizer = <PaillierRingElement as Pow<
+        let base_randomizer = <PaillierRingElement as Pow<
             ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
-        >>::pow(
-            &base_squared.as_ring_element(n2), &randomizer
-        )
+        >>::pow(&base.as_ring_element(n2), &randomizer)
         .as_natural_number();
-        let ciphertext_biquadrated_randomizer =
+
+        let decryption_share_base_randomizer =
             <PaillierRingElement as Pow<ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber>>::pow(
-                &ciphertext_biquadrated.as_ring_element(n2),
+                &decryption_share_base.as_ring_element(n2),
                 &randomizer,
             )
             .as_natural_number();
 
         let challenge = Self::compute_challenge(
-            base_squared_randomizer,
-            ciphertext_biquadrated_randomizer,
+            base_randomizer,
+            decryption_share_base_randomizer,
             transcript,
         );
 
-        // $e*d$ is a 128-bit number $ee$, multiplied by a 4096-bit number $d$ => (4096 + 128)-bit
-        // number. $r$ is a (256+4096)-bit number, so to get $ z = r - e*d $, which will
-        // never overflow (r is sampled randomly, the probability for r to be < e*d is < 1/2^128
-        // which is the computational security parameter. This results in a (4096 + 256)-bit
-        // number $z$
-        let response = randomizer.wrapping_sub(&((challenge * secret_key_share).into()));
+        // $e*d$ is a 128-bit number $e$, multiplied by a 4096-bit number $d$ => (4096 + 128)-bit
+        // number. $r$ is a (256+4096)-bit number, so to get $z = r - e*d$, which will
+        // never overflow (r is sampled randomly, the probability for $r < e*d$
+        // is smaller than $1/2^128$ which is the computational security parameter.
+        //
+        // This results in a (4096 + 256)-bit number $z$
+        let response = randomizer.wrapping_sub(&((challenge * witness).into()));
 
         ProofOfEqualityOfDiscreteLogs {
-            base_squared_randomizer,
-            ciphertext_biquadrated_randomizer,
+            base_randomizer,
+            decryption_share_base_randomizer,
             response,
         }
     }
 
-    /// verify that `self` represents a valid proof of equality of discrete logs of
-    /// `public_verification_key` and `decryption_share` with respect to the bases `base` and
-    /// `ciphertext` respectively.
+    /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a = g^d$ and $b = h^d$
+    /// in zero-knowledge (i.e. without revealing the witness `d`)
+    /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
+    ///
+    /// Verify that `self` proves the equality of the discrete logs of $a = g^d$ and $b = h^d$.
+    /// Where, for the usecase of threshold Paillier:
+    ///     - For prover $P_j$, the witness $x$ is simply its secret key share $d_j$.
+    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup.
+    ///       The proof is constructed over $g=\tilde{g}^{2} \in\QR_{N^2}$, which is the actual `base` for the proof.
+    ///     - For prover $P_j$, the `public_verification_key` $v_j=g^{n!d_j}$.
+    ///       The proof is constructed over $a=\tilde{g}^2x=v_j^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
+    ///       The proof is constructed over $h=\tilde{h}^2 \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
+    ///       The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
-    #[allow(dead_code)]
-    pub(crate) fn verify(
+    ///
+    /// ## Example
+    /// TODO
+    pub fn verify(
         &self,
-        // The Paillier associated bi-prime $N$
-        n: &LargeBiPrimeSizedNumber,
-        // The base $g$
+        // The Paillier modulus
+        n2: &PaillierModulusSizedNumber,
+        // The base $\tilde{g}$
         base: &PaillierModulusSizedNumber,
-        // The ciphertext $h$
-        ciphertext_squared: &PaillierModulusSizedNumber,
-        // The public verification key $a = g^d$
+        // The decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted
+        decryption_share_base: &PaillierModulusSizedNumber,
+        // The public verification key $v_j=g^{n!d_j}$
         public_verification_key: &PaillierModulusSizedNumber,
-        // The decryption share $b = h^d$
+        // The decryption share $\ct_j=\ct^{2n!d_j}$
         decryption_share: &PaillierModulusSizedNumber,
     ) -> Result<(), ProofError> {
-        let n2 = n.square();
+        let (base, public_verification_key, decryption_shares_and_bases, mut transcript) =
+            Self::setup_protocol(
+                n2,
+                base,
+                public_verification_key,
+                vec![(*decryption_share_base, *decryption_share)],
+            );
 
-        let (
-            base_squared,
-            ciphertext_biquadrated,
-            public_verification_key_squared,
-            decryption_share_squared,
-            mut transcript,
-        ) = Self::setup_single_protocol(
-            &n2,
-            base,
-            ciphertext_squared,
-            public_verification_key,
-            decryption_share,
-        );
+        let (decryption_share_base, decryption_share) =
+            decryption_shares_and_bases.first().unwrap();
 
         self.verify_inner(
-            &n2,
-            base_squared,
-            ciphertext_biquadrated,
-            public_verification_key_squared,
-            decryption_share_squared,
+            n2,
+            base,
+            *decryption_share_base,
+            public_verification_key,
+            *decryption_share,
             &mut transcript,
         )
     }
@@ -158,10 +190,10 @@ impl ProofOfEqualityOfDiscreteLogs {
     fn verify_inner(
         &self,
         n2: &PaillierModulusSizedNumber,
-        base_squared: PaillierModulusSizedNumber,
-        ciphertext_biquadrated: PaillierModulusSizedNumber,
-        public_verification_key_squared: PaillierModulusSizedNumber,
-        decryption_share_squared: PaillierModulusSizedNumber,
+        base: PaillierModulusSizedNumber,
+        decryption_share_base: PaillierModulusSizedNumber,
+        public_verification_key: PaillierModulusSizedNumber,
+        decryption_share: PaillierModulusSizedNumber,
         transcript: &mut Transcript,
     ) -> Result<(), ProofError> {
         // Every square number except for zero that is not co-primed to $N^2$ yields factorization
@@ -175,205 +207,236 @@ impl ProofOfEqualityOfDiscreteLogs {
         // For self.ciphertext_biquadrated_randomizer and self.base_squared_randomizer checking it
         // is non-zero is sufficient and we don't have to check their in the
         // quadratic-residue group otherwise the proof verification formula will fail
-        if base_squared == PaillierModulusSizedNumber::ZERO
-            || ciphertext_biquadrated == PaillierModulusSizedNumber::ZERO
-            || public_verification_key_squared == PaillierModulusSizedNumber::ZERO
-            || decryption_share_squared == PaillierModulusSizedNumber::ZERO
-            || self.base_squared_randomizer == PaillierModulusSizedNumber::ZERO
-            || self.ciphertext_biquadrated_randomizer == PaillierModulusSizedNumber::ZERO
+        if base == PaillierModulusSizedNumber::ZERO
+            || decryption_share_base == PaillierModulusSizedNumber::ZERO
+            || public_verification_key == PaillierModulusSizedNumber::ZERO
+            || decryption_share == PaillierModulusSizedNumber::ZERO
+            || self.base_randomizer == PaillierModulusSizedNumber::ZERO
+            || self.decryption_share_base_randomizer == PaillierModulusSizedNumber::ZERO
         {
             return Err(ProofError {});
         }
 
-        let base_squared_raised_to_the_response =
-            <PaillierRingElement as Pow<ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber>>::pow(
-                &base_squared.as_ring_element(n2),
-                &self.response,
-            );
+        let base_squared_raised_to_the_response = <PaillierRingElement as Pow<
+            ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
+        >>::pow(
+            &base.as_ring_element(n2), &self.response
+        );
 
         let ciphertext_biquadrated_raised_to_the_response =
             <PaillierRingElement as Pow<ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber>>::pow(
-                &ciphertext_biquadrated.as_ring_element(n2),
+                &decryption_share_base.as_ring_element(n2),
                 &self.response,
             );
 
         let challenge = Self::compute_challenge(
-            self.base_squared_randomizer,
-            self.ciphertext_biquadrated_randomizer,
+            self.base_randomizer,
+            self.decryption_share_base_randomizer,
             transcript,
         );
 
         let public_verification_key_squared_raised_to_the_challenge =
             <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
-                &public_verification_key_squared.as_ring_element(n2),
+                &public_verification_key.as_ring_element(n2),
                 &challenge,
             );
 
         let decryption_share_squared_raised_to_the_challenge =
             <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
-                &decryption_share_squared.as_ring_element(n2),
+                &decryption_share.as_ring_element(n2),
                 &challenge,
             );
 
         if (base_squared_raised_to_the_response
             * public_verification_key_squared_raised_to_the_challenge)
             .as_natural_number()
-            == self.base_squared_randomizer
+            == self.base_randomizer
             && (ciphertext_biquadrated_raised_to_the_response
                 * decryption_share_squared_raised_to_the_challenge)
                 .as_natural_number()
-                == self.ciphertext_biquadrated_randomizer
+                == self.decryption_share_base_randomizer
         {
             return Ok(());
         }
         Err(ProofError {})
     }
 
-    fn setup_single_protocol(
+    fn setup_protocol(
         n2: &PaillierModulusSizedNumber,
         base: &PaillierModulusSizedNumber,
-        ciphertext_squared: &PaillierModulusSizedNumber,
         public_verification_key: &PaillierModulusSizedNumber,
-        decryption_share: &PaillierModulusSizedNumber,
+        decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
     ) -> (
         PaillierModulusSizedNumber,
         PaillierModulusSizedNumber,
-        PaillierModulusSizedNumber,
-        PaillierModulusSizedNumber,
+        Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
         Transcript,
     ) {
-        // The paper assumes that $a, b, g, h\in QR_{N}$ after the setup.
-        // In order to eliminate problems from the caller's side, we perform the squaring ourselves
-        // to assure it is in the quadratic residue group.
-        let base_squared = base
+        // The paper requires that $a, b, g, h\in QR_{N}$, but we get their roots as parameters.
+        // Therefore we perform the squaring to assure it is in the quadratic residue group.
+        let base = base
             .as_ring_element(n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
             .as_natural_number();
-        let ciphertext_biquadrated = ciphertext_squared
+
+        let public_verification_key = public_verification_key
             .as_ring_element(n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
             .as_natural_number();
-        let public_verification_key_squared = public_verification_key
-            .as_ring_element(n2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-            .as_natural_number();
-        let decryption_share_squared = decryption_share
-            .as_ring_element(n2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-            .as_natural_number();
+
+        let decryption_shares_and_bases: Vec<(
+            PaillierModulusSizedNumber,
+            PaillierModulusSizedNumber,
+        )> = decryption_shares_and_bases
+            .iter()
+            .map(|(decryption_share_base, decryption_share)| {
+                (
+                    decryption_share_base
+                        .as_ring_element(n2)
+                        .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
+                        .as_natural_number(),
+                    decryption_share
+                        .as_ring_element(n2)
+                        .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
+                        .as_natural_number(),
+                )
+            })
+            .collect();
 
         let mut transcript = Transcript::new(b"Proof of Equality of Discrete Logs");
-        transcript.append_statement(b"N (squared)", n2);
-        transcript.append_statement(b"base (squared)", &base_squared);
-        transcript.append_statement(b"ciphertext (biquadrated)", &ciphertext_biquadrated);
+
+        transcript.append_statement(b"The Paillier modulus $N^2$", n2);
+        transcript.append_statement(b"The base $g$", &base);
         transcript.append_statement(
-            b"public verification key (squared)",
-            &public_verification_key_squared,
+            b"The public verification key $a=g^x$",
+            &public_verification_key,
         );
-        transcript.append_statement(b"decryption share (squared)", &decryption_share_squared);
+
+        decryption_shares_and_bases
+            .iter()
+            .for_each(|(decryption_share_base, decryption_share)| {
+                transcript
+                    .append_statement(b"The decryption share base $h$", &decryption_share_base);
+                transcript.append_statement(b"The decryption share $b=h^x$", &decryption_share);
+            });
 
         (
-            base_squared,
-            ciphertext_biquadrated,
-            public_verification_key_squared,
-            decryption_share_squared,
+            base,
+            public_verification_key,
+            decryption_shares_and_bases,
             transcript,
         )
     }
 
-    /// Create a `BatchedProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete
-    /// logs of $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$ with
-    /// respects to the bases $g$ and $h_i$ respectively.
+    /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs
+    /// of $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$
+    /// with respects to the bases $g$ and $h_i$ respectively in zero-knowledge (i.e. without revealing the witness `d`)
+    /// for every (`decryption_share_base`, `decryption_share`) in `decryption_shares_and_bases`.
     ///
-    /// This is done in zero-knowledge (i.e. without revealing the secret discrete log `d`).
+    /// Where, for the usecase of threshold Paillier:
+    ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
+    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup.
+    ///       The proof is constructed over $g=\tilde{g}^{2} \in\QR_{N^2}$, which is the actual `base` for the proof.
+    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$.
+    ///       The proof is constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
+    ///       The proof is constructed over $h=\tilde{h}^2 \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
+    ///       The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
     ///
     /// # Panics
     ///
-    /// Panics if the `ciphertexts_and_decryption_shares` is empty
-    #[allow(dead_code)]
-    pub(crate) fn batch_prove(
+    /// Panics if the `ciphertexts_and_decryption_shares` is empty TODO: return error?
+    ///
+    /// ## Example
+    /// TODO
+    pub fn batch_prove(
         // The Paillier modulus
         n2: &PaillierModulusSizedNumber,
-        // The witness $d$ (the secret-key share in threshold decryption)
-        secret_key_share: &PaillierModulusSizedNumber,
-        // The base $g$
+        // The witness $d$ (the secret key share in threshold decryption)
+        witness: &PaillierModulusSizedNumber,
+        // The base $\tilde{g}$
         base: &PaillierModulusSizedNumber,
-        // The public verification key $a = g^d$
+        // The public verification key $v_j=g^{n!d_j}$
         public_verification_key: &PaillierModulusSizedNumber,
-        // The squared ciphertexts ${{h_i}}_i$ and their matching decryption shares ${{b_i}}_i =
-        // {{h_i^d}}_i$
-        squared_ciphertexts_and_decryption_shares: Vec<(
-            PaillierModulusSizedNumber,
-            PaillierModulusSizedNumber,
-        )>,
+        // The decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$ are the ciphertexts to be decrypted
+        // and their matching decryption shares ${\ct^i_j}_i = {{\tilde{h_i}^d}}_i$
+        decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
-        let (base_squared, _, batched_ciphertext_biquadrated, _, mut transcript) =
-            Self::setup_batch_protocol(
-                n2,
-                base,
-                public_verification_key,
-                squared_ciphertexts_and_decryption_shares,
-            );
+        let (base, _, batched_decrytion_share_base, _, mut transcript) = Self::setup_batch_protocol(
+            n2,
+            base,
+            public_verification_key,
+            decryption_shares_and_bases,
+        );
 
         Self::prove_inner(
             n2,
-            secret_key_share,
-            base_squared,
-            batched_ciphertext_biquadrated,
+            witness,
+            base,
+            batched_decrytion_share_base,
             &mut transcript,
             rng,
         )
     }
 
-    /// verify that `self` represents a valid (batched) proof of equality of discrete logs of
-    /// $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$ with respects to the
-    /// bases $g$ and $h_i$ respectively.    
+    /// Verify that `self` proves the equality of the discrete logs
+    /// of $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$
+    /// with respects to the bases $g$ and $h_i$ for every (`decryption_share_base`, `decryption_share`) in `decryption_shares_and_bases`.
+    ///
+    /// Where, for the usecase of threshold Paillier:
+    ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
+    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element sampled and published in the setup.
+    ///       The proof is constructed over $g=\tilde{g}^{2} \in\QR_{N^2}$, which is the actual `base` for the proof.
+    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$.
+    ///       The proof is constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
+    ///       The proof is constructed over $h=\tilde{h}^2 \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
+    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely, $\ct_j=\ct^{2n!d_j}$.
+    ///       The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
     ///
     /// # Panics
     ///
-    /// Panics if the `ciphertexts_and_decryption_shares` is empty
-    #[allow(dead_code)]
-    pub(crate) fn batch_verify(
+    /// Panics if the `ciphertexts_and_decryption_shares` is empty TODO: return error?
+    ///
+    /// ## Example
+    /// TODO
+    pub fn batch_verify(
         &self,
-        // The Paillier associated bi-prime $N$
-        n: &LargeBiPrimeSizedNumber,
-        // The base $g$
+        // The Paillier modulus
+        n2: &PaillierModulusSizedNumber,
+        // The base $\tilde{g}$
         base: &PaillierModulusSizedNumber,
-        // The public verification key $a = g^d$
+        // The public verification key $v_j=g^{n!d_j}$
         public_verification_key: &PaillierModulusSizedNumber,
-        // The ciphertexts ${{h_i}}_i$ and their matching decryption shares ${{b_i}}_i =
-        // {{h_i^d}}_i$
-        squared_ciphertexts_and_decryption_shares: Vec<(
-            PaillierModulusSizedNumber,
-            PaillierModulusSizedNumber,
-        )>,
+        // The decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$ are the ciphertexts to be decrypted
+        // and their matching decryption shares ${\ct^i_j}_i = {{\tilde{h_i}^d}}_i$
+        decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
     ) -> Result<(), ProofError> {
-        let n2 = n.square();
-
         let (
-            base_squared,
-            public_verification_key_squared,
-            batched_ciphertext_biquadrated,
-            batched_decryption_share_squared,
+            base,
+            public_verification_key,
+            batched_decryption_share_base,
+            batched_decryption_share,
             mut transcript,
         ) = Self::setup_batch_protocol(
             &n2,
             base,
             public_verification_key,
-            squared_ciphertexts_and_decryption_shares,
+            decryption_shares_and_bases,
         );
 
         self.verify_inner(
             &n2,
-            base_squared,
-            batched_ciphertext_biquadrated,
-            public_verification_key_squared,
-            batched_decryption_share_squared,
+            base,
+            batched_decryption_share_base,
+            public_verification_key,
+            batched_decryption_share,
             &mut transcript,
         )
     }
@@ -382,10 +445,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         n2: &PaillierModulusSizedNumber,
         base: &PaillierModulusSizedNumber,
         public_verification_key: &PaillierModulusSizedNumber,
-        ciphertexts_and_decryption_shares: Vec<(
-            PaillierModulusSizedNumber,
-            PaillierModulusSizedNumber,
-        )>,
+        decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
     ) -> (
         PaillierModulusSizedNumber,
         PaillierModulusSizedNumber,
@@ -393,37 +453,17 @@ impl ProofOfEqualityOfDiscreteLogs {
         PaillierModulusSizedNumber,
         Transcript,
     ) {
-        // The paper assumes that $a, b, g, h\in QR_{N}$ after the setup.
-        // In order to eliminate problems from the caller's side, we perform the squaring ourselves
-        // to assure it is in the quadratic residue group.
-        let base_squared = base
-            .as_ring_element(n2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-            .as_natural_number();
+        // TODO: is it intended that I first raise every h_i and b_i by 2?
+        let (base, public_verification_key, decryption_shares_and_bases, mut transcript) =
+            Self::setup_protocol(
+                n2,
+                base,
+                public_verification_key,
+                decryption_shares_and_bases,
+            );
 
-        let public_verification_key_squared = public_verification_key
-            .as_ring_element(n2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-            .as_natural_number();
-
-        let mut transcript = Transcript::new(b"Batched Proof of Equality of Discrete Logs");
-
-        transcript.append_statement(b"N (squared)", n2);
-        transcript.append_statement(b"base (squared)", &base_squared);
-        transcript.append_statement(
-            b"public verification key (squared)",
-            &public_verification_key_squared,
-        );
-
-        ciphertexts_and_decryption_shares
-            .iter()
-            .for_each(|(ciphertext, decryption_share)| {
-                transcript.append_statement(b"ciphertext", ciphertext);
-                transcript.append_statement(b"decryption share", decryption_share);
-            });
-
-        let randomizers: Vec<ComputationalSecuritySizedNumber> = (1
-            ..=ciphertexts_and_decryption_shares.len())
+        let randomizers: Vec<ComputationalSecuritySizedNumber> = (1..=decryption_shares_and_bases
+            .len())
             .map(|_| {
                 let challenge: ComputationalSecuritySizedNumber =
                     transcript.challenge(b"challenge");
@@ -434,20 +474,20 @@ impl ProofOfEqualityOfDiscreteLogs {
         let randomizers_ciphertexts_and_decryption_shares: Vec<(
             (PaillierModulusSizedNumber, PaillierModulusSizedNumber),
             ComputationalSecuritySizedNumber,
-        )> = ciphertexts_and_decryption_shares
+        )> = decryption_shares_and_bases
             .iter()
             .zip(randomizers.iter())
             .map(|((a, b), c)| ((*a, *b), *c))
             .collect();
 
         #[cfg(not(feature = "parallel"))]
-        let randomizers_ciphertexts_and_decryption_shares_iter =
+        let randomizers_decryption_shares_and_bases_iter =
             randomizers_ciphertexts_and_decryption_shares.iter();
         #[cfg(feature = "parallel")]
-        let randomizers_ciphertexts_and_decryption_shares_iter =
+        let randomizers_decryption_shares_and_bases_iter =
             randomizers_ciphertexts_and_decryption_shares.par_iter();
 
-        let batched_ciphertext = randomizers_ciphertexts_and_decryption_shares_iter
+        let batched_decryption_share_base = randomizers_decryption_shares_and_bases_iter
             .clone()
             .map(|((ciphertext, _), randomizer)| {
                 <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
@@ -457,19 +497,19 @@ impl ProofOfEqualityOfDiscreteLogs {
             });
 
         #[cfg(not(feature = "parallel"))]
-        let batched_ciphertext = batched_ciphertext
+        let batched_decryption_share_base = batched_ciphertext
             .reduce(|x, y| x * y)
             .unwrap()
             .as_natural_number();
         #[cfg(feature = "parallel")]
-        let batched_ciphertext = batched_ciphertext
+        let batched_decryption_share_base = batched_decryption_share_base
             .reduce(
                 || PaillierModulusSizedNumber::ONE.as_ring_element(n2),
                 |x, y| x * y,
             )
             .as_natural_number();
 
-        let batched_decryption_share = randomizers_ciphertexts_and_decryption_shares_iter.map(
+        let batched_decryption_share = randomizers_decryption_shares_and_bases_iter.map(
             |((_, decryption_share), randomizer)| {
                 <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
                     &decryption_share.as_ring_element(n2),
@@ -491,23 +531,12 @@ impl ProofOfEqualityOfDiscreteLogs {
             )
             .as_natural_number();
 
-        let batched_ciphertext_biquadrated = batched_ciphertext
-            .as_ring_element(n2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-            .as_natural_number();
-        let batched_decryption_share_squared = batched_decryption_share
-            .as_ring_element(n2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-            .as_natural_number();
-
+        // TODO: do I need to add them to the transcript? they are a direct equation of previously added values
         transcript.append_statement(
-            b"batched ciphertext (biquadrated)",
-            &batched_ciphertext_biquadrated,
+            b"batched decryption share base",
+            &batched_decryption_share_base,
         );
-        transcript.append_statement(
-            b"batched decryption share (squared)",
-            &batched_decryption_share_squared,
-        );
+        transcript.append_statement(b"batched decryption share", &batched_decryption_share);
 
         // TODO: check if Merlin already handles this [i.e. adds the challenge to the transcript],
         // if so remove this? TODO: should we even add these to the transcript?
@@ -516,10 +545,10 @@ impl ProofOfEqualityOfDiscreteLogs {
         });
 
         (
-            base_squared,
-            public_verification_key_squared,
-            batched_ciphertext_biquadrated,
-            batched_decryption_share_squared,
+            base,
+            public_verification_key,
+            batched_decryption_share_base,
+            batched_decryption_share,
             transcript,
         )
     }
@@ -577,7 +606,7 @@ mod tests {
 
         assert!(proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &ciphertext_squared,
                 &public_verification_key,
@@ -629,7 +658,7 @@ mod tests {
 
         assert!(proof
             .batch_verify(
-                &N,
+                &n2,
                 &BASE,
                 &public_verification_key,
                 squared_ciphertexts_and_decryption_shares,
@@ -656,14 +685,14 @@ mod tests {
         let wrong_ciphertext_biquadrated_randomizer = PaillierModulusSizedNumber::from_be_hex("2EAA0D625BD67781CFFCC4563365C37CDCEC8782B451703D4130F7B05E4D080EFF1668E8E96125EE991C45076AB92EFA40232A2C150A96A8DB72F9FB1E7EC57924A13465113ECF9CA575C312C11841C83935B81137B3172C5AB86CCF7EE400D525F5FDA24194F6BCEB4ECDA99EDCE509DDA1B5106EECE1962FFA65FE6B359E5524685ECB5C785B8B0F91744BB2B50EBEE981099AC4B66F6CCF01B1D16F6611D0846EAA44E20C4895CC77CC4CECD1A2AA34CCC97AE0D91C9438FBD0A59A66AB669BD35D78869DD9801C0B13CBBF202F8E21C21B4B76C006DE01A93DC708DE5777B1F305598DEC6552F92DB4166D10B784C6E897579265CA6C48721947F5CF0FC2B65C1EF15A0A62AF54478DD2E3275942A6D2E628C7FD56F1522DD6B251ECD129B93CDC76167A16B52711AB02315EA7D53C0F5F15403AC7BDC1DB3D65D714DA38ED350590D4ACB2B8CC6F4597C4CBCE311F8EA71B3B5783A3C57BACAA7D065EA12190DD982ADC78ECBE0F864016EDB59E9097D6D0DBECAA5F9E8272F1204246059AE42348DC978AF8F0E82BC13940559A7900AE10F343253F97611493EFA673FF74C695476A90FAD5AE734885C86C895F1CFF3E4731A3569F2295B119A46D48632BEB2576D0C0435E49C61FDFA0960C31E79D6BEFF0A1676F8F15A45B3E74B1905035DC3414B812B4253896CB04EDD6C9C4B9822FC2A2A567DEDB3F8730BBD2BD");
 
         let invalid_proof = ProofOfEqualityOfDiscreteLogs {
-            base_squared_randomizer: wrong_base_squared_randomizer,
-            ciphertext_biquadrated_randomizer: wrong_ciphertext_biquadrated_randomizer,
+            base_randomizer: wrong_base_squared_randomizer,
+            decryption_share_base_randomizer: wrong_ciphertext_biquadrated_randomizer,
             response: wrong_response,
         };
 
         assert!(invalid_proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &ciphertext_squared,
                 &wrong_public_verification_key,
@@ -683,14 +712,14 @@ mod tests {
 
         // Try to fool verification with zeroed out fields
         let crafted_proof = ProofOfEqualityOfDiscreteLogs {
-            base_squared_randomizer: PaillierModulusSizedNumber::ZERO,
-            ciphertext_biquadrated_randomizer: PaillierModulusSizedNumber::ZERO,
+            base_randomizer: PaillierModulusSizedNumber::ZERO,
+            decryption_share_base_randomizer: PaillierModulusSizedNumber::ZERO,
             response: wrong_response,
         };
 
         assert!(crafted_proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &ciphertext_squared,
                 &PaillierModulusSizedNumber::ZERO,
@@ -700,14 +729,14 @@ mod tests {
 
         // Try to fool verification with fields that their square is zero mod N^2 (e.g. N)
         let crafted_proof = ProofOfEqualityOfDiscreteLogs {
-            base_squared_randomizer: (N * LargeBiPrimeSizedNumber::from(2u8)),
-            ciphertext_biquadrated_randomizer: (N * LargeBiPrimeSizedNumber::from(2u8)),
+            base_randomizer: (N * LargeBiPrimeSizedNumber::from(2u8)),
+            decryption_share_base_randomizer: (N * LargeBiPrimeSizedNumber::from(2u8)),
             response: wrong_response,
         };
 
         assert!(crafted_proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &ciphertext_squared,
                 &(N * LargeBiPrimeSizedNumber::from(2u8)),
@@ -729,7 +758,7 @@ mod tests {
         // Assure that verification fails for random values
         assert!(valid_proof
             .verify(
-                &N,
+                &n2,
                 &wrong_base,
                 &ciphertext_squared,
                 &public_verification_key,
@@ -739,7 +768,7 @@ mod tests {
 
         assert!(valid_proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &wrong_ciphertext,
                 &public_verification_key,
@@ -749,7 +778,7 @@ mod tests {
 
         assert!(valid_proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &ciphertext_squared,
                 &wrong_public_verification_key,
@@ -759,7 +788,7 @@ mod tests {
 
         assert!(valid_proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &ciphertext_squared,
                 &public_verification_key,
@@ -768,10 +797,10 @@ mod tests {
             .is_err());
 
         let mut invalid_proof = valid_proof.clone();
-        invalid_proof.base_squared_randomizer = wrong_base_squared_randomizer;
+        invalid_proof.base_randomizer = wrong_base_squared_randomizer;
         assert!(invalid_proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &ciphertext_squared,
                 &public_verification_key,
@@ -780,10 +809,10 @@ mod tests {
             .is_err());
 
         let mut invalid_proof = valid_proof.clone();
-        invalid_proof.ciphertext_biquadrated_randomizer = wrong_ciphertext_biquadrated_randomizer;
+        invalid_proof.decryption_share_base_randomizer = wrong_ciphertext_biquadrated_randomizer;
         assert!(invalid_proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &ciphertext_squared,
                 &public_verification_key,
@@ -795,7 +824,7 @@ mod tests {
         invalid_proof.response = wrong_response;
         assert!(invalid_proof
             .verify(
-                &N,
+                &n2,
                 &BASE,
                 &ciphertext_squared,
                 &public_verification_key,
@@ -867,7 +896,7 @@ mod benches {
             bench.iter(|| {
                 assert!(proof
                     .verify(
-                        &n,
+                        &n2,
                         &base,
                         &ciphertext_squared,
                         &public_verification_key,
@@ -934,7 +963,7 @@ mod benches {
                     bench.iter(|| {
                         assert!(batched_proof
                             .batch_verify(
-                                &n,
+                                &n2,
                                 &base,
                                 &public_verification_key,
                                 squared_ciphertexts_and_decryption_shares.clone()
