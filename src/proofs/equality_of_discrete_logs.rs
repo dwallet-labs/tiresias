@@ -129,15 +129,15 @@ impl ProofOfEqualityOfDiscreteLogs {
     #[allow(dead_code)]
     pub(crate) fn verify(
         &self,
-        // The Paillier associated bi-prime $N$
+        // Paillier associated bi-prime $N$
         n: &LargeBiPrimeSizedNumber,
-        // The base $g$
+        // Global verification key $g$
         g_base: &PaillierModulusSizedNumber,
-        // The ciphertext $h$
+        // Ciphertext $h$
         ciphertext: &PaillierModulusSizedNumber,
-        // The personal verification key $a = g^d$
+        // Personal verification key $a = g^d$
         personal_verification_key: &PaillierModulusSizedNumber,
-        // The decryption share $b = h^d$
+        // Decryption share $b = h^d$
         decryption_share: &PaillierModulusSizedNumber,
     ) -> Result<(), ProofError> {
         let n2 = n.square();
@@ -283,18 +283,18 @@ mod tests {
 
     fn craft_proof(
         n2: &PaillierModulusSizedNumber,
-        base: &PaillierModulusSizedNumber,
+        g_base: &PaillierModulusSizedNumber,
         ciphertext: &PaillierModulusSizedNumber,
-        public_verification_key: &PaillierModulusSizedNumber,
+        personal_verification_key: &PaillierModulusSizedNumber,
         decryption_share: &PaillierModulusSizedNumber,
     ) -> ProofOfEqualityOfDiscreteLogs {
-        let base_squared = base
+        let g_base_squared = g_base
             .as_ring_element(n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
         let ciphertext_biquadrated = ciphertext
             .as_ring_element(n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(4u8), 3);
-        let public_verification_key_squared = public_verification_key
+        let personal_verification_key_squared = personal_verification_key
             .as_ring_element(n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
         let decryption_share_squared = decryption_share
@@ -303,14 +303,17 @@ mod tests {
 
         let mut transcript = Transcript::new(TRANSCRIPT_LABEL);
         transcript.append_statement(TRANSCRIPT_N_SQUARED, n2);
-        transcript.append_statement(TRANSCRIPT_G_BASE_SQUARED, &base_squared.as_natural_number());
+        transcript.append_statement(
+            TRANSCRIPT_G_BASE_SQUARED,
+            &g_base_squared.as_natural_number(),
+        );
         transcript.append_statement(
             TRANSCRIPT_CIPHERTEXT_BIQUADRATED,
             &ciphertext_biquadrated.as_natural_number(),
         );
         transcript.append_statement(
             TRANSCRIPT_PERSONAL_VERIFICATION_KEY_SQUARED,
-            &public_verification_key_squared.as_natural_number(),
+            &personal_verification_key_squared.as_natural_number(),
         );
         transcript.append_statement(
             TRANSCRIPT_DECRYPTION_SHARE_SQUARED,
@@ -363,7 +366,7 @@ mod tests {
             )
             .is_err());
 
-        let public_verification_key = G_BASE
+        let personal_verification_key = G_BASE
             .as_ring_element(&n2)
             .pow(&SECRET_KEY)
             .as_natural_number();
@@ -405,7 +408,7 @@ mod tests {
             &SECRET_KEY,
             &G_BASE,
             &CIPHERTEXT,
-            &public_verification_key,
+            &personal_verification_key,
             &decryption_share,
             &mut OsRng,
         );
@@ -416,7 +419,7 @@ mod tests {
                 &N,
                 &wrong_g_base,
                 &CIPHERTEXT,
-                &public_verification_key,
+                &personal_verification_key,
                 &decryption_share,
             )
             .is_err());
@@ -426,7 +429,7 @@ mod tests {
                 &N,
                 &G_BASE,
                 &wrong_ciphertext,
-                &public_verification_key,
+                &personal_verification_key,
                 &decryption_share,
             )
             .is_err());
@@ -446,7 +449,7 @@ mod tests {
                 &N,
                 &G_BASE,
                 &CIPHERTEXT,
-                &public_verification_key,
+                &personal_verification_key,
                 &wrong_decryption_share,
             )
             .is_err());
@@ -458,7 +461,7 @@ mod tests {
                 &N,
                 &G_BASE,
                 &CIPHERTEXT,
-                &public_verification_key,
+                &personal_verification_key,
                 &decryption_share,
             )
             .is_err());
@@ -470,7 +473,7 @@ mod tests {
                 &N,
                 &G_BASE,
                 &CIPHERTEXT,
-                &public_verification_key,
+                &personal_verification_key,
                 &decryption_share,
             )
             .is_err());
@@ -496,7 +499,7 @@ mod benches {
             |bench| {
                 bench.iter_batched(
                     || {
-                        let base = PaillierModulusSizedNumber::random_mod(
+                        let g_base = PaillierModulusSizedNumber::random_mod(
                             &mut OsRng,
                             &NonZero::new(n2).unwrap(),
                         );
@@ -505,7 +508,7 @@ mod benches {
                             &NonZero::new(n2).unwrap(),
                         );
 
-                        let public_verification_key = base
+                        let personal_verification_key = g_base
                             .as_ring_element(&n2)
                             .pow(&secret_key_share)
                             .as_natural_number();
@@ -516,25 +519,25 @@ mod benches {
                             .as_natural_number();
                         (
                             secret_key_share,
-                            base,
+                            g_base,
                             ciphertext,
-                            public_verification_key,
+                            personal_verification_key,
                             decryption_share,
                         )
                     },
                     |(
                         secret_key_share,
-                        base,
+                        g_base,
                         ciphertext,
-                        public_verification_key,
+                        personal_verification_key,
                         decryption_share,
                     )| {
                         ProofOfEqualityOfDiscreteLogs::prove(
                             &n2,
                             &secret_key_share,
-                            &base,
+                            &g_base,
                             &ciphertext,
-                            &public_verification_key,
+                            &personal_verification_key,
                             &decryption_share,
                             &mut OsRng,
                         )
@@ -549,7 +552,7 @@ mod benches {
             |bench| {
                 bench.iter_batched(
                     || {
-                        let base = PaillierModulusSizedNumber::random_mod(
+                        let g_base = PaillierModulusSizedNumber::random_mod(
                             &mut OsRng,
                             &NonZero::new(n2).unwrap(),
                         );
@@ -558,7 +561,7 @@ mod benches {
                             &NonZero::new(n2).unwrap(),
                         );
 
-                        let public_verification_key = base
+                        let personal_verification_key = g_base
                             .as_ring_element(&n2)
                             .pow(&secret_key_share)
                             .as_natural_number();
@@ -569,27 +572,27 @@ mod benches {
                             .as_natural_number();
                         (
                             n,
-                            base,
+                            g_base,
                             ciphertext,
-                            public_verification_key,
+                            personal_verification_key,
                             decryption_share,
                             ProofOfEqualityOfDiscreteLogs::prove(
                                 &n2,
                                 &secret_key_share,
-                                &base,
+                                &g_base,
                                 &ciphertext,
-                                &public_verification_key,
+                                &personal_verification_key,
                                 &decryption_share,
                                 &mut OsRng,
                             ),
                         )
                     },
-                    |(n, base, ciphertext, public_verification_key, decryption_share, proof)| {
+                    |(n, g_base, ciphertext, personal_verification_key, decryption_share, proof)| {
                         proof.verify(
                             &n,
-                            &base,
+                            &g_base,
                             &ciphertext,
-                            &public_verification_key,
+                            &personal_verification_key,
                             &decryption_share,
                         )
                     },
