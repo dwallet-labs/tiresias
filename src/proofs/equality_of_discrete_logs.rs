@@ -587,7 +587,14 @@ mod benches {
                             ),
                         )
                     },
-                    |(n, g_base, ciphertext, personal_verification_key, decryption_share, proof)| {
+                    |(
+                        n,
+                        g_base,
+                        ciphertext,
+                        personal_verification_key,
+                        decryption_share,
+                        proof,
+                    )| {
                         proof.verify(
                             &n,
                             &g_base,
