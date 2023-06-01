@@ -676,20 +676,6 @@ impl ProofOfEqualityOfDiscreteLogs {
             )
             .as_natural_number();
 
-        // TODO: do I need to add them to the transcript? they are a direct equation of previously
-        // added values
-        transcript.append_statement(
-            b"batched decryption share base",
-            &batched_decryption_share_base,
-        );
-        transcript.append_statement(b"batched decryption share", &batched_decryption_share);
-
-        // TODO: check if Merlin already handles this [i.e. adds the challenge to the transcript],
-        // if so remove this? TODO: should we even add these to the transcript?
-        randomizers.iter().for_each(|randomizer| {
-            transcript.append_statement(b"randomizer", randomizer);
-        });
-
         Ok((
             base,
             public_verification_key,
