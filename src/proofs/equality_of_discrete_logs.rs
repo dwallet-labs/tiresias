@@ -741,7 +741,7 @@ mod tests {
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(n_factorial), 3)
             .as_natural_number();
-        let public_verification_key = BASE
+        let public_verification_key = base
             .as_ring_element(&n2)
             .pow(&SECRET_KEY)
             .as_natural_number();
@@ -755,19 +755,17 @@ mod tests {
         let proof = ProofOfEqualityOfDiscreteLogs::prove(
             n2,
             witness,
-            BASE,
+            base,
             decryption_share_base,
             public_verification_key,
             decryption_share,
             &mut OsRng,
         );
 
-        // TODO: @dolevmu this test passes, and from my understanding of the proof it should - so
-        // why did you ask me to raise base by n!?
         assert!(proof
             .verify(
                 n2,
-                BASE,
+                base,
                 decryption_share_base,
                 public_verification_key,
                 decryption_share,
