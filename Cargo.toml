@@ -9,7 +9,6 @@ merlin = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.163", features = ["derive"] }
 
 rayon = { version = "1.7.0", optional = true }
-
 thiserror = "1.0.40"
 
 # For benchmarking

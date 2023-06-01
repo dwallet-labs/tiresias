@@ -12,8 +12,8 @@ use crate::{
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 
-/// A proof of equality of discrete logs, which is utilized to prove the validity of threshold
-/// decryptions by the parties.
+/// A proof of equality of discrete logarithms, utilized to validate threshold
+/// decryptions performed by the parties.
 ///
 /// This proves the following language:
 ///         $L_{\EDL^2}[N,\tilde g,a;x] = \{(\tilde h,b) \mid \tilde h\in \ZZ_{N^2}^* \wedge
@@ -39,10 +39,10 @@ pub struct ProofOfEqualityOfDiscreteLogs {
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("Invalid Params")]
+    #[error("invalid parameters")]
     InvalidParams(),
 
-    #[error("Invalid proof - didn't satisfy the proof equation")]
+    #[error("invalid proof - the proof equation was not satisfied.")]
     ProofVerificationError(),
 }
 
@@ -50,7 +50,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 impl ProofOfEqualityOfDiscreteLogs {
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
-    /// = g^d$ and $b = h^d$ in zero-knowledge (i.e. without revealing the witness `d`).
+    /// a = g^x$ and $b = h^x$ in zero-knowledge (i.e. without revealing the witness `x`).
     /// Where, for the usecase of threshold Paillier:
     ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
     ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
