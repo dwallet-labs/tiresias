@@ -49,21 +49,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl ProofOfEqualityOfDiscreteLogs {
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
     /// a = g^x$ and $b = h^x$ in zero-knowledge (i.e. without revealing the witness `x`).
-    /// Where, for the usecase of threshold Paillier:
-    ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
-    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
-    ///       sampled and published in the setup. The proof is constructed over $g=\tilde{g}^{2}
-    ///       \in\QR_{N^2}$, which is the actual `base` for the proof.
-    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$. The proof is
-    ///       constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual
-    ///       `decryption_share_base` for the proof.
-    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
-    ///       ciphertext to be decrypted. The proof is constructed over $h=\tilde{h}^2
-    ///       \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely,
-    ///       $\ct_j=\ct^{2n!d_j}$. The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$,
-    ///       which is the actual `decryption_share_base` for the proof.
-    ///
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
     pub fn prove(
         // The Paillier modulus
@@ -145,26 +130,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         }
     }
 
-    /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
-    /// = g^d$ and $b = h^d$ in zero-knowledge (i.e. without revealing the witness `d`)
-    /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
-    ///
     /// Verify that `self` proves the equality of the discrete logs of $a = g^d$ and $b = h^d$.
-    /// Where, for the usecase of threshold Paillier:
-    ///     - For prover $P_j$, the witness $x$ is simply its secret key share $d_j$.
-    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
-    ///       sampled and published in the setup. The proof is constructed over $g=\tilde{g}^{2}
-    ///       \in\QR_{N^2}$, which is the actual `base` for the proof.
-    ///     - For prover $P_j$, the `public_verification_key` $v_j=g^{n!d_j}$. The proof is
-    ///       constructed over $a=\tilde{g}^2x=v_j^2x \in\QR_{N^2}$, which is the actual
-    ///       `decryption_share_base` for the proof.
-    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
-    ///       ciphertext to be decrypted. The proof is constructed over $h=\tilde{h}^2
-    ///       \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely,
-    ///       $\ct_j=\ct^{2n!d_j}$. The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$,
-    ///       which is the actual `decryption_share_base` for the proof.
-    ///
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
     pub fn verify(
         &self,
