@@ -346,7 +346,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         public_verification_key: PaillierModulusSizedNumber,
         // The decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$
         // are the ciphertexts to be decrypted and their matching decryption shares
-        // ${\ct^i_j}_i = {{\tilde{h_i}^d}}_i$
+        // ${\ct^i_j}_i = {{\tilde{h_i}^x}}_i$
         decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
         rng: &mut impl CryptoRngCore,
     ) -> Result<ProofOfEqualityOfDiscreteLogs> {
