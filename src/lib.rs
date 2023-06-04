@@ -4,13 +4,13 @@ use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     Concat, Uint, U1024, U128,
 };
+pub use decryption_key::DecryptionKey;
+pub use encryption_key::EncryptionKey;
+pub use proofs::ProofOfEqualityOfDiscreteLogs;
 
 mod decryption_key;
 mod encryption_key;
 mod proofs;
-pub use decryption_key::DecryptionKey;
-pub use encryption_key::EncryptionKey;
-pub use proofs::ProofOfEqualityOfDiscreteLogs;
 
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
 /// Set to a U128 for 128-bit security.

@@ -12,8 +12,8 @@ use crate::{
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 
-/// A proof of equality of discrete logs, which is utilized to prove the validity of threshold
-/// decryptions by the parties.
+/// A proof of equality of discrete logs, which is utilized to prove the validity of decryption
+/// shares sent by each party.
 ///
 /// This proves the following language:
 ///         $L_{\EDL^2}[N,\tilde g,a;x] = \{(\tilde h,b) \mid \tilde h\in \ZZ_{N^2}^* \wedge
@@ -29,11 +29,11 @@ use crate::{
 ///       $\ct_j=\ct^{2n!d_j}$.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofOfEqualityOfDiscreteLogs {
-    // The base randomizer $u=g^r \in \mathbb{Z}_{N^2}^*$.
+    // Base randomizer $u=g^r \in \mathbb{Z}_{N^2}^*$.
     base_randomizer: PaillierModulusSizedNumber,
-    // The decryption share base randomizer $v=h^r \in \mathbb{Z}_{N^2}^*$.
+    // Decryption share base randomizer $v=h^r \in \mathbb{Z}_{N^2}^*$.
     decryption_share_base_randomizer: PaillierModulusSizedNumber,
-    // The response $z \in \mathbb{Z}$.
+    // Response $z \in \mathbb{Z}$.
     response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 }
 
@@ -50,67 +50,21 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 impl ProofOfEqualityOfDiscreteLogs {
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
-    /// = g^d$ and $b = h^d$ in zero-knowledge (i.e. without revealing the witness `d`).
-    /// Where, for the usecase of threshold Paillier:
-    ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
-    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
-    ///       sampled and published in the setup. The proof is constructed over $g=\tilde{g}^{2}
-    ///       \in\QR_{N^2}$, which is the actual `base` for the proof.
-    ///     - For prover $P_j$, $a$ is the `public_verification_key` $v_j=g^{n!d_j}$. The proof is
-    ///       constructed over $a=\tilde{g}^2x \in\QR_{N^2}$, which is the actual
-    ///       `decryption_share_base` for the proof.
-    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
-    ///       ciphertext to be decrypted. The proof is constructed over $h=\tilde{h}^2
-    ///       \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely,
-    ///       $\ct_j=\ct^{2n!d_j}$. The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$,
-    ///       which is the actual `decryption_share_base` for the proof.
-    ///
+    /// a = g^x$ and $b = h^x$ in zero-knowledge (i.e. without revealing the witness `x`).
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
-    ///
-    /// ## Example
-    /// ```rust
-    /// use std::collections::HashMap;
-    /// use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-    /// use rand_core::OsRng;
-    /// use threshold_paillier::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber, EncryptionKey, ProofOfEqualityOfDiscreteLogs};
-    ///
-    /// let n: LargeBiPrimeSizedNumber = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
-    /// let n2 = n.square();
-    /// let decryption_key_share: PaillierModulusSizedNumber = PaillierModulusSizedNumber::from_be_hex("366E9B246DB913DF2421C04ABE53340FC2A4510AC9C3297F50C4B791D4E94FC0CB122283BECD04228E229A836CF7DC04B7A4C17821A9AB5D0998587680354D9D22A420235BAC1AEF04066F42C1A1A867DAE1118D8E5015DAE22F9E3ECD5FFFF0F972C1E766DCACD9BEAAE9BE454AE08845A01FC9D3A62493A64E288DC28475DCA5E7016A780533C8A2EFF45C367FB591D33473253A20C90E88B0C338153D6E9494B12184246D040005D70B36F6BDAD1BE32B92CA50E5B0365C866308C770927F317C1A476C94CE013CEEB021E4CF742119D59AA7B545EDD3536282153BE41DADF85CA65392F227D326DECA23EB2AD4D0D4EFAED6A3BD7E91DC55A9C88EE3242543EF1D92E892298C201AAC81E3CBA58186D0BC1388D6EEA325265F922FBCDC4C58A29BBD54E99E1B9F4B78BAD4F0CCFE733EE69C04859EACE9DB6541567287F0CA5E7D50153CF554470422E2638DED6115C20D46396779CEB3048C58D7B0C183E627D5E4E04DD9CDF6333A278457873C0DB73F8F90264D4B52B4ACC1AF9651D1C7D6C51FEF7AF78EB0F8BECD969F058281B95DED93D31895FF0464D6F990C2F4B582659B18917C25B406C6DAB573500FADC423FA474F6F939C5C7D6505DA583D47BCFC93CAB94B57850A0668A7489D30A0088DDEA971AA82DF1A3CBCD02749DC60C07D6C186B8F0D6DB94FB9B8FE4A5A56142D68410B65830D6ECC6CBC99C7DF");
-    /// let encryption_key = EncryptionKey::new(n);
-    /// let (t, n) = (2, 3);
-    /// let plaintext = LargeBiPrimeSizedNumber::from(42u8);
-    /// let ciphertext = encryption_key.encrypt(&plaintext, &mut OsRng);
-    /// let params = DynResidueParams::new(&n2);
-    /// let decryption_share_base = DynResidue::new(&ciphertext, params)
-    ///            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
-    ///            .retrieve();
-    /// let decryption_share = DynResidue::new(&decryption_share_base, params)
-    ///            .pow(&decryption_key_share)
-    ///            .retrieve();
-    /// let base = PaillierModulusSizedNumber::from_be_hex("03B4EFB895D3A85104F1F93744F9DB8924911747DE87ACEC55F1BF37C4531FD7F0A5B498A943473FFA65B89A04FAC2BBDF76FF14D81EB0A0DAD7414CF697E554A93C8495658A329A1907339F9438C1048A6E14476F9569A14BD092BCB2730DCE627566808FD686008F46A47964732DC7DCD2E6ECCE83F7BCCAB2AFDF37144ED153A118B683FF6A3C6971B08DE53DA5D2FEEF83294C21998FC0D1E219A100B6F57F2A2458EA9ABCFA8C5D4DF14B286B71BF5D7AD4FFEEEF069B64E0FC4F1AB684D6B2F20EAA235892F360AA2ECBF361357405D77E5023DF7BEDC12F10F6C35F3BE1163BC37B6C97D62616260A2862F659EB1811B1DDA727847E810D0C2FA120B18E99C9008AA4625CF1862460F8AB3A41E3FDB552187E0408E60885391A52EE2A89DD2471ECBA0AD922DEA0B08474F0BED312993ECB90C90C0F44EF267124A6217BC372D36F8231EB76B0D31DDEB183283A46FAAB74052A01F246D1C638BC00A47D25978D7DF9513A99744D8B65F2B32E4D945B0BA3B7E7A797604173F218D116A1457D20A855A52BBD8AC15679692C5F6AC4A8AF425370EF1D4184322F317203BE9678F92BFD25C7E6820D70EE08809424720249B4C58B81918DA02CFD2CAB3C42A02B43546E64430F529663FCEFA51E87E63F0813DA52F3473506E9E98DCD3142D830F1C1CDF6970726C190EAE1B5D5A26BC30857B4DF639797895E5D61A5EE");
-    /// let base = DynResidue::new(&base, params)
-    ///            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8 * 3), 3)
-    ///            .retrieve();
-    /// let public_verification_key = DynResidue::new(&base, params)
-    ///         .pow(&decryption_key_share)
-    ///         .retrieve();
-    /// let proof = ProofOfEqualityOfDiscreteLogs::prove(n2, decryption_key_share, base, decryption_share_base, public_verification_key, decryption_share, &mut OsRng);
-    /// ```
     pub fn prove(
         // The Paillier modulus
         n2: PaillierModulusSizedNumber,
-        // The witness $d$ (the secret key share in threshold decryption)
+        // Witness $x$ (the secret key share $d_j$ in threshold decryption)
         witness: PaillierModulusSizedNumber,
-        // The base $\tilde{g}$
+        // Base $\tilde{g}$
         base: PaillierModulusSizedNumber,
-        // The decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
+        // Decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
         // ciphertext to be decrypted
         decryption_share_base: PaillierModulusSizedNumber,
-        // The public verification key $v_j=g^{n!d_j}$
+        // Public verification key $v_j=g^{n!d_j}$
         public_verification_key: PaillierModulusSizedNumber,
-        // The decryption share $\ct_j=\ct^{2n!d_j}$
+        // Decryption share $\ct_j=\ct^{2n!d_j}$
         decryption_share: PaillierModulusSizedNumber,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
@@ -178,59 +132,8 @@ impl ProofOfEqualityOfDiscreteLogs {
         }
     }
 
-    /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
-    /// = g^d$ and $b = h^d$ in zero-knowledge (i.e. without revealing the witness `d`)
-    /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
-    ///
     /// Verify that `self` proves the equality of the discrete logs of $a = g^d$ and $b = h^d$.
-    /// Where, for the usecase of threshold Paillier:
-    ///     - For prover $P_j$, the witness $x$ is simply its secret key share $d_j$.
-    ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
-    ///       sampled and published in the setup. The proof is constructed over $g=\tilde{g}^{2}
-    ///       \in\QR_{N^2}$, which is the actual `base` for the proof.
-    ///     - For prover $P_j$, the `public_verification_key` $v_j=g^{n!d_j}$. The proof is
-    ///       constructed over $a=\tilde{g}^2x=v_j^2x \in\QR_{N^2}$, which is the actual
-    ///       `decryption_share_base` for the proof.
-    ///     - `decryption_share_base` $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
-    ///       ciphertext to be decrypted. The proof is constructed over $h=\tilde{h}^2
-    ///       \in\QR_{N^2}$, which is the actual `decryption_share_base` for the proof.
-    ///     - For prover $P_j$, $b$ is set to the `decryption_share` of $\ct$, namely,
-    ///       $\ct_j=\ct^{2n!d_j}$. The proof is constructed over $b=\tilde{h}^2x \in\QR_{N^2}$,
-    ///       which is the actual `decryption_share_base` for the proof.
-    ///
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
-    ///
-    /// ## Example
-    /// ```rust
-    /// use std::collections::HashMap;
-    /// use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-    /// use rand_core::OsRng;
-    /// use threshold_paillier::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber, EncryptionKey, ProofOfEqualityOfDiscreteLogs};
-    ///
-    /// let n: LargeBiPrimeSizedNumber = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
-    /// let n2 = n.square();
-    /// let decryption_key_share: PaillierModulusSizedNumber = PaillierModulusSizedNumber::from_be_hex("366E9B246DB913DF2421C04ABE53340FC2A4510AC9C3297F50C4B791D4E94FC0CB122283BECD04228E229A836CF7DC04B7A4C17821A9AB5D0998587680354D9D22A420235BAC1AEF04066F42C1A1A867DAE1118D8E5015DAE22F9E3ECD5FFFF0F972C1E766DCACD9BEAAE9BE454AE08845A01FC9D3A62493A64E288DC28475DCA5E7016A780533C8A2EFF45C367FB591D33473253A20C90E88B0C338153D6E9494B12184246D040005D70B36F6BDAD1BE32B92CA50E5B0365C866308C770927F317C1A476C94CE013CEEB021E4CF742119D59AA7B545EDD3536282153BE41DADF85CA65392F227D326DECA23EB2AD4D0D4EFAED6A3BD7E91DC55A9C88EE3242543EF1D92E892298C201AAC81E3CBA58186D0BC1388D6EEA325265F922FBCDC4C58A29BBD54E99E1B9F4B78BAD4F0CCFE733EE69C04859EACE9DB6541567287F0CA5E7D50153CF554470422E2638DED6115C20D46396779CEB3048C58D7B0C183E627D5E4E04DD9CDF6333A278457873C0DB73F8F90264D4B52B4ACC1AF9651D1C7D6C51FEF7AF78EB0F8BECD969F058281B95DED93D31895FF0464D6F990C2F4B582659B18917C25B406C6DAB573500FADC423FA474F6F939C5C7D6505DA583D47BCFC93CAB94B57850A0668A7489D30A0088DDEA971AA82DF1A3CBCD02749DC60C07D6C186B8F0D6DB94FB9B8FE4A5A56142D68410B65830D6ECC6CBC99C7DF");
-    /// let encryption_key = EncryptionKey::new(n);
-    /// let (t, n) = (2, 3);
-    /// let plaintext = LargeBiPrimeSizedNumber::from(42u8);
-    /// let ciphertext = encryption_key.encrypt(&plaintext, &mut OsRng);
-    /// let params = DynResidueParams::new(&n2);
-    /// let decryption_share_base = DynResidue::new(&ciphertext, params)
-    ///            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
-    ///            .retrieve();
-    /// let decryption_share = DynResidue::new(&decryption_share_base, params)
-    ///            .pow(&decryption_key_share)
-    ///            .retrieve();
-    /// let base = PaillierModulusSizedNumber::from_be_hex("03B4EFB895D3A85104F1F93744F9DB8924911747DE87ACEC55F1BF37C4531FD7F0A5B498A943473FFA65B89A04FAC2BBDF76FF14D81EB0A0DAD7414CF697E554A93C8495658A329A1907339F9438C1048A6E14476F9569A14BD092BCB2730DCE627566808FD686008F46A47964732DC7DCD2E6ECCE83F7BCCAB2AFDF37144ED153A118B683FF6A3C6971B08DE53DA5D2FEEF83294C21998FC0D1E219A100B6F57F2A2458EA9ABCFA8C5D4DF14B286B71BF5D7AD4FFEEEF069B64E0FC4F1AB684D6B2F20EAA235892F360AA2ECBF361357405D77E5023DF7BEDC12F10F6C35F3BE1163BC37B6C97D62616260A2862F659EB1811B1DDA727847E810D0C2FA120B18E99C9008AA4625CF1862460F8AB3A41E3FDB552187E0408E60885391A52EE2A89DD2471ECBA0AD922DEA0B08474F0BED312993ECB90C90C0F44EF267124A6217BC372D36F8231EB76B0D31DDEB183283A46FAAB74052A01F246D1C638BC00A47D25978D7DF9513A99744D8B65F2B32E4D945B0BA3B7E7A797604173F218D116A1457D20A855A52BBD8AC15679692C5F6AC4A8AF425370EF1D4184322F317203BE9678F92BFD25C7E6820D70EE08809424720249B4C58B81918DA02CFD2CAB3C42A02B43546E64430F529663FCEFA51E87E63F0813DA52F3473506E9E98DCD3142D830F1C1CDF6970726C190EAE1B5D5A26BC30857B4DF639797895E5D61A5EE");
-    /// let base = DynResidue::new(&base, params)
-    ///            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8 * 3), 3)
-    ///            .retrieve();
-    /// let public_verification_key = DynResidue::new(&base, params)
-    ///         .pow(&decryption_key_share)
-    ///         .retrieve();
-    /// let proof = ProofOfEqualityOfDiscreteLogs::prove(n2, decryption_key_share, base, decryption_share_base, public_verification_key, decryption_share, &mut OsRng);
-    /// assert!(proof.verify(n2, base, decryption_share_base, public_verification_key, decryption_share).is_ok());
-    /// ```
     pub fn verify(
         &self,
         // The Paillier modulus
@@ -351,8 +254,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
         Transcript,
     ) {
-        // The paper requires that $a, b, g, h\in QR_{N}$, but we get their roots as parameters.
-        // Therefore we perform the squaring to assure it is in the quadratic residue group.
+        // The paper requires that $a, b, g, h\in QR_{N}$, which is enforced by obtaining their
+        // square roots as parameters to begin with. Therefore we perform the squaring to
+        // assure it is in the quadratic residue group.
         let base = base
             .as_ring_element(&n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
@@ -626,10 +530,10 @@ impl ProofOfEqualityOfDiscreteLogs {
             .collect();
 
         #[cfg(not(feature = "parallel"))]
-        let randomizers_decryption_shares_and_bases_iter =
+            let randomizers_decryption_shares_and_bases_iter =
             randomizers_ciphertexts_and_decryption_shares.iter();
         #[cfg(feature = "parallel")]
-        let randomizers_decryption_shares_and_bases_iter =
+            let randomizers_decryption_shares_and_bases_iter =
             randomizers_ciphertexts_and_decryption_shares.par_iter();
 
         let batched_decryption_share_base = randomizers_decryption_shares_and_bases_iter
@@ -642,12 +546,12 @@ impl ProofOfEqualityOfDiscreteLogs {
             });
 
         #[cfg(not(feature = "parallel"))]
-        let batched_decryption_share_base = batched_decryption_share_base
+            let batched_decryption_share_base = batched_decryption_share_base
             .reduce(|x, y| x * y)
             .unwrap()
             .as_natural_number();
         #[cfg(feature = "parallel")]
-        let batched_decryption_share_base = batched_decryption_share_base
+            let batched_decryption_share_base = batched_decryption_share_base
             .reduce(
                 || PaillierModulusSizedNumber::ONE.as_ring_element(&n2),
                 |x, y| x * y,
@@ -664,12 +568,12 @@ impl ProofOfEqualityOfDiscreteLogs {
         );
 
         #[cfg(not(feature = "parallel"))]
-        let batched_decryption_share = batched_decryption_share
+            let batched_decryption_share = batched_decryption_share
             .reduce(|x, y| x * y)
             .unwrap()
             .as_natural_number();
         #[cfg(feature = "parallel")]
-        let batched_decryption_share = batched_decryption_share
+            let batched_decryption_share = batched_decryption_share
             .reduce(
                 || PaillierModulusSizedNumber::ONE.as_ring_element(&n2),
                 |x, y| x * y,
@@ -1199,12 +1103,9 @@ mod benches {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::LargeBiPrimeSizedNumber;
 
     pub(crate) fn benchmark_proof_of_equality_of_discrete_logs(c: &mut Criterion) {
         let mut g = c.benchmark_group("proof of equality of discrete logs benches");
-        g.sample_size(10);
-
         let n = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
         let n2 = n.square();
         let secret_key_share = PaillierModulusSizedNumber::from_be_hex("19d698592b9ccb2890fb84be46cd2b18c360153b740aeccb606cf4168ee2de399f05273182bf468978508a5f4869cb867b340e144838dfaf4ca9bfd38cd55dc2837688aed2dbd76d95091640c47b2037d3d0ca854ffb4c84970b86f905cef24e876ddc8ab9e04f2a5f171b9c7146776c469f0d90908aa436b710cf4489afc73cd3ee38bb81e80a22d5d9228b843f435c48c5eb40088623a14a12b44e2721b56625da5d56d257bb27662c6975630d51e8f5b930d05fc5ba461a0e158cbda0f3266408c9bf60ff617e39ae49e707cbb40958adc512f3b4b69a5c3dc8b6d34cf45bc9597840057438598623fb65254869a165a6030ec6bec12fd59e192b3c1eefd33ef5d9336e0666aa8f36c6bd2749f86ea82290488ee31bf7498c2c77a8900bae00efcff418b62d41eb93502a245236b89c241ad6272724858122a2ebe1ae7ec4684b29048ba25b3a516c281a93043d58844cf3fa0c6f1f73db5db7ecba179652349dea8df5454e0205e910e0206736051ac4b7c707c3013e190423532e907af2e85e5bb6f6f0b9b58257ca1ec8b0318dd197f30352a96472a5307333f0e6b83f4f775fb302c1e10f21e1fcbfff17e3a4aa8bb6f553d9c6ebc2c884ae9b140dd66f21afc8610418e9f0ba2d14ecfa51ff08744a3470ebe4bb21bd6d65b58ac154630b8331ea620673ffbabb179a971a6577c407a076654a629c7733836c250000");
