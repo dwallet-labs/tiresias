@@ -65,7 +65,6 @@ impl ProofOfEqualityOfDiscreteLogs {
     ///       which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
-    ///
     pub fn prove(
         // The Paillier modulus
         n2: PaillierModulusSizedNumber,
@@ -167,7 +166,6 @@ impl ProofOfEqualityOfDiscreteLogs {
     ///       which is the actual `decryption_share_base` for the proof.
     ///
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
-    ///
     pub fn verify(
         &self,
         // The Paillier modulus
