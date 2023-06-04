@@ -1,26 +1,10 @@
-use core::fmt;
-use std::error::Error;
-
 use crypto_bigint::{Encoding, Limb, Uint};
+#[cfg(feature = "benchmarking")]
+pub(crate) use equality_of_discrete_logs::benchmark_proof_of_equality_of_discrete_logs;
+pub use equality_of_discrete_logs::ProofOfEqualityOfDiscreteLogs;
 use merlin::Transcript;
 
-pub(crate) mod equality_of_discrete_logs;
-
-#[derive(Debug, Clone, Copy)]
-/// An error generated for an invalid proof during verification.
-pub struct ProofError;
-
-impl fmt::Display for ProofError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ProofError")
-    }
-}
-
-impl Error for ProofError {
-    fn description(&self) -> &str {
-        "Verification failure!"
-    }
-}
+mod equality_of_discrete_logs;
 
 /// A transcript protocol for fiat-shamir transforms of interactive to non-interactive proofs.
 trait TranscriptProtocol {

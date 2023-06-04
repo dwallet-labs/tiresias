@@ -4,13 +4,13 @@ use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     Concat, Uint, U1024, U128,
 };
+pub use decryption_key::DecryptionKey;
+pub use encryption_key::EncryptionKey;
+pub use proofs::ProofOfEqualityOfDiscreteLogs;
 
 mod decryption_key;
 mod encryption_key;
-pub(crate) mod proofs;
-
-pub use decryption_key::DecryptionKey;
-pub use encryption_key::EncryptionKey;
+mod proofs;
 
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
 /// Set to a U128 for 128-bit security.
@@ -86,5 +86,5 @@ mod tests {
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,
-    proofs::equality_of_discrete_logs::benchmark_proof_of_equality_of_discrete_logs
+    proofs::benchmark_proof_of_equality_of_discrete_logs
 );
