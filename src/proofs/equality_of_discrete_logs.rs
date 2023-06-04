@@ -11,8 +11,8 @@ use crate::{
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 
-/// A proof of equality of discrete logs, which is utilized to prove the validity of threshold
-/// decryptions by the parties.
+/// A proof of equality of discrete logs, which is utilized to prove the validity of decryption shares
+/// sent by each party.
 ///
 /// This proves the following language:
 ///         $L_{\EDL^2}[N,\tilde g,a;x] = \{(\tilde h,b) \mid \tilde h\in \ZZ_{N^2}^* \wedge
@@ -49,7 +49,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 impl ProofOfEqualityOfDiscreteLogs {
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
-    /// = g^d$ and $b = h^d$ in zero-knowledge (i.e. without revealing the witness `d`).
+    /// a = g^x$ and $b = h^x$ in zero-knowledge (i.e. without revealing the witness `x`).
     /// Where, for the usecase of threshold Paillier:
     ///     - For prover $P_j$, the `witness` $x$ is simply its secret key share $d_j$.
     ///     - `base` $\tilde{g}={g'}^{\Delta_n}$ where $g'\gets\ZZ_{N^2}^*$ is a random element
@@ -100,7 +100,7 @@ impl ProofOfEqualityOfDiscreteLogs {
     pub fn prove(
         // The Paillier modulus
         n2: PaillierModulusSizedNumber,
-        // The witness $d$ (the secret key share in threshold decryption)
+        // The witness $x$ (the secret key share $d_j$ in threshold decryption)
         witness: PaillierModulusSizedNumber,
         // The base $\tilde{g}$
         base: PaillierModulusSizedNumber,
@@ -350,7 +350,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
         Transcript,
     ) {
-        // The paper requires that $a, b, g, h\in QR_{N}$, but we get their roots as parameters.
+        // The paper requires that $a, b, g, h\in QR_{N}$, which is enforced by obtaining their square roots as parameters to begin with.
         // Therefore we perform the squaring to assure it is in the quadratic residue group.
         let base = base
             .as_ring_element(&n2)
