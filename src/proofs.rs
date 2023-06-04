@@ -1,8 +1,9 @@
 use crypto_bigint::{Encoding, Limb, Uint};
+use merlin::Transcript;
+
 #[cfg(feature = "benchmarking")]
 pub(crate) use equality_of_discrete_logs::benchmark_proof_of_equality_of_discrete_logs;
 pub use equality_of_discrete_logs::ProofOfEqualityOfDiscreteLogs;
-use merlin::Transcript;
 
 mod equality_of_discrete_logs;
 

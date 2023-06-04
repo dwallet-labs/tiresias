@@ -1,10 +1,11 @@
-#[cfg(feature = "benchmarking")]
-pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
 use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
 use merlin::Transcript;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
 
 use crate::{
     proofs::TranscriptProtocol, AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber,
@@ -311,6 +312,23 @@ impl ProofOfEqualityOfDiscreteLogs {
         )
     }
 
+    fn compute_challenge(
+        base_squared_randomizer: PaillierModulusSizedNumber,
+        decryption_share_base_randomizer: PaillierModulusSizedNumber,
+        transcript: &mut Transcript,
+    ) -> ComputationalSecuritySizedNumber {
+        transcript.append_statement(b"The base randomizer $u=g^r$", &base_squared_randomizer);
+        transcript.append_statement(
+            b"The decryption share base randomizer $v=h^r$",
+            &decryption_share_base_randomizer,
+        );
+
+        let challenge: ComputationalSecuritySizedNumber =
+            transcript.challenge(b"The challenge $e$");
+
+        challenge
+    }
+
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs
     /// of $a = g^x$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^x}}_i$
     /// with respects to the bases $g$ and $h_i$ respectively in zero-knowledge (i.e. without
@@ -494,34 +512,18 @@ impl ProofOfEqualityOfDiscreteLogs {
             transcript,
         ))
     }
-
-    fn compute_challenge(
-        base_squared_randomizer: PaillierModulusSizedNumber,
-        decryption_share_base_randomizer: PaillierModulusSizedNumber,
-        transcript: &mut Transcript,
-    ) -> ComputationalSecuritySizedNumber {
-        transcript.append_statement(b"The base randomizer $u=g^r$", &base_squared_randomizer);
-        transcript.append_statement(
-            b"The decryption share base randomizer $v=h^r$",
-            &decryption_share_base_randomizer,
-        );
-
-        let challenge: ComputationalSecuritySizedNumber =
-            transcript.challenge(b"The challenge $e$");
-
-        challenge
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use rand_core::OsRng;
 
-    use super::*;
     use crate::{
         tests::{BASE, CIPHERTEXT, N, SECRET_KEY},
         LargeBiPrimeSizedNumber,
     };
+
+    use super::*;
 
     #[test]
     fn valid_proof_verifies() {
@@ -1008,8 +1010,9 @@ mod benches {
     use crypto_bigint::{NonZero, RandomMod};
     use rand_core::OsRng;
 
-    use super::*;
     use crate::LargeBiPrimeSizedNumber;
+
+    use super::*;
 
     pub(crate) fn benchmark_proof_of_equality_of_discrete_logs(c: &mut Criterion) {
         let mut g = c.benchmark_group("proof of equality of discrete logs benches");
