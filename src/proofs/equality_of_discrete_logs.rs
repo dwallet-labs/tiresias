@@ -1,11 +1,10 @@
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
 use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
 use merlin::Transcript;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "benchmarking")]
-pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
 
 use crate::{
     proofs::TranscriptProtocol, AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber,
@@ -518,12 +517,11 @@ impl ProofOfEqualityOfDiscreteLogs {
 mod tests {
     use rand_core::OsRng;
 
+    use super::*;
     use crate::{
         tests::{BASE, CIPHERTEXT, N, SECRET_KEY},
         LargeBiPrimeSizedNumber,
     };
-
-    use super::*;
 
     #[test]
     fn valid_proof_verifies() {
@@ -1010,9 +1008,8 @@ mod benches {
     use crypto_bigint::{NonZero, RandomMod};
     use rand_core::OsRng;
 
-    use crate::LargeBiPrimeSizedNumber;
-
     use super::*;
+    use crate::LargeBiPrimeSizedNumber;
 
     pub(crate) fn benchmark_proof_of_equality_of_discrete_logs(c: &mut Criterion) {
         let mut g = c.benchmark_group("proof of equality of discrete logs benches");
