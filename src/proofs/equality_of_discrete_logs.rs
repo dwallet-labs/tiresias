@@ -312,7 +312,7 @@ impl ProofOfEqualityOfDiscreteLogs {
     }
 
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs
-    /// of $a = g^d$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^d}}_i$
+    /// of $a = g^x$ and $b=\prod_{i}{b_i^{t_i}}$ where ${{b_i}}_i = {{h_i^x}}_i$
     /// with respects to the bases $g$ and $h_i$ respectively in zero-knowledge (i.e. without
     /// revealing the witness `d`) for every (`decryption_share_base`, `decryption_share`) in
     /// `decryption_shares_and_bases`.
