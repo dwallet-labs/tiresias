@@ -10,7 +10,6 @@ serde = { version = "1.0.163", features = ["derive"] }
 thiserror = "1.0.40"
 
 rayon = { version = "1.7.0", optional = true }
-
 thiserror = "1.0.40"
 
 # For benchmarking
