@@ -1,10 +1,11 @@
 use crypto_bigint::{Encoding, Limb, Uint};
 use merlin::Transcript;
 
-mod equality_of_discrete_logs;
 #[cfg(feature = "benchmarking")]
 pub(crate) use equality_of_discrete_logs::benchmark_proof_of_equality_of_discrete_logs;
 pub use equality_of_discrete_logs::ProofOfEqualityOfDiscreteLogs;
+
+mod equality_of_discrete_logs;
 
 /// A transcript protocol for fiat-shamir transforms of interactive to non-interactive proofs.
 trait TranscriptProtocol {
