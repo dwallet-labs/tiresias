@@ -409,7 +409,6 @@ impl ProofOfEqualityOfDiscreteLogs {
             return Err(Error::InvalidParams());
         }
 
-        // TODO: is it intended that I first raise every h_i and b_i by 2?
         let (base, public_verification_key, decryption_shares_and_bases, mut transcript) =
             Self::setup_protocol(
                 n2,
