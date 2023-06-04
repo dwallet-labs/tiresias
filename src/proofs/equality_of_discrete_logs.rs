@@ -27,11 +27,11 @@ use crate::{
 ///       $\ct_j=\ct^{2n!d_j}$.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofOfEqualityOfDiscreteLogs {
-    // The base randomizer $u=g^r \in \mathbb{Z}_{N^2}^*$.
+    // Base randomizer $u=g^r \in \mathbb{Z}_{N^2}^*$.
     base_randomizer: PaillierModulusSizedNumber,
-    // The decryption share base randomizer $v=h^r \in \mathbb{Z}_{N^2}^*$.
+    // Decryption share base randomizer $v=h^r \in \mathbb{Z}_{N^2}^*$.
     decryption_share_base_randomizer: PaillierModulusSizedNumber,
-    // The response $z \in \mathbb{Z}$.
+    // Response $z \in \mathbb{Z}$.
     response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 }
 
@@ -100,16 +100,16 @@ impl ProofOfEqualityOfDiscreteLogs {
     pub fn prove(
         // The Paillier modulus
         n2: PaillierModulusSizedNumber,
-        // The witness $x$ (the secret key share $d_j$ in threshold decryption)
+        // Witness $x$ (the secret key share $d_j$ in threshold decryption)
         witness: PaillierModulusSizedNumber,
-        // The base $\tilde{g}$
+        // Base $\tilde{g}$
         base: PaillierModulusSizedNumber,
-        // The decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
+        // Decryption share base $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the
         // ciphertext to be decrypted
         decryption_share_base: PaillierModulusSizedNumber,
-        // The public verification key $v_j=g^{n!d_j}$
+        // Public verification key $v_j=g^{n!d_j}$
         public_verification_key: PaillierModulusSizedNumber,
-        // The decryption share $\ct_j=\ct^{2n!d_j}$
+        // Decryption share $\ct_j=\ct^{2n!d_j}$
         decryption_share: PaillierModulusSizedNumber,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
