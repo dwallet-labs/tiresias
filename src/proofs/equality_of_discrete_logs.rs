@@ -1,9 +1,8 @@
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
 use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "benchmarking")]
-pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
 
 use crate::{
     proofs::TranscriptProtocol, AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber,
@@ -11,8 +10,8 @@ use crate::{
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 
-/// A proof of equality of discrete logs, which is utilized to prove the validity of decryption shares
-/// sent by each party.
+/// A proof of equality of discrete logs, which is utilized to prove the validity of decryption
+/// shares sent by each party.
 ///
 /// This proves the following language:
 ///         $L_{\EDL^2}[N,\tilde g,a;x] = \{(\tilde h,b) \mid \tilde h\in \ZZ_{N^2}^* \wedge
@@ -351,8 +350,9 @@ impl ProofOfEqualityOfDiscreteLogs {
         Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
         Transcript,
     ) {
-        // The paper requires that $a, b, g, h\in QR_{N}$, which is enforced by obtaining their square roots as parameters to begin with.
-        // Therefore we perform the squaring to assure it is in the quadratic residue group.
+        // The paper requires that $a, b, g, h\in QR_{N}$, which is enforced by obtaining their
+        // square roots as parameters to begin with. Therefore we perform the squaring to
+        // assure it is in the quadratic residue group.
         let base = base
             .as_ring_element(&n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
@@ -429,12 +429,11 @@ impl ProofOfEqualityOfDiscreteLogs {
 mod tests {
     use rand_core::OsRng;
 
+    use super::*;
     use crate::{
         tests::{BASE, CIPHERTEXT, N, SECRET_KEY},
         LargeBiPrimeSizedNumber,
     };
-
-    use super::*;
 
     #[test]
     fn valid_proof_verifies() {
@@ -695,9 +694,8 @@ mod benches {
     use crypto_bigint::{NonZero, RandomMod};
     use rand_core::OsRng;
 
-    use crate::LargeBiPrimeSizedNumber;
-
     use super::*;
+    use crate::LargeBiPrimeSizedNumber;
 
     pub(crate) fn benchmark_proof_of_equality_of_discrete_logs(c: &mut Criterion) {
         let mut g = c.benchmark_group("proof of equality of discrete logs benches");
