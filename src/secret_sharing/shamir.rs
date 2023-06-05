@@ -1,8 +1,9 @@
-use std::iter;
-use std::ops::{Add, Mul};
+use std::{
+    iter,
+    ops::{Add, Mul},
+};
 
-use crypto_bigint::rand_core::CryptoRngCore;
-use crypto_bigint::Random;
+use crypto_bigint::{rand_core::CryptoRngCore, Random};
 
 /// Polynomial of some degree $n$
 ///
@@ -33,13 +34,15 @@ where
     ///
     /// ## Order
     ///
-    /// $a_i$ should corresponds to polynomial $i^{\text{th}}$ coefficient $f(x) = \dots{} + a_i x^i + \dots$
+    /// $a_i$ should corresponds to polynomial $i^{\text{th}}$ coefficient $f(x) = \dots{} + a_i x^i
+    /// + \dots$
     ///
     /// ## Polynomial degree
     ///
-    /// Note that it's not guaranteed that constructed polynomial degree equals to `coefficients.len()-1`
-    /// as it's allowed to end with zero coefficients. Actual polynomial degree equals to index of last
-    /// non-zero coefficient or zero if all the coefficients are zero.
+    /// Note that it's not guaranteed that constructed polynomial degree equals to
+    /// `coefficients.len()-1` as it's allowed to end with zero coefficients. Actual polynomial
+    /// degree equals to index of last non-zero coefficient or zero if all the coefficients are
+    /// zero.
     pub fn from_coefficients(coefficients: Vec<T>) -> Result<Self> {
         if coefficients.is_empty() {
             return Err(Error::InvalidParams());
@@ -61,7 +64,8 @@ where
     }
 
     /// Samples random polynomial of degree $n$ with a fixed constant term (i.e. $a_0 =
-    /// \text{constant\\_term}$). In SSS, the constant term is the shared secret, and the other coefficients are used as randomizers to hide the secret.
+    /// \text{constant\\_term}$). In SSS, the constant term is the shared secret, and the other
+    /// coefficients are used as randomizers to hide the secret.
     pub fn sample_with_constant_term(
         degree: u16,
         constant_term: T,
@@ -78,8 +82,10 @@ where
 
     /// Takes scalar $x$ and evaluates $f(x)$
     pub fn evaluate(&self, x: &T) -> T {
-        // Iterate through the coefficients, tail to head, and iteratively evaluate the polynomial by multiplying by `x` and adding the coefficient
-        // Beginning with the last coefficient, every such iteration increases the power of all previously evaluated parts, until we finish with the constant term which isn't multiplied by `x`.
+        // Iterate through the coefficients, tail to head, and iteratively evaluate the polynomial
+        // by multiplying by `x` and adding the coefficient Beginning with the last
+        // coefficient, every such iteration increases the power of all previously evaluated parts,
+        // until we finish with the constant term which isn't multiplied by `x`.
         let mut reversed_coefficients = self.coefficients.iter().rev();
         let last_coefficient = reversed_coefficients.next().unwrap();
 
