@@ -6,11 +6,10 @@ use crypto_bigint::{
 };
 pub use decryption_key::DecryptionKey;
 pub use encryption_key::EncryptionKey;
-pub use proofs::ProofOfEqualityOfDiscreteLogs;
 
 mod decryption_key;
 mod encryption_key;
-mod proofs;
+pub mod proofs;
 
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
 /// Set to a U128 for 128-bit security.
