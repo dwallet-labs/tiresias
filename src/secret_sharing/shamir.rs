@@ -1,10 +1,8 @@
-use std::{
-    fmt::Error,
-    iter,
-    ops::{Add, Mul},
-};
-
-use crypto_bigint::{rand_core::CryptoRngCore, Random};
+use crypto_bigint::rand_core::CryptoRngCore;
+use crypto_bigint::Random;
+use std::fmt::Error;
+use std::iter;
+use std::ops::{Add, Mul};
 
 /// Polynomial of some degree $n$
 ///
@@ -27,15 +25,13 @@ where
     ///
     /// ## Order
     ///
-    /// $a_i$ should corresponds to polynomial $i^{\text{th}}$ coefficient $f(x) = \dots{} + a_i x^i
-    /// + \dots$
+    /// $a_i$ should corresponds to polynomial $i^{\text{th}}$ coefficient $f(x) = \dots{} + a_i x^i + \dots$
     ///
     /// ## Polynomial degree
     ///
-    /// Note that it's not guaranteed that constructed polynomial degree equals to
-    /// `coefficients.len()-1` as it's allowed to end with zero coefficients. Actual polynomial
-    /// degree equals to index of last non-zero coefficient or zero if all the coefficients are
-    /// zero.
+    /// Note that it's not guaranteed that constructed polynomial degree equals to `coefficients.len()-1`
+    /// as it's allowed to end with zero coefficients. Actual polynomial degree equals to index of last
+    /// non-zero coefficient or zero if all the coefficients are zero.
     pub fn from_coefficients(coefficients: Vec<T>) -> Self {
         Self { coefficients }
     }
@@ -52,14 +48,17 @@ where
         )
     }
 
-    /// Samples random polynomial of degree $n$ with fixed constant term (ie. $a_0 =
-    /// \text{constant\\_term}$)
-    pub fn sample_with_free_term(degree: u16, free_term: T, rng: &mut impl CryptoRngCore) -> Self
+    /// Samples random polynomial of degree $n$ with fixed constant term (ie. $a_0 = \text{constant\\_term}$)
+    pub fn sample_with_constant_term(
+        degree: u16,
+        constant_term: T,
+        rng: &mut impl CryptoRngCore,
+    ) -> Self
     where
         T: Random,
     {
         let mut coefficients = Self::sample(degree, rng).coefficients;
-        coefficients[0] = free_term;
+        coefficients[0] = constant_term;
 
         Self::from_coefficients(coefficients)
     }
@@ -70,10 +69,8 @@ where
             return Err(Error); // TODO: proper error, thiserror
         }
 
-        // Iterate through the coefficients, tail to head, and iteratively evaluate the polynomial
-        // by multiplying by `x` and adding the coefficient Beginning with the last
-        // coefficient, every such iteration increases the power of all previously evaluated parts,
-        // until we finish with the free term which isn't multiplied by `x`.
+        // Iterate through the coefficients, tail to head, and iteratively evaluate the polynomial by multiplying by `x` and adding the coefficient
+        // Beginning with the last coefficient, every such iteration increases the power of all previously evaluated parts, until we finish with the constant term which isn't multiplied by `x`.
         let mut reversed_coefficients = self.coefficients.iter().rev();
         let last_coefficient = reversed_coefficients.next().unwrap();
 
@@ -88,9 +85,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{Wrapping, U64};
-
     use super::*;
+    use crypto_bigint::{Wrapping, U64};
+    use rand_core::OsRng;
+    use std::collections::HashSet;
 
     #[test]
     fn evaluates() {
@@ -108,6 +106,23 @@ mod tests {
         assert_eq!(
             polynomial.evaluate(&Wrapping(U64::from(5u8))).unwrap(),
             Wrapping(U64::from(86u8))
+        );
+    }
+
+    #[test]
+    fn samples() {
+        let degree = 10;
+        let polynomial: Polynomial<Wrapping<U64>> = Polynomial::sample(degree, &mut OsRng);
+
+        assert_eq!(
+            polynomial
+                .coefficients
+                .iter()
+                .map(|x| x.0)
+                .filter(|x| x != &U64::ZERO)
+                .collect::<HashSet<_>>()
+                .len(),
+            usize::from(degree + 1)
         );
     }
 }
