@@ -4,11 +4,10 @@ use crypto_bigint::rand_core::CryptoRngCore;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::threshold_decryption::Message;
 use crate::{
     proofs::ProofOfEqualityOfDiscreteLogs,
-    threshold_decryption::precomputed_values::PrecomputedValues, AsNaturalNumber, AsRingElement,
-    EncryptionKey, PaillierModulusSizedNumber,
+    threshold_decryption::{precomputed_values::PrecomputedValues, Message},
+    AsNaturalNumber, AsRingElement, EncryptionKey, PaillierModulusSizedNumber,
 };
 
 #[derive(Clone)]
@@ -134,11 +133,11 @@ impl DecryptionKeyShare {
             squared_ciphertexts_n_factorial_and_decryption_shares,
             rng,
         )
-        .unwrap(); /* TODO: should I return an error here? I know that this will never
-                    * happen as the only case an error is generated is when the vector is
-                    * empty and I send it with values, but this couples my to the
-                    * implementation and could be a problem if in the future new errors may
-                    * be generated */
+        .unwrap(); // TODO: should I return an error here? I know that this will never
+                   // happen as the only case an error is generated is when the vector is
+                   // empty and I send it with values, but this couples my to the
+                   // implementation and could be a problem if in the future new errors may
+                   // be generated
 
         Message {
             decryption_shares,
