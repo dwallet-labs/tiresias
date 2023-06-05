@@ -4,6 +4,7 @@ use crypto_bigint::rand_core::CryptoRngCore;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+use crate::threshold_decryption::Message;
 use crate::{
     proofs::ProofOfEqualityOfDiscreteLogs,
     threshold_decryption::precomputed_values::PrecomputedValues, AsNaturalNumber, AsRingElement,
@@ -55,10 +56,7 @@ impl DecryptionKeyShare {
         &self,
         ciphertexts: Vec<PaillierModulusSizedNumber>,
         rng: &mut impl CryptoRngCore,
-    ) -> (
-        Vec<PaillierModulusSizedNumber>,
-        ProofOfEqualityOfDiscreteLogs,
-    ) {
+    ) -> Message {
         let n2 = self.encryption_key.n2;
 
         #[cfg(not(feature = "parallel"))]
@@ -123,24 +121,29 @@ impl DecryptionKeyShare {
                 rng,
             );
 
-            return (decryption_shares, proof);
+            return Message {
+                decryption_shares,
+                proof,
+            };
         }
-        (
-            decryption_shares,
-            ProofOfEqualityOfDiscreteLogs::batch_prove(
-                n2,
-                self.decryption_key_share,
-                self.base,
-                self.public_verification_key,
-                squared_ciphertexts_n_factorial_and_decryption_shares,
-                rng,
-            )
-            .unwrap(), /* TODO: should I return an error here? I know that this will never
-                        * happen as the only case an error is generated is when the vector is
-                        * empty and I send it with values, but this couples my to the
-                        * implementation and could be a problem if in the future new errors may
-                        * be generated */
+        let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
+            n2,
+            self.decryption_key_share,
+            self.base,
+            self.public_verification_key,
+            squared_ciphertexts_n_factorial_and_decryption_shares,
+            rng,
         )
+        .unwrap(); /* TODO: should I return an error here? I know that this will never
+                    * happen as the only case an error is generated is when the vector is
+                    * empty and I send it with values, but this couples my to the
+                    * implementation and could be a problem if in the future new errors may
+                    * be generated */
+
+        Message {
+            decryption_shares,
+            proof,
+        }
     }
 }
 
@@ -172,15 +175,14 @@ mod tests {
             precomputed_values.n_factorial,
         );
 
-        let (decryption_shares, proof) =
-            decryption_key_share.generate_decryption_shares(vec![CIPHERTEXT], &mut OsRng);
+        let message = decryption_key_share.generate_decryption_shares(vec![CIPHERTEXT], &mut OsRng);
 
         let ciphertext_squared_n_factorial = CIPHERTEXT
             .as_ring_element(&N2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
             .as_natural_number();
 
-        let decryption_share = *decryption_shares.get(0).unwrap();
+        let decryption_share = *message.decryption_shares.get(0).unwrap();
 
         assert_eq!(
             decryption_share,
@@ -190,7 +192,8 @@ mod tests {
                 .as_natural_number()
         );
 
-        assert!(proof
+        assert!(message
+            .proof
             .verify(
                 decryption_key_share.encryption_key.n2,
                 decryption_key_share.base,
@@ -231,7 +234,7 @@ mod tests {
             .map(|m| encryption_key.encrypt(m, &mut OsRng))
             .collect();
 
-        let (decryption_shares, proof) =
+        let message =
             decryption_key_share.generate_decryption_shares(ciphertexts.clone(), &mut OsRng);
 
         let ciphertexts_squared_n_factorial: Vec<PaillierModulusSizedNumber> = ciphertexts
@@ -255,16 +258,17 @@ mod tests {
                 })
                 .collect();
 
-        assert_eq!(decryption_shares, expected_decryption_shares);
+        assert_eq!(message.decryption_shares, expected_decryption_shares);
 
-        assert!(proof
+        assert!(message
+            .proof
             .batch_verify(
                 decryption_key_share.encryption_key.n2,
                 decryption_key_share.base,
                 decryption_key_share.public_verification_key,
                 ciphertexts_squared_n_factorial
                     .into_iter()
-                    .zip(decryption_shares)
+                    .zip(message.decryption_shares)
                     .collect()
             )
             .is_ok());
