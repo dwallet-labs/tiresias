@@ -1,6 +1,5 @@
 use crypto_bigint::rand_core::CryptoRngCore;
 use crypto_bigint::Random;
-use std::fmt::Error;
 use std::iter;
 use std::ops::{Add, Mul};
 
@@ -17,6 +16,14 @@ where
     coefficients: Vec<T>,
 }
 
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum Error {
+    #[error("Invalid Params")]
+    InvalidParams(),
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
 impl<T> Polynomial<T>
 where
     T: Copy + Add<T, Output = T> + Mul<T, Output = T>,
@@ -32,12 +39,16 @@ where
     /// Note that it's not guaranteed that constructed polynomial degree equals to `coefficients.len()-1`
     /// as it's allowed to end with zero coefficients. Actual polynomial degree equals to index of last
     /// non-zero coefficient or zero if all the coefficients are zero.
-    pub fn from_coefficients(coefficients: Vec<T>) -> Self {
-        Self { coefficients }
+    pub fn from_coefficients(coefficients: Vec<T>) -> Result<Self> {
+        if coefficients.is_empty() {
+            return Err(Error::InvalidParams());
+        }
+
+        Ok(Self { coefficients })
     }
 
     /// Sample a random polynomial of given `degree`
-    pub fn sample(degree: u16, rng: &mut impl CryptoRngCore) -> Self
+    pub fn sample(degree: u16, rng: &mut impl CryptoRngCore) -> Result<Self>
     where
         T: Random,
     {
@@ -54,33 +65,29 @@ where
         degree: u16,
         constant_term: T,
         rng: &mut impl CryptoRngCore,
-    ) -> Self
+    ) -> Result<Self>
     where
         T: Random,
     {
-        let mut coefficients = Self::sample(degree, rng).coefficients;
+        let mut coefficients = Self::sample(degree, rng)?.coefficients;
         coefficients[0] = constant_term;
 
         Self::from_coefficients(coefficients)
     }
 
     /// Takes scalar $x$ and evaluates $f(x)$
-    pub fn evaluate(&self, x: &T) -> Result<T, Error> {
-        if self.coefficients.is_empty() {
-            return Err(Error); // TODO: proper error, thiserror
-        }
-
+    pub fn evaluate(&self, x: &T) -> T {
         // Iterate through the coefficients, tail to head, and iteratively evaluate the polynomial by multiplying by `x` and adding the coefficient
         // Beginning with the last coefficient, every such iteration increases the power of all previously evaluated parts, until we finish with the constant term which isn't multiplied by `x`.
         let mut reversed_coefficients = self.coefficients.iter().rev();
         let last_coefficient = reversed_coefficients.next().unwrap();
 
-        Ok(reversed_coefficients.fold(
+        reversed_coefficients.fold(
             *last_coefficient,
             |partially_evaluated_polynomial, coefficient| {
                 partially_evaluated_polynomial * (*x) + (*coefficient)
             },
-        ))
+        )
     }
 }
 
@@ -97,15 +104,16 @@ mod tests {
             Wrapping(U64::from(1u8)),
             Wrapping(U64::from(2u8)),
             Wrapping(U64::from(3u8)),
-        ]);
+        ])
+        .unwrap();
 
         assert_eq!(
-            polynomial.evaluate(&Wrapping(U64::from(0u8))).unwrap(),
+            polynomial.evaluate(&Wrapping(U64::from(0u8))),
             Wrapping(U64::from(1u8))
         );
 
         assert_eq!(
-            polynomial.evaluate(&Wrapping(U64::from(5u8))).unwrap(),
+            polynomial.evaluate(&Wrapping(U64::from(5u8))),
             Wrapping(U64::from(86u8))
         );
     }
@@ -113,7 +121,7 @@ mod tests {
     #[test]
     fn samples() {
         let degree = 10;
-        let polynomial: Polynomial<Wrapping<U64>> = Polynomial::sample(degree, &mut OsRng);
+        let polynomial: Polynomial<Wrapping<U64>> = Polynomial::sample(degree, &mut OsRng).unwrap();
 
         assert_eq!(
             polynomial
