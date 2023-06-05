@@ -1,7 +1,8 @@
-use crypto_bigint::rand_core::CryptoRngCore;
-use crypto_bigint::Random;
 use std::iter;
 use std::ops::{Add, Mul};
+
+use crypto_bigint::rand_core::CryptoRngCore;
+use crypto_bigint::Random;
 
 /// Polynomial of some degree $n$
 ///
@@ -93,10 +94,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashSet;
+
     use crypto_bigint::{Wrapping, U64};
     use rand_core::OsRng;
-    use std::collections::HashSet;
+
+    use super::*;
 
     #[test]
     fn evaluates() {
