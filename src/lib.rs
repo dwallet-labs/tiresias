@@ -11,6 +11,7 @@ pub use proofs::ProofOfEqualityOfDiscreteLogs;
 mod decryption_key;
 mod encryption_key;
 mod proofs;
+mod threshold_decryption;
 
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
 /// Set to a U128 for 128-bit security.
@@ -29,6 +30,7 @@ pub type LargeBiPrimeSizedNumber = <LargePrimeSizedNumber as Concat>::Output;
 pub type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Output;
 
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
+pub(crate) type PaillierPlaintextRingElement = DynResidue<{ LargeBiPrimeSizedNumber::LIMBS }>;
 pub(crate) type ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = Uint<
     {
         PaillierModulusSizedNumber::LIMBS
@@ -37,24 +39,37 @@ pub(crate) type ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = Uint<
 >;
 
 /// Retrieve the minimal natural number in the congruence class.
-pub(crate) trait AsNaturalNumber {
-    fn as_natural_number(&self) -> PaillierModulusSizedNumber;
+pub(crate) trait AsNaturalNumber<T> {
+    fn as_natural_number(&self) -> T;
 }
 
 /// Represent this natural number as the minimal member of the congruence class. i.e. as a member of
 /// the ring $\mathbb{Z}_{n}$
-pub(crate) trait AsRingElement {
-    fn as_ring_element(&self, n: &Self) -> PaillierRingElement;
+pub(crate) trait AsRingElement<T> {
+    fn as_ring_element(&self, n: &Self) -> T;
 }
 
-impl AsNaturalNumber for PaillierRingElement {
+impl AsNaturalNumber<PaillierModulusSizedNumber> for PaillierRingElement {
     fn as_natural_number(&self) -> PaillierModulusSizedNumber {
         self.retrieve()
     }
 }
 
-impl AsRingElement for PaillierModulusSizedNumber {
+impl AsRingElement<PaillierRingElement> for PaillierModulusSizedNumber {
     fn as_ring_element(&self, n: &Self) -> PaillierRingElement {
+        let ring_params = DynResidueParams::new(n);
+        DynResidue::new(self, ring_params)
+    }
+}
+
+impl AsNaturalNumber<LargeBiPrimeSizedNumber> for PaillierPlaintextRingElement {
+    fn as_natural_number(&self) -> LargeBiPrimeSizedNumber {
+        self.retrieve()
+    }
+}
+
+impl AsRingElement<PaillierPlaintextRingElement> for LargeBiPrimeSizedNumber {
+    fn as_ring_element(&self, n: &Self) -> PaillierPlaintextRingElement {
         let ring_params = DynResidueParams::new(n);
         DynResidue::new(self, ring_params)
     }
@@ -86,5 +101,6 @@ mod tests {
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,
-    proofs::benchmark_proof_of_equality_of_discrete_logs
+    proofs::benchmark_proof_of_equality_of_discrete_logs,
+    threshold_decryption::benchmark_decryption_share
 );

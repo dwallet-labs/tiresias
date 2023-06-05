@@ -17,6 +17,7 @@ rand_core = { version = "0.6.4", features = ["std"], optional = true }
 
 [dev-dependencies]
 rand_core = { version = "0.6.4", features = ["std"] }
+rstest = "0.17.0"
 
 [features]
 parallel = ["dep:rayon"]
