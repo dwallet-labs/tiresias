@@ -15,9 +15,9 @@ pub(in crate::threshold_decryption) struct DecryptionKeyShare {
     pub(in crate::threshold_decryption) encryption_key: EncryptionKey,
     // The base $g$ for proofs of equality of discrete logs
     pub(in crate::threshold_decryption) base: PaillierModulusSizedNumber,
-    // The public verification key $v_i$ for proofs of equality of discrete logs
+    // The public verification key $v_j$ for proofs of equality of discrete logs
     pub(in crate::threshold_decryption) public_verification_key: PaillierModulusSizedNumber,
-    // $ d_i $
+    // $ d_j $
     decryption_key_share: PaillierModulusSizedNumber,
     n_factorial: Vec<PaillierModulusSizedNumber>,
 }
