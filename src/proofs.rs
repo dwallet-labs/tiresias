@@ -36,3 +36,26 @@ impl TranscriptProtocol for Transcript {
         Uint::<LIMBS>::from_le_slice(&buf)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ComputationalSecuritySizedNumber;
+    use std::collections::HashSet;
+
+    #[test]
+    fn challenge_modifies_transcript() {
+        let num_challenges = 5;
+        let mut transcript = Transcript::new(b"Test");
+
+        let challenges: HashSet<ComputationalSecuritySizedNumber> = (1..=num_challenges)
+            .map(|_| {
+                let challenge: ComputationalSecuritySizedNumber =
+                    transcript.challenge(b"challenge");
+                challenge
+            })
+            .collect();
+
+        assert_eq!(challenges.len(), num_challenges);
+    }
+}
