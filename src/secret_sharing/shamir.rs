@@ -52,8 +52,8 @@ where
         )
     }
 
-    /// Samples random polynomial of degree $n$ with fixed constant term (ie. $a_0 =
-    /// \text{constant\\_term}$)
+    /// Samples random polynomial of degree $n$ with a fixed constant term (i.e. $a_0 =
+    /// \text{constant\\_term}$). In SSS, the constant term is the shared secret, and the other coefficients are used as randomizers to hide the secret.
     pub fn sample_with_free_term(degree: u16, free_term: T, rng: &mut impl CryptoRngCore) -> Self
     where
         T: Random,
