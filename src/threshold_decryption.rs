@@ -7,6 +7,7 @@ mod decryption_key_share;
 mod precomputed_values;
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct Message {
     decryption_shares: Vec<PaillierModulusSizedNumber>,
     proof: ProofOfEqualityOfDiscreteLogs,
