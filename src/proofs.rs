@@ -39,9 +39,10 @@ impl TranscriptProtocol for Transcript {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
     use crate::ComputationalSecuritySizedNumber;
-    use std::collections::HashSet;
 
     #[test]
     fn challenge_modifies_transcript() {
