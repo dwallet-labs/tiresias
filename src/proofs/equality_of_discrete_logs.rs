@@ -438,11 +438,11 @@ impl ProofOfEqualityOfDiscreteLogs {
             .len())
             .map(|_| {
                 // The `.challenge` method mutates `transcript` by adding the label to it.
-                // Although the same label is used for all values, each value will be a digest of different values
-                // (i.e. it will hold different "multiple" of the label inside the digest) and will therefore be unique
-                let challenge: ComputationalSecuritySizedNumber =
-                    transcript.challenge(b"challenge");
-                challenge
+                // Although the same label is used for all values,
+                // each value will be a digest of different values
+                // (i.e. it will hold different `multiple` of the label inside the digest),
+                // and will therefore be unique.
+                transcript.challenge(b"challenge")
             })
             .collect();
 
