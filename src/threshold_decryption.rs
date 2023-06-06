@@ -1,7 +1,7 @@
 #[cfg(feature = "benchmarking")]
 pub(crate) use decryption_key_share::benchmark_decryption_share;
 
-use crate::{PaillierModulusSizedNumber, ProofOfEqualityOfDiscreteLogs};
+use crate::{proofs::ProofOfEqualityOfDiscreteLogs, PaillierModulusSizedNumber};
 
 mod decryption_key_share;
 mod precomputed_values;

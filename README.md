@@ -7,7 +7,7 @@ Pure-Rust implementation of the UC-secure "Tiresias: Scalable, Maliciously Secur
 - Dolev Mutzari (dWallet Labs)
 - Yehonatan Cohen Scaly (dWallet Labs)
 - Yuval Spiizer (dWallet Labs)
-- Avishay Yanai.
+- Avishay Yanai
 
 This implementation relies on [`crypto_bigint`](https://github.com/RustCrypto/crypto-bigint) for constant-time big
 integer arithmetics whenever dealing with key material or any other secret information.  

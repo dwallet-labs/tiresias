@@ -46,10 +46,10 @@ mod tests {
 
     #[test]
     fn challenge_modifies_transcript() {
-        let num_challenges = 5;
+        let expected_challenges = 5;
         let mut transcript = Transcript::new(b"Test");
 
-        let challenges: HashSet<ComputationalSecuritySizedNumber> = (1..=num_challenges)
+        let challenges: HashSet<ComputationalSecuritySizedNumber> = (1..=expected_challenges)
             .map(|_| {
                 let challenge: ComputationalSecuritySizedNumber =
                     transcript.challenge(b"challenge");
@@ -57,6 +57,6 @@ mod tests {
             })
             .collect();
 
-        assert_eq!(challenges.len(), num_challenges);
+        assert_eq!(expected_challenges, challenges.len());
     }
 }
