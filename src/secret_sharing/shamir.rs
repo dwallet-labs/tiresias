@@ -83,9 +83,10 @@ where
     /// Takes scalar $x$ and evaluates $f(x)$
     pub fn evaluate(&self, x: &T) -> T {
         // Iterate through the coefficients, tail to head, and iteratively evaluate the polynomial
-        // by multiplying by `x` and adding the coefficient Beginning with the last
+        // by multiplying by `x` and adding the coefficient beginning with the last
         // coefficient, every such iteration increases the power of all previously evaluated parts,
         // until we finish with the constant term which isn't multiplied by `x`.
+        // See: Horner's method.
         let mut reversed_coefficients = self.coefficients.iter().rev();
         let last_coefficient = reversed_coefficients.next().unwrap();
 
