@@ -30,42 +30,35 @@ impl<T> Polynomial<T>
 where
     T: Copy + Add<T, Output = T> + Mul<T, Output = T>,
 {
-    /// Constructs polynomial $f(x)$ from list of coefficients $a_0, \dots, a_n$ in the ring
-    ///
-    /// ## Order
-    ///
-    /// $a_i$ should corresponds to polynomial $i^{\text{th}}$ coefficient $f(x) = \dots{} + a_i x^i
-    /// + \dots$
+    /// Sample a random polynomial of given `degree`
     ///
     /// ## Polynomial degree
     ///
     /// Note that it's not guaranteed that constructed polynomial degree equals to
-    /// `coefficients.len()-1` as it's allowed to end with zero coefficients. Actual polynomial
+    /// `degree` as it's allowed to end with zero coefficients. Actual polynomial
     /// degree equals to index of last non-zero coefficient or zero if all the coefficients are
     /// zero.
-    pub fn from_coefficients(coefficients: Vec<T>) -> Result<Self> {
-        if coefficients.is_empty() {
-            return Err(Error::InvalidParams());
-        }
-
-        Ok(Self { coefficients })
-    }
-
-    /// Sample a random polynomial of given `degree`
     pub fn sample(degree: u16, rng: &mut impl CryptoRngCore) -> Result<Self>
     where
         T: Random,
     {
-        Self::from_coefficients(
-            iter::repeat_with(|| T::random(rng))
-                .take(usize::from(degree + 1))
-                .collect(),
-        )
+        let coefficients: Vec<T> = iter::repeat_with(|| T::random(rng))
+            .take(usize::from(degree + 1))
+            .collect();
+
+        Self::try_from(coefficients)
     }
 
     /// Samples random polynomial of degree $n$ with a fixed constant term (i.e. $a_0 =
     /// \text{constant\\_term}$). In SSS, the constant term is the shared secret, and the other
     /// coefficients are used as randomizers to hide the secret.
+    ///
+    /// ## Polynomial degree
+    ///
+    /// Note that it's not guaranteed that constructed polynomial degree equals to
+    /// `degree` as it's allowed to end with zero coefficients. Actual polynomial
+    /// degree equals to index of last non-zero coefficient or zero if all the coefficients are
+    /// zero.
     pub fn sample_with_constant_term(
         degree: u16,
         constant_term: T,
@@ -77,7 +70,7 @@ where
         let mut coefficients = Self::sample(degree, rng)?.coefficients;
         coefficients[0] = constant_term;
 
-        Self::from_coefficients(coefficients)
+        Self::try_from(coefficients)
     }
 
     /// Takes scalar $x$ and evaluates $f(x)$
@@ -98,6 +91,21 @@ where
     }
 }
 
+impl<T> TryFrom<Vec<T>> for Polynomial<T>
+where
+    T: Copy + Add<T, Output = T> + Mul<T, Output = T>,
+{
+    type Error = Error;
+
+    fn try_from(coefficients: Vec<T>) -> std::result::Result<Self, Self::Error> {
+        if coefficients.is_empty() {
+            return Err(Error::InvalidParams());
+        }
+
+        Ok(Self { coefficients })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -109,7 +117,7 @@ mod tests {
 
     #[test]
     fn evaluates() {
-        let polynomial = Polynomial::from_coefficients(vec![
+        let polynomial = Polynomial::try_from(vec![
             Wrapping(U64::from(1u8)),
             Wrapping(U64::from(2u8)),
             Wrapping(U64::from(3u8)),
