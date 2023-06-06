@@ -446,7 +446,7 @@ impl ProofOfEqualityOfDiscreteLogs {
             })
             .collect();
 
-        let randomizers_ciphertexts_and_decryption_shares: Vec<(
+        let randomizers_decryption_shares_and_bases: Vec<(
             (PaillierModulusSizedNumber, PaillierModulusSizedNumber),
             ComputationalSecuritySizedNumber,
         )> = decryption_shares_and_bases
@@ -457,16 +457,16 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         #[cfg(not(feature = "parallel"))]
         let randomizers_decryption_shares_and_bases_iter =
-            randomizers_ciphertexts_and_decryption_shares.iter();
+            randomizers_decryption_shares_and_bases.iter();
         #[cfg(feature = "parallel")]
         let randomizers_decryption_shares_and_bases_iter =
-            randomizers_ciphertexts_and_decryption_shares.par_iter();
+            randomizers_decryption_shares_and_bases.par_iter();
 
         let batched_decryption_share_base = randomizers_decryption_shares_and_bases_iter
             .clone()
-            .map(|((ciphertext, _), randomizer)| {
+            .map(|((decryption_share_base, _), randomizer)| {
                 <PaillierRingElement as Pow<ComputationalSecuritySizedNumber>>::pow(
-                    &ciphertext.as_ring_element(&n2),
+                    &decryption_share_base.as_ring_element(&n2),
                     randomizer,
                 )
             });
@@ -575,12 +575,18 @@ mod tests {
     #[test]
     fn valid_batched_proof_verifies() {
         let n2 = N.square();
+        let n_factorial: u8 = 2 * 3;
 
+        let base = BASE
+            .as_ring_element(&n2)
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(n_factorial), 3)
+            .as_natural_number();
         let decryption_share_base = CIPHERTEXT
             .as_ring_element(&n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(n_factorial), 3)
             .as_natural_number();
-        let public_verification_key = BASE
+        let public_verification_key = base
             .as_ring_element(&n2)
             .pow(&SECRET_KEY)
             .as_natural_number();
@@ -589,15 +595,14 @@ mod tests {
             .pow(&SECRET_KEY)
             .as_natural_number();
 
-        let squared_ciphertexts_and_decryption_shares =
-            vec![(decryption_share_base, decryption_share)];
+        let decryption_shares_and_bases = vec![(decryption_share_base, decryption_share)];
 
         let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
             n2,
             SECRET_KEY,
-            BASE,
+            base,
             public_verification_key,
-            squared_ciphertexts_and_decryption_shares.clone(),
+            decryption_shares_and_bases.clone(),
             &mut OsRng,
         )
         .unwrap();
@@ -605,9 +610,9 @@ mod tests {
         assert!(proof
             .batch_verify(
                 n2,
-                BASE,
+                base,
                 public_verification_key,
-                squared_ciphertexts_and_decryption_shares,
+                decryption_shares_and_bases,
             )
             .is_ok());
 
@@ -615,13 +620,14 @@ mod tests {
         let decryption_share_base2 = ciphertext2
             .as_ring_element(&n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(n_factorial), 3)
             .as_natural_number();
         let decryption_share2 = decryption_share_base2
             .as_ring_element(&n2)
             .pow(&SECRET_KEY)
             .as_natural_number();
 
-        let squared_ciphertexts_and_decryption_shares = vec![
+        let decryption_shares_and_bases = vec![
             (decryption_share_base, decryption_share),
             (decryption_share_base2, decryption_share2),
         ];
@@ -629,9 +635,9 @@ mod tests {
         let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
             n2,
             SECRET_KEY,
-            BASE,
+            base,
             public_verification_key,
-            squared_ciphertexts_and_decryption_shares.clone(),
+            decryption_shares_and_bases.clone(),
             &mut OsRng,
         )
         .unwrap();
@@ -639,9 +645,9 @@ mod tests {
         assert!(proof
             .batch_verify(
                 n2,
-                BASE,
+                base,
                 public_verification_key,
-                squared_ciphertexts_and_decryption_shares,
+                decryption_shares_and_bases,
             )
             .is_ok());
     }
@@ -1025,7 +1031,7 @@ mod benches {
         let base = PaillierModulusSizedNumber::random_mod(&mut OsRng, &NonZero::new(n2).unwrap());
         let ciphertext =
             PaillierModulusSizedNumber::random_mod(&mut OsRng, &NonZero::new(n2).unwrap());
-        let ciphertext_squared = ciphertext
+        let decryption_share_base = ciphertext
             .as_ring_element(&n2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
             .as_natural_number();
@@ -1033,7 +1039,7 @@ mod benches {
             .as_ring_element(&n2)
             .pow(&secret_key_share)
             .as_natural_number();
-        let decryption_share = ciphertext_squared
+        let decryption_share = decryption_share_base
             .as_ring_element(&n2)
             .pow(&secret_key_share)
             .as_natural_number();
@@ -1044,7 +1050,7 @@ mod benches {
                     n2,
                     secret_key_share,
                     base,
-                    ciphertext_squared,
+                    decryption_share_base,
                     public_verification_key,
                     decryption_share,
                     &mut OsRng,
@@ -1056,7 +1062,7 @@ mod benches {
             n2,
             secret_key_share,
             base,
-            ciphertext_squared,
+            decryption_share_base,
             public_verification_key,
             decryption_share,
             &mut OsRng,
@@ -1068,7 +1074,7 @@ mod benches {
                     .verify(
                         n2,
                         base,
-                        ciphertext_squared,
+                        decryption_share_base,
                         public_verification_key,
                         decryption_share,
                     )
@@ -1077,7 +1083,7 @@ mod benches {
         });
 
         for batch_size in [10, 100, 1000] {
-            let squared_ciphertexts = iter::repeat_with(|| {
+            let decryption_share_bases = iter::repeat_with(|| {
                 PaillierModulusSizedNumber::random_mod(&mut OsRng, &NonZero::new(n2).unwrap())
                     .as_ring_element(&n2)
                     .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
@@ -1085,14 +1091,14 @@ mod benches {
             })
             .take(batch_size);
 
-            let squared_ciphertexts_and_decryption_shares: Vec<(
+            let decryption_shares_and_bases: Vec<(
                 PaillierModulusSizedNumber,
                 PaillierModulusSizedNumber,
-            )> = squared_ciphertexts
-                .map(|ciphertext| {
+            )> = decryption_share_bases
+                .map(|decryption_share_base| {
                     (
-                        ciphertext,
-                        ciphertext
+                        decryption_share_base,
+                        decryption_share_base
                             .as_ring_element(&n2)
                             .pow(&secret_key_share)
                             .as_natural_number(),
@@ -1109,7 +1115,7 @@ mod benches {
                             secret_key_share,
                             base,
                             public_verification_key,
-                            squared_ciphertexts_and_decryption_shares.clone(),
+                            decryption_shares_and_bases.clone(),
                             &mut OsRng,
                         )
                     });
@@ -1121,7 +1127,7 @@ mod benches {
                 secret_key_share,
                 base,
                 public_verification_key,
-                squared_ciphertexts_and_decryption_shares.clone(),
+                decryption_shares_and_bases.clone(),
                 &mut OsRng,
             )
             .unwrap();
@@ -1135,7 +1141,7 @@ mod benches {
                                 n2,
                                 base,
                                 public_verification_key,
-                                squared_ciphertexts_and_decryption_shares.clone()
+                                decryption_shares_and_bases.clone()
                             )
                             .is_ok());
                     });
