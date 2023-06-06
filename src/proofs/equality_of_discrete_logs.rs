@@ -336,15 +336,15 @@ impl ProofOfEqualityOfDiscreteLogs {
     ///
     /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
     pub fn batch_prove(
-        // The Paillier modulus
+        // Paillier modulus
         n2: PaillierModulusSizedNumber,
-        // The witness $d$ (the secret key share in threshold decryption)
+        // Witness $d$ (the secret key share in threshold decryption)
         witness: PaillierModulusSizedNumber,
-        // The base $\tilde{g}$
+        // Base $\tilde{g}$
         base: PaillierModulusSizedNumber,
-        // The public verification key $v_j=g^{n!d_j}$
+        // Public verification key $v_j=g^{n!d_j}$
         public_verification_key: PaillierModulusSizedNumber,
-        // The decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$
+        // Decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$
         // are the ciphertexts to be decrypted and their matching decryption shares
         // ${\ct^i_j}_i = {{\tilde{h_i}^x}}_i$
         decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
@@ -376,13 +376,13 @@ impl ProofOfEqualityOfDiscreteLogs {
     /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
     pub fn batch_verify(
         &self,
-        // The Paillier modulus
+        // Paillier modulus
         n2: PaillierModulusSizedNumber,
-        // The base $\tilde{g}$
+        // Base $\tilde{g}$
         base: PaillierModulusSizedNumber,
-        // The public verification key $v_j=g^{n!d_j}$
+        // Public verification key $v_j=g^{n!d_j}$
         public_verification_key: PaillierModulusSizedNumber,
-        // The decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$
+        // Decryption share bases ${\tilde{h_i}}_i={\ct^i^{2n!}\in\ZZ_{N^2}^*}$ where ${\ct^i}$
         // are the ciphertexts to be decrypted and their matching decryption shares
         // ${\ct^i_j}_i = {{\tilde{h_i}^d}}_i$
         decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
