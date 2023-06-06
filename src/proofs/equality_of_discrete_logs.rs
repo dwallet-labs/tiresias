@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// A proof of equality of discrete logarithms, utilized to validate threshold
-/// decryptions performed by the parties.
+/// decryption performed by the parties.
 ///
 /// This proves the following language:
 ///         $L_{\EDL^2}[N,\tilde g,a;x] = \{(\tilde h,b) \mid \tilde h\in \ZZ_{N^2}^* \wedge
