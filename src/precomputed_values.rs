@@ -3,15 +3,15 @@ use crypto_bigint::CheckedMul;
 use crate::PaillierModulusSizedNumber;
 
 /// This struct holds precomputed values that are computationally expensive to compute
-#[derive(Clone)]
-pub(in crate::threshold_decryption) struct PrecomputedValues {
+#[derive(Clone, Debug)]
+pub struct PrecomputedValues {
     // The precomputed value $n!$ divided into factors of the Paillier modulus size for efficient
     // exponentiation
-    pub(in crate::threshold_decryption) n_factorial: Vec<PaillierModulusSizedNumber>,
+    pub n_factorial: Vec<PaillierModulusSizedNumber>,
 }
 
 impl PrecomputedValues {
-    pub(in crate::threshold_decryption) fn new(n: u16) -> PrecomputedValues {
+    pub fn new(n: u16) -> PrecomputedValues {
         let n_factorial = Self::combine_small_factors_to_modulus_sized_factors((2..=n).collect());
 
         PrecomputedValues { n_factorial }

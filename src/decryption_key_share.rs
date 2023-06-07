@@ -3,20 +3,26 @@ pub(crate) use benches::benchmark_decryption_share;
 use crypto_bigint::rand_core::CryptoRngCore;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    proofs::ProofOfEqualityOfDiscreteLogs,
-    threshold_decryption::{precomputed_values::PrecomputedValues, Message},
-    AsNaturalNumber, AsRingElement, EncryptionKey, PaillierModulusSizedNumber,
+    precomputed_values::PrecomputedValues, proofs::ProofOfEqualityOfDiscreteLogs, AsNaturalNumber,
+    AsRingElement, EncryptionKey, PaillierModulusSizedNumber,
 };
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Message {
+    decryption_shares: Vec<PaillierModulusSizedNumber>,
+    proof: ProofOfEqualityOfDiscreteLogs,
+}
+
 #[derive(Clone)]
-pub(in crate::threshold_decryption) struct DecryptionKeyShare {
-    pub(in crate::threshold_decryption) encryption_key: EncryptionKey,
+pub struct DecryptionKeyShare {
+    encryption_key: EncryptionKey,
     // The base $g$ for proofs of equality of discrete logs
-    pub(in crate::threshold_decryption) base: PaillierModulusSizedNumber,
+    base: PaillierModulusSizedNumber,
     // The public verification key $v_j$ for proofs of equality of discrete logs
-    pub(in crate::threshold_decryption) public_verification_key: PaillierModulusSizedNumber,
+    public_verification_key: PaillierModulusSizedNumber,
     // $ d_j $
     decryption_key_share: PaillierModulusSizedNumber,
     n_factorial: Vec<PaillierModulusSizedNumber>,
@@ -24,12 +30,13 @@ pub(in crate::threshold_decryption) struct DecryptionKeyShare {
 
 impl DecryptionKeyShare {
     /// Construct a new `DecryptionKeyShare`.
-    pub(in crate::threshold_decryption) fn new(
+    pub fn new(
         encryption_key: EncryptionKey,
         base: PaillierModulusSizedNumber,
         decryption_key_share: PaillierModulusSizedNumber,
-        n_factorial: Vec<PaillierModulusSizedNumber>,
+        precomputed_values: &PrecomputedValues,
     ) -> DecryptionKeyShare {
+        let n_factorial = precomputed_values.n_factorial.clone();
         let base = n_factorial
             .iter()
             .fold(base.as_ring_element(&encryption_key.n2), |acc, factor| {
@@ -51,7 +58,7 @@ impl DecryptionKeyShare {
         }
     }
 
-    pub(in crate::threshold_decryption) fn generate_decryption_shares(
+    pub fn generate_decryption_shares(
         &self,
         ciphertexts: Vec<PaillierModulusSizedNumber>,
         rng: &mut impl CryptoRngCore,
@@ -125,7 +132,7 @@ impl DecryptionKeyShare {
                 proof,
             };
         }
-        
+
         let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
             n2,
             self.decryption_key_share,
@@ -168,12 +175,8 @@ mod tests {
 
         let precomputed_values = PrecomputedValues::new(n);
 
-        let decryption_key_share = DecryptionKeyShare::new(
-            encryption_key,
-            BASE,
-            SECRET_KEY,
-            precomputed_values.n_factorial,
-        );
+        let decryption_key_share =
+            DecryptionKeyShare::new(encryption_key, BASE, SECRET_KEY, &precomputed_values);
 
         let message = decryption_key_share.generate_decryption_shares(vec![CIPHERTEXT], &mut OsRng);
 
@@ -216,7 +219,7 @@ mod tests {
             encryption_key.clone(),
             BASE,
             SECRET_KEY,
-            precomputed_values.n_factorial,
+            &precomputed_values,
         );
 
         let batch_size = 3;
@@ -316,7 +319,7 @@ mod benches {
                     encryption_key.clone(),
                     base,
                     secret_key_share,
-                    precomputed_values.n_factorial.clone(),
+                    &precomputed_values,
                 );
 
                 g.bench_function(

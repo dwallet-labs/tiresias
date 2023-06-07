@@ -5,13 +5,16 @@ use crypto_bigint::{
     Concat, Uint, U1024, U128,
 };
 pub use decryption_key::DecryptionKey;
+pub use decryption_key_share::{DecryptionKeyShare, Message};
 pub use encryption_key::EncryptionKey;
+pub use precomputed_values::PrecomputedValues;
 
 mod decryption_key;
+mod decryption_key_share;
 mod encryption_key;
+mod precomputed_values;
 pub mod proofs;
 pub mod secret_sharing;
-mod threshold_decryption;
 
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
 /// Set to a U128 for 128-bit security.
@@ -88,5 +91,5 @@ mod tests {
 criterion_group!(
     benches,
     proofs::benchmark_proof_of_equality_of_discrete_logs,
-    threshold_decryption::benchmark_decryption_share
+    decryption_key_share::benchmark_decryption_share
 );
