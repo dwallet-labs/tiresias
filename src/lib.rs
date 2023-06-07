@@ -10,6 +10,7 @@ pub use encryption_key::EncryptionKey;
 mod decryption_key;
 mod encryption_key;
 pub mod proofs;
+pub mod secret_sharing;
 mod threshold_decryption;
 
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
