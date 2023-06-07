@@ -688,7 +688,7 @@ mod benches {
         let encryption_key = &EncryptionKey::new(n);
 
         for num_parties in [10, 100, 1000, 10000] {
-            let precomputed_values = PrecomputedValues::new(num_parties, n);
+            let precomputed_values = PrecomputedValues::new(num_parties, encryption_key.n);
             for batch_size in [1, 10, 100, 1000] {
                 let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
                     LargeBiPrimeSizedNumber::random_mod(&mut OsRng, &NonZero::new(n).unwrap())
