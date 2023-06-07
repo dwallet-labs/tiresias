@@ -64,7 +64,7 @@ impl DecryptionKeyShare {
         #[cfg(feature = "parallel")]
         let iter = ciphertexts.par_iter();
 
-        let ciphertexts_squared_n_factorial: Vec<PaillierModulusSizedNumber> = iter
+        let decryption_share_bases: Vec<PaillierModulusSizedNumber> = iter
             .map(|ciphertext| {
                 // Computing n! could be too big for even relatively small numbers (e.g. 100),
                 // so instead we compute the factorial in the exponent, in O(n) exponentiation
@@ -82,9 +82,9 @@ impl DecryptionKeyShare {
             .collect();
 
         #[cfg(not(feature = "parallel"))]
-        let iter = ciphertexts_squared_n_factorial.iter();
+        let iter = decryption_share_bases.iter();
         #[cfg(feature = "parallel")]
-        let iter = ciphertexts_squared_n_factorial.par_iter();
+        let iter = decryption_share_bases.par_iter();
 
         let decryption_shares: Vec<PaillierModulusSizedNumber> = iter
             .map(|decryption_share_base| {
@@ -96,26 +96,24 @@ impl DecryptionKeyShare {
             })
             .collect();
 
-        let squared_ciphertexts_n_factorial_and_decryption_shares: Vec<(
+        let decryption_shares_and_bases: Vec<(
             PaillierModulusSizedNumber,
             PaillierModulusSizedNumber,
-        )> = ciphertexts_squared_n_factorial
+        )> = decryption_share_bases
             .into_iter()
             .zip(decryption_shares.clone())
             .collect();
 
-        if squared_ciphertexts_n_factorial_and_decryption_shares.len() == 1 {
-            let (ciphertext_squared_n_factorial, decryption_share) =
-                squared_ciphertexts_n_factorial_and_decryption_shares
-                    .get(0)
-                    .unwrap();
+        if decryption_shares_and_bases.len() == 1 {
+            let (decryption_share_base, decryption_share) =
+                decryption_shares_and_bases.get(0).unwrap();
 
             // TODO: add SID, PID?
             let proof = ProofOfEqualityOfDiscreteLogs::prove(
                 n2,
                 self.decryption_key_share,
                 self.base,
-                *ciphertext_squared_n_factorial,
+                *decryption_share_base,
                 self.public_verification_key,
                 *decryption_share,
                 rng,
@@ -132,7 +130,7 @@ impl DecryptionKeyShare {
             self.decryption_key_share,
             self.base,
             self.public_verification_key,
-            squared_ciphertexts_n_factorial_and_decryption_shares,
+            decryption_shares_and_bases,
             rng,
         )
         .map_err(|_| Error::SanityCheckError(SanityCheckError::InvalidParams()))?;
@@ -172,7 +170,7 @@ mod tests {
             .generate_decryption_shares(vec![CIPHERTEXT], &mut OsRng)
             .unwrap();
 
-        let ciphertext_squared_n_factorial = CIPHERTEXT
+        let decryption_share_base = CIPHERTEXT
             .as_ring_element(&N2)
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
             .as_natural_number();
@@ -181,7 +179,7 @@ mod tests {
 
         assert_eq!(
             decryption_share,
-            ciphertext_squared_n_factorial
+            decryption_share_base
                 .as_ring_element(&N2)
                 .pow(&SECRET_KEY)
                 .as_natural_number()
@@ -192,7 +190,7 @@ mod tests {
             .verify(
                 decryption_key_share.encryption_key.n2,
                 decryption_key_share.base,
-                ciphertext_squared_n_factorial,
+                decryption_share_base,
                 decryption_key_share.public_verification_key,
                 decryption_share
             )
@@ -233,7 +231,7 @@ mod tests {
             .generate_decryption_shares(ciphertexts.clone(), &mut OsRng)
             .unwrap();
 
-        let ciphertexts_squared_n_factorial: Vec<PaillierModulusSizedNumber> = ciphertexts
+        let decryption_share_bases: Vec<PaillierModulusSizedNumber> = ciphertexts
             .iter()
             .map(|ciphertext| {
                 ciphertext
@@ -243,16 +241,15 @@ mod tests {
             })
             .collect();
 
-        let expected_decryption_shares: Vec<PaillierModulusSizedNumber> =
-            ciphertexts_squared_n_factorial
-                .iter()
-                .map(|ciphertext| {
-                    ciphertext
-                        .as_ring_element(&N2)
-                        .pow(&SECRET_KEY)
-                        .as_natural_number()
-                })
-                .collect();
+        let expected_decryption_shares: Vec<PaillierModulusSizedNumber> = decryption_share_bases
+            .iter()
+            .map(|ciphertext| {
+                ciphertext
+                    .as_ring_element(&N2)
+                    .pow(&SECRET_KEY)
+                    .as_natural_number()
+            })
+            .collect();
 
         assert_eq!(message.decryption_shares, expected_decryption_shares);
 
@@ -262,7 +259,7 @@ mod tests {
                 decryption_key_share.encryption_key.n2,
                 decryption_key_share.base,
                 decryption_key_share.public_verification_key,
-                ciphertexts_squared_n_factorial
+                decryption_share_bases
                     .into_iter()
                     .zip(message.decryption_shares)
                     .collect()
