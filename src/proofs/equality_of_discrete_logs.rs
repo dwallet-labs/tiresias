@@ -6,6 +6,7 @@ use merlin::Transcript;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::proofs::{Error, Result};
 use crate::{
     proofs::TranscriptProtocol, AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber,
     PaillierModulusSizedNumber, PaillierRingElement,
@@ -36,17 +37,6 @@ pub struct ProofOfEqualityOfDiscreteLogs {
     // Response $z \in \mathbb{Z}$.
     response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 }
-
-#[derive(thiserror::Error, Debug, PartialEq)]
-pub enum Error {
-    #[error("Invalid Params")]
-    InvalidParams(),
-
-    #[error("Invalid proof - didn't satisfy the proof equation")]
-    ProofVerificationError(),
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 impl ProofOfEqualityOfDiscreteLogs {
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
