@@ -7,7 +7,7 @@ use crate::PaillierModulusSizedNumber;
 pub struct PrecomputedValues {
     // The precomputed value $n!$ divided into factors of the Paillier modulus size for efficient
     // exponentiation
-    pub n_factorial: Vec<PaillierModulusSizedNumber>,
+    pub(crate) n_factorial: Vec<PaillierModulusSizedNumber>,
 }
 
 impl PrecomputedValues {
