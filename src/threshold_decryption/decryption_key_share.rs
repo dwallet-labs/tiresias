@@ -66,8 +66,8 @@ impl DecryptionKeyShare {
         let ciphertexts_squared_n_factorial: Vec<PaillierModulusSizedNumber> = iter
             .map(|ciphertext| {
                 // Computing n! could be too big for even relatively small numbers (e.g. 100),
-                // so instead we compute the factorial in the exponent, in O(n) exponentiations
-                // (which are performed within the ring, so don't bloat the size)
+                // so instead we compute the factorial in the exponent, in O(n) exponentiation
+                // (which are performed within the ring, so the size isn't bloated)
                 self.n_factorial
                     .iter()
                     .fold(
@@ -86,9 +86,9 @@ impl DecryptionKeyShare {
         let iter = ciphertexts_squared_n_factorial.par_iter();
 
         let decryption_shares: Vec<PaillierModulusSizedNumber> = iter
-            .map(|ciphertext| {
+            .map(|decryption_share_base| {
                 // $ c_i = c^{2n!d_i} $
-                ciphertext
+                decryption_share_base
                     .as_ring_element(&n2)
                     .pow(&self.decryption_key_share)
                     .as_natural_number()
@@ -125,6 +125,7 @@ impl DecryptionKeyShare {
                 proof,
             };
         }
+        
         let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
             n2,
             self.decryption_key_share,
