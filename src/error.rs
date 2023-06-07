@@ -7,8 +7,7 @@ pub enum Error {
 }
 
 #[derive(thiserror::Error, Debug, PartialEq)]
-pub enum ProtocolError {
-}
+pub enum ProtocolError {}
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum SanityCheckError {

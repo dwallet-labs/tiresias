@@ -4,10 +4,10 @@ use crypto_bigint::rand_core::CryptoRngCore;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::error::SanityCheckError;
 use crate::{
-    precomputed_values::PrecomputedValues, proofs::ProofOfEqualityOfDiscreteLogs, AsNaturalNumber,
-    AsRingElement, EncryptionKey, Error, Message, PaillierModulusSizedNumber, Result,
+    error::SanityCheckError, precomputed_values::PrecomputedValues,
+    proofs::ProofOfEqualityOfDiscreteLogs, AsNaturalNumber, AsRingElement, EncryptionKey, Error,
+    Message, PaillierModulusSizedNumber, Result,
 };
 
 #[derive(Clone)]

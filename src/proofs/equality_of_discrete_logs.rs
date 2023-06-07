@@ -6,11 +6,10 @@ use merlin::Transcript;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::proofs::{Error, Result};
 use crate::{
-    proofs::TranscriptProtocol, AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber,
-    PaillierModulusSizedNumber, PaillierRingElement,
-    ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
+    proofs::{Error, Result, TranscriptProtocol},
+    AsNaturalNumber, AsRingElement, ComputationalSecuritySizedNumber, PaillierModulusSizedNumber,
+    PaillierRingElement, ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber,
 };
 
 /// A proof of equality of discrete logarithms, utilized to validate threshold

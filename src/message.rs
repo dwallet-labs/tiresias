@@ -1,6 +1,6 @@
-use crate::proofs::ProofOfEqualityOfDiscreteLogs;
-use crate::PaillierModulusSizedNumber;
 use serde::{Deserialize, Serialize};
+
+use crate::{proofs::ProofOfEqualityOfDiscreteLogs, PaillierModulusSizedNumber};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Message {
