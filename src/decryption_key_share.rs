@@ -19,7 +19,7 @@ pub struct DecryptionKeyShare {
     public_verification_key: PaillierModulusSizedNumber,
     // $ d_j $
     decryption_key_share: PaillierModulusSizedNumber,
-    n_factorial: Vec<PaillierModulusSizedNumber>,
+    precomputed_values: PrecomputedValues,
 }
 
 impl DecryptionKeyShare {
@@ -28,10 +28,10 @@ impl DecryptionKeyShare {
         encryption_key: EncryptionKey,
         base: PaillierModulusSizedNumber,
         decryption_key_share: PaillierModulusSizedNumber,
-        precomputed_values: &PrecomputedValues,
+        precomputed_values: PrecomputedValues,
     ) -> DecryptionKeyShare {
-        let n_factorial = precomputed_values.n_factorial.clone();
-        let base = n_factorial
+        let base = precomputed_values
+            .n_factorial
             .iter()
             .fold(base.as_ring_element(&encryption_key.n2), |acc, factor| {
                 acc.pow_bounded_exp(factor, factor.bits_vartime())
@@ -48,7 +48,7 @@ impl DecryptionKeyShare {
             base,
             public_verification_key,
             decryption_key_share,
-            n_factorial,
+            precomputed_values,
         }
     }
 
@@ -69,7 +69,8 @@ impl DecryptionKeyShare {
                 // Computing n! could be too big for even relatively small numbers (e.g. 100),
                 // so instead we compute the factorial in the exponent, in O(n) exponentiation
                 // (which are performed within the ring, so the size isn't bloated)
-                self.n_factorial
+                self.precomputed_values
+                    .n_factorial
                     .iter()
                     .fold(
                         ciphertext
@@ -164,7 +165,7 @@ mod tests {
         let precomputed_values = PrecomputedValues::new(n);
 
         let decryption_key_share =
-            DecryptionKeyShare::new(encryption_key, BASE, SECRET_KEY, &precomputed_values);
+            DecryptionKeyShare::new(encryption_key, BASE, SECRET_KEY, precomputed_values);
 
         let message = decryption_key_share
             .generate_decryption_shares(vec![CIPHERTEXT], &mut OsRng)
@@ -205,12 +206,8 @@ mod tests {
 
         let precomputed_values = PrecomputedValues::new(n);
 
-        let decryption_key_share = DecryptionKeyShare::new(
-            encryption_key.clone(),
-            BASE,
-            SECRET_KEY,
-            &precomputed_values,
-        );
+        let decryption_key_share =
+            DecryptionKeyShare::new(encryption_key.clone(), BASE, SECRET_KEY, precomputed_values);
 
         let batch_size = 3;
         let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
@@ -309,7 +306,7 @@ mod benches {
                     encryption_key.clone(),
                     base,
                     secret_key_share,
-                    &precomputed_values,
+                    precomputed_values.clone(),
                 );
 
                 g.bench_function(
