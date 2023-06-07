@@ -8,6 +8,7 @@ crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "f
 merlin = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.163", features = ["derive"] }
 thiserror = "1.0.40"
+gcd = "2.3.0"
 
 rayon = { version = "1.7.0", optional = true }
 
@@ -17,13 +18,14 @@ rand_core = { version = "0.6.4", features = ["std"], optional = true }
 
 [dev-dependencies]
 rand_core = { version = "0.6.4", features = ["std"] }
+rstest = "0.17.0"
 
 [features]
 parallel = ["dep:rayon"]
 
 # This feature is for internal-use only (for benchmarking) and exists due to limitations of benchmarking non-public functions in Rust.
 # There will be no SemVer support for this feature.
-benchmarking = ["dep:criterion", "dep:rand_core"]
+benchmarking = ["dep:criterion", "dep:rand_core", "parallel"]
 
 [[bench]]
 name = "benches"

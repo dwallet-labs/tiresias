@@ -7,7 +7,10 @@ pub enum Error {
 }
 
 #[derive(thiserror::Error, Debug, PartialEq)]
-pub enum ProtocolError {}
+pub enum ProtocolError {
+    #[error("The following parties {malicious_parties:?} behaved maliciously by submitting invalid proofs")]
+    ProofVerificationError { malicious_parties: Vec<u16> },
+}
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum SanityCheckError {
