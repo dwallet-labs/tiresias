@@ -13,9 +13,9 @@ use crate::{
 #[derive(Clone)]
 pub struct DecryptionKeyShare {
     encryption_key: EncryptionKey,
-    // The base $g$ for proofs of equality of discrete logs
+    // Base $g$ for proofs of equality of discrete logs
     base: PaillierModulusSizedNumber,
-    // The public verification key $v_j$ for proofs of equality of discrete logs
+    // Public verification key $v_j$ for proofs of equality of discrete logs
     public_verification_key: PaillierModulusSizedNumber,
     // $ d_j $
     decryption_key_share: PaillierModulusSizedNumber,
