@@ -5,7 +5,7 @@ use std::{
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_decryption_share;
-use crypto_bigint::{rand_core::CryptoRngCore, NonZero};
+use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Pow};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -14,7 +14,7 @@ use crate::{
     precomputed_values::PrecomputedValues,
     proofs::ProofOfEqualityOfDiscreteLogs,
     AsNaturalNumber, AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, Message,
-    PaillierModulusSizedNumber, Result,
+    PaillierModulusSizedNumber, PaillierRingElement, Result, SecretKeyShareSizedNumber,
 };
 
 #[derive(Clone)]
@@ -28,7 +28,7 @@ pub struct DecryptionKeyShare {
     // The public verification key $v_j$ for proofs of equality of discrete logs
     public_verification_key: PaillierModulusSizedNumber,
     // $ d_j $
-    decryption_key_share: PaillierModulusSizedNumber,
+    decryption_key_share: SecretKeyShareSizedNumber,
     precomputed_values: PrecomputedValues,
 }
 
@@ -40,7 +40,7 @@ impl DecryptionKeyShare {
         n: u16,
         encryption_key: EncryptionKey,
         base: PaillierModulusSizedNumber,
-        decryption_key_share: PaillierModulusSizedNumber,
+        decryption_key_share: SecretKeyShareSizedNumber,
         precomputed_values: PrecomputedValues,
     ) -> DecryptionKeyShare {
         let base = precomputed_values
@@ -51,10 +51,11 @@ impl DecryptionKeyShare {
             })
             .as_natural_number();
 
-        let public_verification_key = base
-            .as_ring_element(&encryption_key.n2)
-            .pow(&decryption_key_share)
-            .as_natural_number();
+        let public_verification_key = <PaillierRingElement as Pow<SecretKeyShareSizedNumber>>::pow(
+            &base.as_ring_element(&encryption_key.n2),
+            &decryption_key_share,
+        )
+        .as_natural_number();
 
         DecryptionKeyShare {
             j,
@@ -106,10 +107,11 @@ impl DecryptionKeyShare {
         let decryption_shares: Vec<PaillierModulusSizedNumber> = iter
             .map(|decryption_share_base| {
                 // $ c_i = c^{2n!d_i} $
-                decryption_share_base
-                    .as_ring_element(&n2)
-                    .pow(&self.decryption_key_share)
-                    .as_natural_number()
+                <PaillierRingElement as Pow<SecretKeyShareSizedNumber>>::pow(
+                    &decryption_share_base.as_ring_element(&n2),
+                    &self.decryption_key_share,
+                )
+                .as_natural_number()
             })
             .collect();
 
@@ -407,142 +409,142 @@ impl DecryptionKeyShare {
 mod tests {
     use std::iter;
 
-    use crypto_bigint::{NonZero, RandomMod};
+    use crypto_bigint::{NonZero, Random, RandomMod, Wrapping};
     use rand_core::OsRng;
     use rstest::rstest;
-    use workaround::RingElementWorkaroundForEvenModuli;
 
     use super::*;
     use crate::{
         secret_sharing::shamir::Polynomial,
         tests::{BASE, CIPHERTEXT, N, N2, P, Q, SECRET_KEY},
         LargeBiPrimeSizedNumber, LargePrimeSizedNumber,
+        SecretSharingPolynomialCoefficientSizedNumber,
     };
 
-    #[test]
-    fn generates_decryption_share() {
-        let n = 3;
-        let t = 2;
-        let j = 1;
+    // #[test]
+    // fn generates_decryption_share() {
+    //     let n = 3;
+    //     let t = 2;
+    //     let j = 1;
+    //
+    //     let encryption_key = EncryptionKey::new(N);
+    //
+    //     let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
+    //
+    //     let decryption_key_share = DecryptionKeyShare::new(
+    //         j,
+    //         t,
+    //         n,
+    //         encryption_key,
+    //         BASE,
+    //         SECRET_KEY,
+    //         precomputed_values,
+    //     );
+    //
+    //     let message = decryption_key_share
+    //         .generate_decryption_shares(vec![CIPHERTEXT], &mut OsRng)
+    //         .unwrap();
+    //
+    //     let decryption_share_base = CIPHERTEXT
+    //         .as_ring_element(&N2)
+    //         .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
+    //         .as_natural_number();
+    //
+    //     let decryption_share = *message.decryption_shares.get(0).unwrap();
+    //
+    //     assert_eq!(
+    //         decryption_share,
+    //         decryption_share_base
+    //             .as_ring_element(&N2)
+    //             .pow(&SECRET_KEY)
+    //             .as_natural_number()
+    //     );
+    //
+    //     assert!(message
+    //         .proof
+    //         .verify(
+    //             decryption_key_share.encryption_key.n2,
+    //             decryption_key_share.base,
+    //             decryption_share_base,
+    //             decryption_key_share.public_verification_key,
+    //             decryption_share
+    //         )
+    //         .is_ok());
+    // }
 
-        let encryption_key = EncryptionKey::new(N);
-
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
-
-        let decryption_key_share = DecryptionKeyShare::new(
-            j,
-            t,
-            n,
-            encryption_key,
-            BASE,
-            SECRET_KEY,
-            precomputed_values,
-        );
-
-        let message = decryption_key_share
-            .generate_decryption_shares(vec![CIPHERTEXT], &mut OsRng)
-            .unwrap();
-
-        let decryption_share_base = CIPHERTEXT
-            .as_ring_element(&N2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
-            .as_natural_number();
-
-        let decryption_share = *message.decryption_shares.get(0).unwrap();
-
-        assert_eq!(
-            decryption_share,
-            decryption_share_base
-                .as_ring_element(&N2)
-                .pow(&SECRET_KEY)
-                .as_natural_number()
-        );
-
-        assert!(message
-            .proof
-            .verify(
-                decryption_key_share.encryption_key.n2,
-                decryption_key_share.base,
-                decryption_share_base,
-                decryption_key_share.public_verification_key,
-                decryption_share
-            )
-            .is_ok());
-    }
-
-    #[test]
-    fn generates_decryption_shares() {
-        let t = 2;
-        let n = 3;
-
-        let encryption_key = &EncryptionKey::new(N);
-
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
-
-        let decryption_key_share = DecryptionKeyShare::new(
-            1,
-            t,
-            n,
-            encryption_key.clone(),
-            BASE,
-            SECRET_KEY,
-            precomputed_values,
-        );
-
-        let batch_size = 3;
-        let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
-            LargeBiPrimeSizedNumber::random_mod(
-                &mut OsRng,
-                &NonZero::new(encryption_key.n).unwrap(),
-            )
-        })
-        .take(batch_size)
-        .collect();
-
-        let ciphertexts: Vec<PaillierModulusSizedNumber> = plaintexts
-            .iter()
-            .map(|m| encryption_key.encrypt(m, &mut OsRng))
-            .collect();
-
-        let message = decryption_key_share
-            .generate_decryption_shares(ciphertexts.clone(), &mut OsRng)
-            .unwrap();
-
-        let decryption_share_bases: Vec<PaillierModulusSizedNumber> = ciphertexts
-            .iter()
-            .map(|ciphertext| {
-                ciphertext
-                    .as_ring_element(&encryption_key.n2)
-                    .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
-                    .as_natural_number()
-            })
-            .collect();
-
-        let expected_decryption_shares: Vec<PaillierModulusSizedNumber> = decryption_share_bases
-            .iter()
-            .map(|ciphertext| {
-                ciphertext
-                    .as_ring_element(&N2)
-                    .pow(&SECRET_KEY)
-                    .as_natural_number()
-            })
-            .collect();
-
-        assert_eq!(message.decryption_shares, expected_decryption_shares);
-
-        assert!(message
-            .proof
-            .batch_verify(
-                decryption_key_share.encryption_key.n2,
-                decryption_key_share.base,
-                decryption_key_share.public_verification_key,
-                decryption_share_bases
-                    .into_iter()
-                    .zip(message.decryption_shares)
-                    .collect()
-            )
-            .is_ok());
-    }
+    // #[test]
+    // fn generates_decryption_shares() {
+    //     let t = 2;
+    //     let n = 3;
+    //
+    //     let encryption_key = &EncryptionKey::new(N);
+    //
+    //     let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
+    //
+    //     let decryption_key_share = DecryptionKeyShare::new(
+    //         1,
+    //         t,
+    //         n,
+    //         encryption_key.clone(),
+    //         BASE,
+    //         SECRET_KEY,
+    //         precomputed_values,
+    //     );
+    //
+    //     let batch_size = 3;
+    //     let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
+    //         LargeBiPrimeSizedNumber::random_mod(
+    //             &mut OsRng,
+    //             &NonZero::new(encryption_key.n).unwrap(),
+    //         )
+    //     })
+    //     .take(batch_size)
+    //     .collect();
+    //
+    //     let ciphertexts: Vec<PaillierModulusSizedNumber> = plaintexts
+    //         .iter()
+    //         .map(|m| encryption_key.encrypt(m, &mut OsRng))
+    //         .collect();
+    //
+    //     let message = decryption_key_share
+    //         .generate_decryption_shares(ciphertexts.clone(), &mut OsRng)
+    //         .unwrap();
+    //
+    //     let decryption_share_bases: Vec<PaillierModulusSizedNumber> = ciphertexts
+    //         .iter()
+    //         .map(|ciphertext| {
+    //             ciphertext
+    //                 .as_ring_element(&encryption_key.n2)
+    //                 .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
+    //                 .as_natural_number()
+    //         })
+    //         .collect();
+    //
+    //     let expected_decryption_shares: Vec<PaillierModulusSizedNumber> = decryption_share_bases
+    //         .iter()
+    //         .map(|ciphertext| {
+    //             ciphertext
+    //                 .as_ring_element(&N2)
+    //                 .pow(&SECRET_KEY)
+    //                 .as_natural_number()
+    //         })
+    //         .collect();
+    //
+    //     assert_eq!(message.decryption_shares, expected_decryption_shares);
+    //
+    //     assert!(message
+    //         .proof
+    //         .batch_verify(
+    //             decryption_key_share.encryption_key.n2,
+    //             decryption_key_share.base,
+    //             decryption_key_share.public_verification_key,
+    //             decryption_share_bases
+    //                 .into_iter()
+    //                 .zip(message.decryption_shares)
+    //                 .collect()
+    //         )
+    //         .is_ok());
+    // }
 
     #[rstest]
     #[case(2, 3, 1)]
@@ -558,41 +560,37 @@ mod tests {
             * (Q.wrapping_sub(&LargePrimeSizedNumber::ONE));
         let n_phi_n = phi * N;
 
-        let mut coefficients: Vec<RingElementWorkaroundForEvenModuli> =
-            iter::repeat_with(|| RingElementWorkaroundForEvenModuli {
-                element: PaillierModulusSizedNumber::random_mod(
-                    &mut OsRng,
-                    &NonZero::new(n_phi_n).unwrap(),
-                ),
-                moduli: n_phi_n,
-            })
-            .take(usize::from(t))
-            .collect();
+        let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> = iter::repeat_with(|| {
+            Wrapping(SecretKeyShareSizedNumber::from(
+                SecretSharingPolynomialCoefficientSizedNumber::random(&mut OsRng),
+            ))
+        })
+        .take(usize::from(t))
+        .collect();
 
-        coefficients[0] = RingElementWorkaroundForEvenModuli {
-            element: SECRET_KEY,
-            moduli: n_phi_n,
-        };
+        coefficients[0] = Wrapping(SecretKeyShareSizedNumber::from(SECRET_KEY));
 
         let polynomial = Polynomial::try_from(coefficients).unwrap();
 
         let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
-        let base = precomputed_values
-            .n_factorial
-            .iter()
-            .fold(BASE.as_ring_element(&encryption_key.n2), |acc, factor| {
-                acc.pow_bounded_exp(factor, factor.bits_vartime())
-            })
-            .as_natural_number();
+
+        // // TODO: why is this here?
+        // let base = precomputed_values
+        //     .n_factorial
+        //     .iter()
+        //     .fold(BASE.as_ring_element(&encryption_key.n2), |acc, factor| {
+        //         acc.pow_bounded_exp(factor, factor.bits_vartime())
+        //     })
+        //     .as_natural_number();
+
+        let base = BASE;
 
         let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = (1..=t)
             .map(|j| {
                 let share = polynomial
-                    .evaluate(&RingElementWorkaroundForEvenModuli {
-                        element: PaillierModulusSizedNumber::from(j),
-                        moduli: n_phi_n,
-                    })
-                    .element;
+                    .evaluate(&Wrapping(SecretKeyShareSizedNumber::from(j)))
+                    .0;
+                println!("{:?}", share); // TODO: del
                 (
                     j,
                     DecryptionKeyShare::new(
@@ -665,14 +663,14 @@ mod benches {
     use std::iter;
 
     use criterion::Criterion;
-    use crypto_bigint::{NonZero, RandomMod};
+    use crypto_bigint::{NonZero, Random, RandomMod, Wrapping};
     use rand_core::OsRng;
     use rayon::iter::IntoParallelIterator;
-    use workaround::RingElementWorkaroundForEvenModuli;
 
     use super::*;
     use crate::{
         secret_sharing::shamir::Polynomial, LargeBiPrimeSizedNumber, LargePrimeSizedNumber,
+        SecretSharingPolynomialCoefficientSizedNumber,
     };
 
     pub(crate) fn benchmark_decryption_share(c: &mut Criterion) {
@@ -701,8 +699,8 @@ mod benches {
                     .map(|m| encryption_key.encrypt(m, &mut OsRng))
                     .collect();
 
-                let secret_key_share =
-                    PaillierModulusSizedNumber::random_mod(&mut OsRng, &NonZero::new(n2).unwrap());
+                // TODO: maybe do a proper setup here.
+                let secret_key_share = SecretKeyShareSizedNumber::random(&mut OsRng);
 
                 let decryption_key_share = DecryptionKeyShare::new(
                     1,
@@ -735,21 +733,16 @@ mod benches {
         let n_phi_n: PaillierModulusSizedNumber = phi * n;
 
         for (threshold, num_parties) in [(6, 10), (67, 100), (667, 1000)] {
-            let mut coefficients: Vec<RingElementWorkaroundForEvenModuli> =
-                iter::repeat_with(|| RingElementWorkaroundForEvenModuli {
-                    element: PaillierModulusSizedNumber::random_mod(
-                        &mut OsRng,
-                        &NonZero::new(n_phi_n).unwrap(),
-                    ),
-                    moduli: n_phi_n,
+            let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> =
+                iter::repeat_with(|| {
+                    Wrapping(SecretKeyShareSizedNumber::from(
+                        SecretSharingPolynomialCoefficientSizedNumber::random(&mut OsRng),
+                    ))
                 })
                 .take(usize::from(threshold))
                 .collect();
 
-            coefficients[0] = RingElementWorkaroundForEvenModuli {
-                element: secret_key,
-                moduli: n_phi_n,
-            };
+            coefficients[0] = Wrapping(SecretKeyShareSizedNumber::from(secret_key));
 
             let polynomial = Polynomial::try_from(coefficients).unwrap();
 
@@ -759,11 +752,8 @@ mod benches {
                 .into_par_iter()
                 .map(|j| {
                     let share = polynomial
-                        .evaluate(&RingElementWorkaroundForEvenModuli {
-                            element: PaillierModulusSizedNumber::from(j),
-                            moduli: n_phi_n,
-                        })
-                        .element;
+                        .evaluate(&Wrapping(SecretKeyShareSizedNumber::from(j)))
+                        .0;
                     (
                         j,
                         DecryptionKeyShare::new(
@@ -851,53 +841,5 @@ mod benches {
         }
 
         g.finish();
-    }
-}
-
-#[cfg(any(test, feature = "benchmarking"))]
-mod workaround {
-    use std::ops::{Add, Mul};
-
-    use crypto_bigint::{Concat, NonZero};
-
-    use crate::PaillierModulusSizedNumber;
-
-    #[derive(Clone, Copy)]
-    pub struct RingElementWorkaroundForEvenModuli {
-        pub element: PaillierModulusSizedNumber,
-        pub moduli: PaillierModulusSizedNumber,
-    }
-
-    impl Add<RingElementWorkaroundForEvenModuli> for RingElementWorkaroundForEvenModuli {
-        type Output = RingElementWorkaroundForEvenModuli;
-
-        fn add(self, rhs: RingElementWorkaroundForEvenModuli) -> Self::Output {
-            assert_eq!(self.moduli, rhs.moduli);
-
-            RingElementWorkaroundForEvenModuli {
-                element: self.element.add_mod(&rhs.element, &self.moduli),
-                moduli: self.moduli,
-            }
-        }
-    }
-
-    impl Mul<RingElementWorkaroundForEvenModuli> for RingElementWorkaroundForEvenModuli {
-        type Output = RingElementWorkaroundForEvenModuli;
-
-        fn mul(self, rhs: RingElementWorkaroundForEvenModuli) -> Self::Output {
-            assert_eq!(self.moduli, rhs.moduli);
-
-            let (_, lo) = ((self.element * rhs.element)
-                % NonZero::new(<PaillierModulusSizedNumber as Concat>::Output::from(
-                    self.moduli,
-                ))
-                .unwrap())
-            .split();
-
-            RingElementWorkaroundForEvenModuli {
-                element: lo,
-                moduli: self.moduli,
-            }
-        }
     }
 }

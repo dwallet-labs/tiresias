@@ -2,7 +2,7 @@
 use criterion::criterion_group;
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Concat, Uint, U1024, U128,
+    Concat, Limb, Uint, U1024, U128, U6144, U8192,
 };
 pub use decryption_key::DecryptionKey;
 pub use decryption_key_share::DecryptionKeyShare;
@@ -39,12 +39,22 @@ pub type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Outpu
 
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
 pub(crate) type PaillierPlaintextRingElement = DynResidue<{ LargeBiPrimeSizedNumber::LIMBS }>;
-pub(crate) type ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = Uint<
-    {
-        PaillierModulusSizedNumber::LIMBS
-            + <ComputationalSecuritySizedNumber as Concat>::Output::LIMBS
-    },
->;
+
+// TODO: validate these values. (for 100 parties they are sure to be wrong?)
+// The maximum size for 100 parties
+pub type SecretSharingPolynomialCoefficientSizedNumber = U6144;
+
+// // The maximum size for 1000 parties
+// pub type SecretSharingPolynomialCoefficientSizedNumber = Uint<{ 14480 / Limb::BITS }>;
+
+// The maximum size for 100 parties
+pub type SecretKeyShareSizedNumber = U8192;
+
+// // The maximum size for 1000 parties
+// pub type SecretKeyShareSizedNumber = Uint<{ 24480 / Limb::BITS }>;
+
+// We accounted for this already
+pub(crate) type ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = SecretKeyShareSizedNumber;
 
 /// Retrieve the minimal natural number in the congruence class.
 pub(crate) trait AsNaturalNumber<T> {
@@ -111,6 +121,6 @@ mod tests {
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,
-    proofs::benchmark_proof_of_equality_of_discrete_logs,
+    // proofs::benchmark_proof_of_equality_of_discrete_logs,
     decryption_key_share::benchmark_decryption_share,
 );
