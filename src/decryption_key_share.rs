@@ -748,7 +748,8 @@ mod benches {
                         )
                         .unwrap(),
                     ))
-                });
+                })
+                .collect();
 
             coefficients[0] = Wrapping(SecretKeyShareSizedNumber::from(secret_key));
 
