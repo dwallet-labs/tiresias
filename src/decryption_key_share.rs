@@ -5,7 +5,7 @@ use std::{
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_decryption_share;
-use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Pow};
+use crypto_bigint::{rand_core::CryptoRngCore, NonZero, PowBoundedExp};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -15,7 +15,7 @@ use crate::{
     proofs::ProofOfEqualityOfDiscreteLogs,
     AsNaturalNumber, AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, Message,
     PaillierModulusSizedNumber, PaillierRingElement, Result, SecretKeyShareSizedNumber,
-    MAX_PLAYERS,
+    MAX_PLAYERS, SECRET_KEY_SHARE_SIZE_UPPER_BOUND,
 };
 
 #[derive(Clone)]
@@ -54,11 +54,13 @@ impl DecryptionKeyShare {
             })
             .as_natural_number();
 
-        let public_verification_key = <PaillierRingElement as Pow<SecretKeyShareSizedNumber>>::pow(
-            &base.as_ring_element(&encryption_key.n2),
-            &decryption_key_share,
-        )
-        .as_natural_number();
+        let public_verification_key =
+            <PaillierRingElement as PowBoundedExp<SecretKeyShareSizedNumber>>::pow_bounded_exp(
+                &base.as_ring_element(&encryption_key.n2),
+                &decryption_key_share,
+                SECRET_KEY_SHARE_SIZE_UPPER_BOUND,
+            )
+            .as_natural_number();
 
         DecryptionKeyShare {
             j,
@@ -110,9 +112,10 @@ impl DecryptionKeyShare {
         let decryption_shares: Vec<PaillierModulusSizedNumber> = iter
             .map(|decryption_share_base| {
                 // $ c_i = c^{2n!d_i} $
-                <PaillierRingElement as Pow<SecretKeyShareSizedNumber>>::pow(
+                <PaillierRingElement as PowBoundedExp<SecretKeyShareSizedNumber>>::pow_bounded_exp(
                     &decryption_share_base.as_ring_element(&n2),
                     &self.decryption_key_share,
+                    SECRET_KEY_SHARE_SIZE_UPPER_BOUND,
                 )
                 .as_natural_number()
             })
@@ -412,7 +415,7 @@ impl DecryptionKeyShare {
 mod tests {
     use std::iter;
 
-    use crypto_bigint::{NonZero, Random, RandomMod, Wrapping};
+    use crypto_bigint::{NonZero, RandomMod, Wrapping};
     use rand_core::OsRng;
     use rstest::rstest;
 
@@ -422,6 +425,7 @@ mod tests {
         tests::{BASE, CIPHERTEXT, N, N2, SECRET_KEY},
         LargeBiPrimeSizedNumber, LargePrimeSizedNumber,
         SecretSharingPolynomialCoefficientSizedNumber,
+        SECRET_SHARING_POLYNOMIAL_COEFFICIENT_SIZE_UPPER_BOUND,
     };
 
     // #[test]
@@ -560,8 +564,13 @@ mod tests {
         // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of the
         // DKG.
         let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> = iter::repeat_with(|| {
-            Wrapping(SecretKeyShareSizedNumber::from(
-                SecretSharingPolynomialCoefficientSizedNumber::random(&mut OsRng),
+            Wrapping(SecretKeyShareSizedNumber::random_mod(
+                &mut OsRng,
+                &NonZero::new(
+                    SecretKeyShareSizedNumber::ONE
+                        .shl_vartime(SECRET_SHARING_POLYNOMIAL_COEFFICIENT_SIZE_UPPER_BOUND),
+                )
+                .unwrap(),
             ))
         })
         .take(usize::from(t))
@@ -662,7 +671,7 @@ mod benches {
     use std::iter;
 
     use criterion::Criterion;
-    use crypto_bigint::{NonZero, Random, RandomMod, Wrapping};
+    use crypto_bigint::{NonZero, RandomMod, Wrapping};
     use rand_core::OsRng;
     use rayon::iter::IntoParallelIterator;
 
@@ -670,6 +679,7 @@ mod benches {
     use crate::{
         secret_sharing::shamir::Polynomial, LargeBiPrimeSizedNumber, LargePrimeSizedNumber,
         SecretSharingPolynomialCoefficientSizedNumber,
+        SECRET_SHARING_POLYNOMIAL_COEFFICIENT_SIZE_UPPER_BOUND,
     };
 
     pub(crate) fn benchmark_decryption_share(c: &mut Criterion) {
@@ -729,12 +739,16 @@ mod benches {
         for (threshold, num_parties) in [(6, 10), (67, 100), (667, 1000)] {
             let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> =
                 iter::repeat_with(|| {
-                    Wrapping(SecretKeyShareSizedNumber::from(
-                        SecretSharingPolynomialCoefficientSizedNumber::random(&mut OsRng),
+                    Wrapping(SecretKeyShareSizedNumber::random_mod(
+                        &mut OsRng,
+                        &NonZero::new(
+                            SecretKeyShareSizedNumber::ONE.shl_vartime(
+                                SECRET_SHARING_POLYNOMIAL_COEFFICIENT_SIZE_UPPER_BOUND,
+                            ),
+                        )
+                        .unwrap(),
                     ))
-                })
-                .take(usize::from(threshold))
-                .collect();
+                });
 
             coefficients[0] = Wrapping(SecretKeyShareSizedNumber::from(secret_key));
 
