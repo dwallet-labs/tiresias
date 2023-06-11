@@ -43,6 +43,7 @@ impl DecryptionKeyShare {
         decryption_key_share: SecretKeyShareSizedNumber,
         precomputed_values: PrecomputedValues,
     ) -> DecryptionKeyShare {
+        // TODO: assert n < 1000
         let base = precomputed_values
             .n_factorial
             .iter()
@@ -685,46 +686,46 @@ mod benches {
         let base: PaillierModulusSizedNumber = PaillierModulusSizedNumber::from_be_hex("03B4EFB895D3A85104F1F93744F9DB8924911747DE87ACEC55F1BF37C4531FD7F0A5B498A943473FFA65B89A04FAC2BBDF76FF14D81EB0A0DAD7414CF697E554A93C8495658A329A1907339F9438C1048A6E14476F9569A14BD092BCB2730DCE627566808FD686008F46A47964732DC7DCD2E6ECCE83F7BCCAB2AFDF37144ED153A118B683FF6A3C6971B08DE53DA5D2FEEF83294C21998FC0D1E219A100B6F57F2A2458EA9ABCFA8C5D4DF14B286B71BF5D7AD4FFEEEF069B64E0FC4F1AB684D6B2F20EAA235892F360AA2ECBF361357405D77E5023DF7BEDC12F10F6C35F3BE1163BC37B6C97D62616260A2862F659EB1811B1DDA727847E810D0C2FA120B18E99C9008AA4625CF1862460F8AB3A41E3FDB552187E0408E60885391A52EE2A89DD2471ECBA0AD922DEA0B08474F0BED312993ECB90C90C0F44EF267124A6217BC372D36F8231EB76B0D31DDEB183283A46FAAB74052A01F246D1C638BC00A47D25978D7DF9513A99744D8B65F2B32E4D945B0BA3B7E7A797604173F218D116A1457D20A855A52BBD8AC15679692C5F6AC4A8AF425370EF1D4184322F317203BE9678F92BFD25C7E6820D70EE08809424720249B4C58B81918DA02CFD2CAB3C42A02B43546E64430F529663FCEFA51E87E63F0813DA52F3473506E9E98DCD3142D830F1C1CDF6970726C190EAE1B5D5A26BC30857B4DF639797895E5D61A5EE");
         let encryption_key = &EncryptionKey::new(n);
 
-        for num_parties in [10, 100, 1000, 10000] {
-            let precomputed_values = PrecomputedValues::new(num_parties, n);
-            for batch_size in [1, 10, 100, 1000] {
-                let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
-                    LargeBiPrimeSizedNumber::random_mod(&mut OsRng, &NonZero::new(n).unwrap())
-                })
-                .take(batch_size)
-                .collect();
-
-                let ciphertexts: Vec<PaillierModulusSizedNumber> = plaintexts
-                    .iter()
-                    .map(|m| encryption_key.encrypt(m, &mut OsRng))
-                    .collect();
-
-                // TODO: maybe do a proper setup here.
-                let secret_key_share = SecretKeyShareSizedNumber::random(&mut OsRng);
-
-                let decryption_key_share = DecryptionKeyShare::new(
-                    1,
-                    num_parties,
-                    num_parties,
-                    encryption_key.clone(),
-                    base,
-                    secret_key_share,
-                    precomputed_values.clone(),
-                );
-
-                g.bench_function(
-                    format!(
-                        "decryption_share() for {num_parties} parties and {batch_size} decryptions"
-                    ),
-                    |bench| {
-                        bench.iter(|| {
-                            decryption_key_share
-                                .generate_decryption_shares(ciphertexts.clone(), &mut OsRng)
-                        });
-                    },
-                );
-            }
-        }
+        // for num_parties in [10, 100, 1000, 10000] {
+        //     let precomputed_values = PrecomputedValues::new(num_parties, n);
+        //     for batch_size in [1, 10, 100, 1000] {
+        //         let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
+        //             LargeBiPrimeSizedNumber::random_mod(&mut OsRng, &NonZero::new(n).unwrap())
+        //         })
+        //         .take(batch_size)
+        //         .collect();
+        //
+        //         let ciphertexts: Vec<PaillierModulusSizedNumber> = plaintexts
+        //             .iter()
+        //             .map(|m| encryption_key.encrypt(m, &mut OsRng))
+        //             .collect();
+        //
+        //         // TODO: maybe do a proper setup here.
+        //         let secret_key_share = SecretKeyShareSizedNumber::random(&mut OsRng);
+        //
+        //         let decryption_key_share = DecryptionKeyShare::new(
+        //             1,
+        //             num_parties,
+        //             num_parties,
+        //             encryption_key.clone(),
+        //             base,
+        //             secret_key_share,
+        //             precomputed_values.clone(),
+        //         );
+        //
+        //         g.bench_function(
+        //             format!(
+        //                 "decryption_share() for {num_parties} parties and {batch_size} decryptions"
+        //             ),
+        //             |bench| {
+        //                 bench.iter(|| {
+        //                     decryption_key_share
+        //                         .generate_decryption_shares(ciphertexts.clone(), &mut OsRng)
+        //                 });
+        //             },
+        //         );
+        //     }
+        // }
 
         // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of the
         // DKG.
