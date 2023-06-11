@@ -5,10 +5,19 @@ use crypto_bigint::{
     Concat, Uint, U1024, U128,
 };
 pub use decryption_key::DecryptionKey;
+pub use decryption_key_share::DecryptionKeyShare;
 pub use encryption_key::EncryptionKey;
+pub use error::{Error, Result};
+pub use message::Message;
+pub use precomputed_values::PrecomputedValues;
 
 mod decryption_key;
+mod decryption_key_share;
 mod encryption_key;
+mod error;
+mod message;
+mod precomputed_values;
+
 pub mod proofs;
 pub mod secret_sharing;
 
@@ -86,5 +95,6 @@ mod tests {
 #[cfg(feature = "benchmarking")]
 criterion_group!(
     benches,
-    proofs::benchmark_proof_of_equality_of_discrete_logs
+    proofs::benchmark_proof_of_equality_of_discrete_logs,
+    decryption_key_share::benchmark_decryption_share
 );
