@@ -1,4 +1,4 @@
-use crypto_bigint::{rand_core::CryptoRngCore, Pow, Random};
+use crypto_bigint::{rand_core::CryptoRngCore, Random};
 
 use crate::{
     AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber,
@@ -41,7 +41,7 @@ impl EncryptionKey {
         // $ c = (m*N + 1) * (r^N) mod N^2 $
         (
             (m * n + one) * // $ (m*N + 1) * $
-                <PaillierRingElement as Pow<LargeBiPrimeSizedNumber>>::pow(&r, &self.n)
+                r.pow_bounded_exp(&self.n, LargeBiPrimeSizedNumber::BITS)
             // $ (r^N) $
         )
         .as_natural_number()
