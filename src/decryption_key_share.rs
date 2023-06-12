@@ -10,7 +10,9 @@ use crypto_bigint::{rand_core::CryptoRngCore, NonZero};
 use rayon::prelude::*;
 
 use crate::{
+    binomial_coefficient_upper_bound,
     error::{ProtocolError, SanityCheckError},
+    factorial_upper_bound,
     precomputed_values::PrecomputedValues,
     proofs::ProofOfEqualityOfDiscreteLogs,
     secret_key_share_size_upper_bound, AsNaturalNumber, AsRingElement, EncryptionKey, Error,
@@ -46,12 +48,9 @@ impl DecryptionKeyShare {
     ) -> DecryptionKeyShare {
         assert!(usize::from(n) <= MAX_PLAYERS);
 
-        let base = precomputed_values
-            .n_factorial
-            .iter()
-            .fold(base.as_ring_element(&encryption_key.n2), |acc, factor| {
-                acc.pow_bounded_exp(factor, factor.bits_vartime())
-            })
+        let base = base
+            .as_ring_element(&encryption_key.n2)
+            .pow_bounded_exp(&precomputed_values.n_factorial, factorial_upper_bound(n))
             .as_natural_number();
 
         let public_verification_key = base
@@ -85,17 +84,12 @@ impl DecryptionKeyShare {
 
         let decryption_share_bases: Vec<PaillierModulusSizedNumber> = iter
             .map(|ciphertext| {
-                // Computing n! could be too big for even relatively small numbers (e.g. 100),
-                // so instead we compute the factorial in the exponent, in O(n) exponentiation
-                // (which are performed within the ring, so the size isn't bloated)
-                self.precomputed_values
-                    .n_factorial
-                    .iter()
-                    .fold(
-                        ciphertext
-                            .as_ring_element(&n2)
-                            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2),
-                        |acc, factor| acc.pow_bounded_exp(factor, factor.bits_vartime()),
+                ciphertext
+                    .as_ring_element(&n2)
+                    .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
+                    .pow_bounded_exp(
+                        &self.precomputed_values.n_factorial,
+                        factorial_upper_bound(self.n),
                     )
                     .as_natural_number()
             })
@@ -211,15 +205,10 @@ impl DecryptionKeyShare {
 
         let ciphertexts: Vec<PaillierModulusSizedNumber> = iter
             .map(|ciphertext| {
-                precomputed_values
-                    .n_factorial
-                    .iter()
-                    .fold(
-                        ciphertext
-                            .as_ring_element(&n2)
-                            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2),
-                        |acc, factor| acc.pow_bounded_exp(factor, factor.bits_vartime()),
-                    )
+                ciphertext
+                    .as_ring_element(&n2)
+                    .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
+                    .pow_bounded_exp(&precomputed_values.n_factorial, factorial_upper_bound(n))
                     .as_natural_number()
             })
             .collect();
@@ -330,14 +319,13 @@ impl DecryptionKeyShare {
                         .as_ring_element(&n2)
                         .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
 
-                    let c_j_prime = precomputed_values
-                        .factored_binomial_coefficients
-                        .get(&j)
-                        .unwrap()
-                        .iter()
-                        .fold(c_j_prime, |acc, factor| {
-                            acc.pow_bounded_exp(factor, factor.bits_vartime())
-                        });
+                    let c_j_prime = c_j_prime.pow_bounded_exp(
+                        &precomputed_values
+                            .factored_binomial_coefficients
+                            .get(&j)
+                            .unwrap(),
+                        binomial_coefficient_upper_bound(n),
+                    );
 
                     // $^{\Pi_{j'\in [n] \setminus S} (j'-j)}$
                     // Since we can't raise by a negative number with `crypto_bigint`, we do this in
@@ -791,12 +779,12 @@ mod benches {
                     })
                     .collect();
 
-                let base = precomputed_values
-                    .n_factorial
-                    .iter()
-                    .fold(base.as_ring_element(&encryption_key.n2), |acc, factor| {
-                        acc.pow_bounded_exp(factor, factor.bits_vartime())
-                    })
+                let base = base
+                    .as_ring_element(&encryption_key.n2)
+                    .pow_bounded_exp(
+                        &precomputed_values.n_factorial,
+                        factorial_upper_bound(num_parties),
+                    )
                     .as_natural_number();
 
                 g.bench_function(

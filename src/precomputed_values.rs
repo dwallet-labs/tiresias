@@ -1,24 +1,21 @@
 use std::collections::HashMap;
 
-use crypto_bigint::CheckedMul;
 use gcd::Gcd;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::{AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
+use crate::{AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber, SecretKeyShareSizedNumber};
 
 /// This struct holds precomputed values that are computationally expensive to compute
 #[derive(Clone, Debug)]
 pub struct PrecomputedValues {
     // A precomputed mapping of the party-id $j$ to the binomial coefficient ${n\choose j}$,
-    // factored to "small enough" factors (i.e. of the size of elements in the ring)
-    pub(crate) factored_binomial_coefficients: HashMap<u16, Vec<PaillierModulusSizedNumber>>,
+    pub(crate) factored_binomial_coefficients: HashMap<u16, SecretKeyShareSizedNumber>,
     // The precomputed value $(4n!^{2})^{-1} mod(N)$ used for threshold_decryption (saved for
     // optimization reasons)
     pub(crate) four_n_factorial_squared_inverse_mod_n: LargeBiPrimeSizedNumber,
-    // The precomputed value $n!$ divided into factors of the Paillier modulus size for efficient
-    // exponentiation
-    pub(crate) n_factorial: Vec<PaillierModulusSizedNumber>,
+    // The precomputed value $n!$
+    pub(crate) n_factorial: SecretKeyShareSizedNumber,
 }
 
 impl PrecomputedValues {
@@ -36,8 +33,8 @@ impl PrecomputedValues {
         #[cfg(feature = "parallel")]
         let iter = (1..=(n / 2)).into_par_iter();
 
-        let mut factored_binomial_coefficients: HashMap<u16, Vec<PaillierModulusSizedNumber>> =
-            iter.flat_map(|j| {
+        let mut factored_binomial_coefficients: HashMap<u16, SecretKeyShareSizedNumber> = iter
+            .flat_map(|j| {
                 let factored_coefficient = Self::factor_binomial_coefficient(j, n);
 
                 // Account for the coefficient's symmetric nature for the above mentioned
@@ -53,7 +50,7 @@ impl PrecomputedValues {
             })
             .collect();
 
-        factored_binomial_coefficients.insert(n, vec![PaillierModulusSizedNumber::ONE]);
+        factored_binomial_coefficients.insert(n, SecretKeyShareSizedNumber::ONE);
 
         let n_factorial = (2..=n).fold(
             LargeBiPrimeSizedNumber::ONE.as_ring_element(&paillier_n),
@@ -67,7 +64,11 @@ impl PrecomputedValues {
         .0
         .as_natural_number();
 
-        let n_factorial = Self::combine_small_factors_to_modulus_sized_factors((2..=n).collect());
+        // Can't overflow
+        let n_factorial = (2..=n)
+            .map(|x| SecretKeyShareSizedNumber::from(x))
+            .reduce(|a, b| a.wrapping_mul(&b))
+            .unwrap();
 
         PrecomputedValues {
             factored_binomial_coefficients,
@@ -78,7 +79,7 @@ impl PrecomputedValues {
 
     // Factor the binomial coefficients by reducing the fractions ${n\choose j} = \frac{{n - j +
     // 1}\cdots n}{1\cdots j}$.
-    fn factor_binomial_coefficient(j: u16, n: u16) -> Vec<PaillierModulusSizedNumber> {
+    fn factor_binomial_coefficient(j: u16, n: u16) -> SecretKeyShareSizedNumber {
         let mut denominators: Vec<u16> = (2..=j).collect();
 
         let mut reduced_numerators: Vec<u16> = vec![];
@@ -110,33 +111,12 @@ impl PrecomputedValues {
             }
         }
 
-        Self::combine_small_factors_to_modulus_sized_factors(reduced_numerators)
-    }
-
-    fn combine_small_factors_to_modulus_sized_factors(
-        small_factors: Vec<u16>,
-    ) -> Vec<PaillierModulusSizedNumber> {
-        let (mut modulus_sized_factors, last_factor) = small_factors.iter().fold(
-            (vec![], PaillierModulusSizedNumber::ONE),
-            |(factors, factor_acc), factor| {
-                let factor = PaillierModulusSizedNumber::from(*factor);
-
-                let mul_res = factor_acc.checked_mul(&factor);
-
-                if bool::from(mul_res.is_some()) {
-                    (factors, mul_res.unwrap())
-                } else {
-                    // We overflowed, so let's start next factor
-                    let mut factors = factors;
-                    factors.push(factor_acc);
-                    (factors, factor)
-                }
-            },
-        );
-
-        modulus_sized_factors.push(last_factor);
-
-        modulus_sized_factors
+        // Can't overflow
+        reduced_numerators
+            .iter()
+            .map(|x| SecretKeyShareSizedNumber::from(*x))
+            .reduce(|a, b| a.wrapping_mul(&b))
+            .unwrap()
     }
 }
 
@@ -153,26 +133,26 @@ mod tests {
 
     #[rstest]
     #[case::args((3, HashMap::from([
-    (1, vec![PaillierModulusSizedNumber::from(3u16)]),
-    (2, vec![PaillierModulusSizedNumber::from(3u16)]),
-    (3, vec![PaillierModulusSizedNumber::from(1u16)])
+    (1, SecretKeyShareSizedNumber::from(3u16)),
+    (2, SecretKeyShareSizedNumber::from(3u16)),
+    (3, SecretKeyShareSizedNumber::from(1u16))
     ])))]
     #[case::args((5, HashMap::from([
-    (1, vec![PaillierModulusSizedNumber::from(5u16)]),
-    (2, vec![PaillierModulusSizedNumber::from(2u16 * 5)]),
-    (3, vec![PaillierModulusSizedNumber::from(2u16 * 5)]),
-    (4, vec![PaillierModulusSizedNumber::from(5u16)]),
-    (5, vec![PaillierModulusSizedNumber::from(1u16)])
+    (1, SecretKeyShareSizedNumber::from(5u16)),
+    (2, SecretKeyShareSizedNumber::from(2u16 * 5)),
+    (3, SecretKeyShareSizedNumber::from(2u16 * 5)),
+    (4, SecretKeyShareSizedNumber::from(5u16)),
+    (5, SecretKeyShareSizedNumber::from(1u16))
     ])))]
     #[case::args((6, HashMap::from([
-    (1, vec![PaillierModulusSizedNumber::from(6u16)]),
-    (2, vec![PaillierModulusSizedNumber::from(5u16 * 3)]),
-    (3, vec![PaillierModulusSizedNumber::from(2u16 * 5 * 2)]),
-    (4, vec![PaillierModulusSizedNumber::from(5u16 * 3)]),
-    (5, vec![PaillierModulusSizedNumber::from(6u16)]),
-    (6, vec![PaillierModulusSizedNumber::from(1u16)])
+    (1, SecretKeyShareSizedNumber::from(6u16)),
+    (2, SecretKeyShareSizedNumber::from(5u16 * 3)),
+    (3, SecretKeyShareSizedNumber::from(2u16 * 5 * 2)),
+    (4, SecretKeyShareSizedNumber::from(5u16 * 3)),
+    (5, SecretKeyShareSizedNumber::from(6u16)),
+    (6, SecretKeyShareSizedNumber::from(1u16))
     ])))]
-    fn constructs(#[case] args: (u16, HashMap<u16, Vec<PaillierModulusSizedNumber>>)) {
+    fn constructs(#[case] args: (u16, HashMap<u16, SecretKeyShareSizedNumber>)) {
         let (n, factors) = args;
         let paillier_n = N;
 

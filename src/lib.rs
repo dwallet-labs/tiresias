@@ -50,26 +50,26 @@ const fn max_secret_key_share_size_upper_bound(nlog_n: usize) -> usize {
     2 * nlog_n + 2 * PaillierModulusSizedNumber::BITS + StatisticalSecuritySizedNumber::BITS
 }
 
-fn secret_key_share_size_upper_bound(num_parties: u16) -> usize {
-    let logn = usize::try_from(if num_parties % 2 == 0 {
-        num_parties.ilog2()
-    } else {
-        num_parties.ilog2() + 1
-    })
-    .unwrap();
+fn log(n: u16) -> usize {
+    usize::try_from(if n % 2 == 0 { n.ilog2() } else { n.ilog2() + 1 }).unwrap()
+}
 
-    max_secret_key_share_size_upper_bound(usize::from(num_parties) * logn)
+fn secret_key_share_size_upper_bound(num_parties: u16) -> usize {
+    max_secret_key_share_size_upper_bound(usize::from(num_parties) * log(num_parties))
 }
 
 fn secret_sharing_polynomial_coefficient_size_upper_bound(num_parties: u16) -> usize {
-    let logn = usize::try_from(if num_parties % 2 == 0 {
-        num_parties.ilog2()
-    } else {
-        num_parties.ilog2() + 1
-    })
-    .unwrap();
+    max_secret_sharing_polynomial_coefficient_size_upper_bound(
+        usize::from(num_parties) * log(num_parties),
+    )
+}
 
-    max_secret_sharing_polynomial_coefficient_size_upper_bound(usize::from(num_parties) * logn)
+fn factorial_upper_bound(num_parties: u16) -> usize {
+    usize::from(num_parties) * log(num_parties)
+}
+
+fn binomial_coefficient_upper_bound(num_parties: u16) -> usize {
+    usize::from(num_parties)
 }
 
 pub const MAX_PLAYERS: usize = 1024;
@@ -156,5 +156,5 @@ mod tests {
 criterion_group!(
     benches,
     proofs::benchmark_proof_of_equality_of_discrete_logs,
-    // decryption_key_share::benchmark_decryption_share,
+    decryption_key_share::benchmark_decryption_share,
 );
