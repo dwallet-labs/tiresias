@@ -528,9 +528,8 @@ mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::tests::WITNESS;
     use crate::{
-        tests::{BASE, CIPHERTEXT, N},
+        tests::{BASE, CIPHERTEXT, N, WITNESS},
         LargeBiPrimeSizedNumber,
     };
 
