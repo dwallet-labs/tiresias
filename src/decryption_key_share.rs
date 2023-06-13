@@ -406,6 +406,7 @@ mod tests {
     use std::iter;
 
     use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
+    use rand::seq::IteratorRandom;
     use rand_core::OsRng;
     use rstest::rstest;
 
@@ -573,7 +574,10 @@ mod tests {
 
         let base = BASE;
 
-        let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = (1..=t)
+        let decrypters = (1..=n).choose_multiple(&mut OsRng, usize::from(t));
+
+        let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = decrypters
+            .into_iter()
             .map(|j| {
                 let share = polynomial
                     .evaluate(&Wrapping(SecretKeyShareSizedNumber::from(j)))
@@ -651,6 +655,7 @@ mod benches {
 
     use criterion::Criterion;
     use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
+    use rand::seq::IteratorRandom;
     use rand_core::OsRng;
     use rayon::iter::IntoParallelIterator;
 
@@ -735,7 +740,9 @@ mod benches {
 
             let polynomial = Polynomial::try_from(coefficients).unwrap();
 
-            let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = (1..=threshold)
+            let decrypters = (1..=num_parties).choose_multiple(&mut OsRng, usize::from(threshold));
+
+            let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = decrypters
                 .into_par_iter()
                 .map(|j| {
                     let share = polynomial
