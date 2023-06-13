@@ -47,7 +47,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         n2: PaillierModulusSizedNumber,
         // The number of parties $n$
         num_parties: u16,
-        // The threhsold $t$
+        // The threshold $t$
         threshold: u16,
         // Witness $x$ (the secret key share $d_j$ in threshold decryption)
         witness: SecretKeyShareSizedNumber,
@@ -152,7 +152,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         n2: PaillierModulusSizedNumber,
         // The number of parties $n$
         num_parties: u16,
-        // The threhsold $t$
+        // The threshold $t$
         threshold: u16,
         // The base $\tilde{g}$
         base: PaillierModulusSizedNumber,
@@ -358,7 +358,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         n2: PaillierModulusSizedNumber,
         // The number of parties $n$
         num_parties: u16,
-        // The threhsold $t$
+        // The threshold $t$
         threshold: u16,
         // Witness $d$ (the secret key share in threshold decryption)
         witness: SecretKeyShareSizedNumber,
@@ -404,7 +404,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         n2: PaillierModulusSizedNumber,
         // The number of parties $n$
         num_parties: u16,
-        // The threhsold $t$
+        // The threshold $t$
         threshold: u16,
         // Base $\tilde{g}$
         base: PaillierModulusSizedNumber,

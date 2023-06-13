@@ -599,6 +599,7 @@ mod tests {
         let decrypters = (1..=n).choose_multiple(&mut OsRng, usize::from(t));
 
         let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = decrypters
+            .clone()
             .into_iter()
             .map(|j| {
                 let share = polynomial
@@ -652,7 +653,10 @@ mod tests {
             })
             .collect();
 
-        let base = decryption_key_shares.get(&1).unwrap().base;
+        let base = decryption_key_shares
+            .get(&decrypters.first().unwrap())
+            .unwrap()
+            .base;
 
         assert_eq!(
             plaintexts,
