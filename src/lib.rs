@@ -43,30 +43,41 @@ pub type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Outpu
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
 pub(crate) type PaillierPlaintextRingElement = DynResidue<{ LargeBiPrimeSizedNumber::LIMBS }>;
 
-const fn max_secret_sharing_polynomial_coefficient_size_upper_bound(nlog_n: usize) -> usize {
-    nlog_n + 2 * PaillierModulusSizedNumber::BITS + StatisticalSecuritySizedNumber::BITS
+const fn secret_sharing_polynomial_coefficient_size_upper_bound(
+    num_parties: usize,
+    threshold: usize,
+) -> usize {
+    factorial_upper_bound(num_parties)
+        + 2 * const_log(threshold)
+        + 1
+        + PaillierModulusSizedNumber::BITS
+        + StatisticalSecuritySizedNumber::BITS
+        + const_log(num_parties) // Account for summing up `num_parties` shamir shares (one from each party)
 }
 
-const fn max_secret_key_share_size_upper_bound(nlog_n: usize) -> usize {
-    2 * nlog_n + 2 * PaillierModulusSizedNumber::BITS + StatisticalSecuritySizedNumber::BITS
+const fn secret_key_share_size_upper_bound(num_parties: usize, threshold: usize) -> usize {
+    secret_sharing_polynomial_coefficient_size_upper_bound(num_parties, threshold)
+        + threshold * const_log(num_parties)
+        + 1
 }
 
-fn log(n: u16) -> usize {
-    usize::try_from(if n % 2 == 0 { n.ilog2() } else { n.ilog2() + 1 }).unwrap()
+// I don't like this either.. but `ilog2` returns `u32` and we don't have a `const` transition to `usize`
+const fn const_log(n: usize) -> usize {
+    let mut power = 1;
+    let mut counter = 0;
+
+    while power < n {
+        power *= 2;
+        counter += 1;
+    }
+
+    counter
 }
 
-fn secret_key_share_size_upper_bound(num_parties: u16) -> usize {
-    max_secret_key_share_size_upper_bound(usize::from(num_parties) * log(num_parties))
-}
-
-fn secret_sharing_polynomial_coefficient_size_upper_bound(num_parties: u16) -> usize {
-    max_secret_sharing_polynomial_coefficient_size_upper_bound(
-        usize::from(num_parties) * log(num_parties),
-    )
-}
-
-fn factorial_upper_bound(num_parties: u16) -> usize {
-    usize::from(num_parties) * log(num_parties)
+const fn factorial_upper_bound(num_parties: usize) -> usize {
+    // See https://math.stackexchange.com/questions/55709/how-to-prove-this-approximation-of-logarithm-of-factorial
+    // This expands to $(n+1)log(n+1) - n$ when further bounding $e$ to its floor $2$.
+    (num_parties + 1) * const_log(num_parties + 1) - num_parties
 }
 
 fn binomial_coefficient_upper_bound(num_parties: u16) -> usize {
@@ -74,11 +85,10 @@ fn binomial_coefficient_upper_bound(num_parties: u16) -> usize {
 }
 
 pub const MAX_PLAYERS: usize = 1024;
-pub const MAX_PLAYERS_LOG: usize = 10;
 pub const SECRET_SHARING_POLYNOMIAL_COEFFICIENT_SIZE_UPPER_BOUND: usize =
-    max_secret_sharing_polynomial_coefficient_size_upper_bound(MAX_PLAYERS * MAX_PLAYERS_LOG);
+    secret_sharing_polynomial_coefficient_size_upper_bound(MAX_PLAYERS, MAX_PLAYERS);
 pub const SECRET_KEY_SHARE_SIZE_UPPER_BOUND: usize =
-    max_secret_key_share_size_upper_bound(MAX_PLAYERS * MAX_PLAYERS_LOG);
+    secret_key_share_size_upper_bound(MAX_PLAYERS, MAX_PLAYERS);
 
 pub type SecretKeyShareSizedNumber =
     Uint<{ SECRET_KEY_SHARE_SIZE_UPPER_BOUND.next_power_of_two() / Limb::BITS }>;
@@ -150,6 +160,19 @@ mod tests {
         let x = x % NonZero::new(N2).unwrap();
 
         assert_eq!(x.as_ring_element(&N2).as_natural_number(), x);
+    }
+
+    #[test]
+    fn const_log_computes_correctly() {
+        assert_eq!(const_log(1), 0);
+        assert_eq!(const_log(2), 1);
+        assert_eq!(const_log(3), 2);
+        assert_eq!(const_log(4), 2);
+        assert_eq!(const_log(5), 3);
+        assert_eq!(const_log(6), 3);
+        assert_eq!(const_log(7), 3);
+        assert_eq!(const_log(8), 3);
+        assert_eq!(const_log(9), 4);
     }
 }
 

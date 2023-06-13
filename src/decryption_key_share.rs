@@ -50,12 +50,18 @@ impl DecryptionKeyShare {
 
         let base = base
             .as_ring_element(&encryption_key.n2)
-            .pow_bounded_exp(&precomputed_values.n_factorial, factorial_upper_bound(n))
+            .pow_bounded_exp(
+                &precomputed_values.n_factorial,
+                factorial_upper_bound(usize::from(n)),
+            )
             .as_natural_number();
 
         let public_verification_key = base
             .as_ring_element(&encryption_key.n2)
-            .pow_bounded_exp(&decryption_key_share, secret_key_share_size_upper_bound(n))
+            .pow_bounded_exp(
+                &decryption_key_share,
+                secret_key_share_size_upper_bound(usize::from(n), usize::from(t)),
+            )
             .as_natural_number();
 
         DecryptionKeyShare {
@@ -89,7 +95,7 @@ impl DecryptionKeyShare {
                     .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
                     .pow_bounded_exp(
                         &self.precomputed_values.n_factorial,
-                        factorial_upper_bound(self.n),
+                        factorial_upper_bound(usize::from(self.n)),
                     )
                     .as_natural_number()
             })
@@ -107,7 +113,7 @@ impl DecryptionKeyShare {
                     .as_ring_element(&n2)
                     .pow_bounded_exp(
                         &self.decryption_key_share,
-                        secret_key_share_size_upper_bound(self.n),
+                        secret_key_share_size_upper_bound(usize::from(self.n), usize::from(self.t)),
                     )
                     .as_natural_number()
             })
@@ -129,6 +135,7 @@ impl DecryptionKeyShare {
             let proof = ProofOfEqualityOfDiscreteLogs::prove(
                 n2,
                 self.n,
+                self.t,
                 self.decryption_key_share,
                 self.base,
                 *decryption_share_base,
@@ -146,6 +153,7 @@ impl DecryptionKeyShare {
         let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
             n2,
             self.n,
+            self.t,
             self.decryption_key_share,
             self.base,
             self.public_verification_key,
@@ -208,7 +216,10 @@ impl DecryptionKeyShare {
                 ciphertext
                     .as_ring_element(&n2)
                     .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-                    .pow_bounded_exp(&precomputed_values.n_factorial, factorial_upper_bound(n))
+                    .pow_bounded_exp(
+                        &precomputed_values.n_factorial,
+                        factorial_upper_bound(usize::from(n)),
+                    )
                     .as_natural_number()
             })
             .collect();
@@ -232,6 +243,7 @@ impl DecryptionKeyShare {
                         .verify(
                             n2,
                             n,
+                            t,
                             base,
                             ciphertext_squared_n_factorial,
                             public_verification_key,
@@ -253,6 +265,7 @@ impl DecryptionKeyShare {
                         .batch_verify(
                             n2,
                             n,
+                            t,
                             base,
                             public_verification_key,
                             squared_ciphertexts_n_factorial_and_decryption_shares,
@@ -444,7 +457,10 @@ mod tests {
 
         let expected_decryption_share = decryption_share_base
             .as_ring_element(&N2)
-            .pow_bounded_exp(&WITNESS, secret_key_share_size_upper_bound(n))
+            .pow_bounded_exp(
+                &WITNESS,
+                secret_key_share_size_upper_bound(usize::from(n), usize::from(t)),
+            )
             .as_natural_number();
 
         assert_eq!(expected_decryption_share, decryption_share);
@@ -454,6 +470,7 @@ mod tests {
             .verify(
                 decryption_key_share.encryption_key.n2,
                 n,
+                t,
                 decryption_key_share.base,
                 decryption_share_base,
                 decryption_key_share.public_verification_key,
@@ -515,7 +532,10 @@ mod tests {
             .map(|decryption_share_base| {
                 decryption_share_base
                     .as_ring_element(&N2)
-                    .pow_bounded_exp(&WITNESS, secret_key_share_size_upper_bound(n))
+                    .pow_bounded_exp(
+                        &WITNESS,
+                        secret_key_share_size_upper_bound(usize::from(n), usize::from(t)),
+                    )
                     .as_natural_number()
             })
             .collect();
@@ -527,6 +547,7 @@ mod tests {
             .batch_verify(
                 decryption_key_share.encryption_key.n2,
                 n,
+                t,
                 decryption_key_share.base,
                 decryption_key_share.public_verification_key,
                 decryption_share_bases
@@ -552,10 +573,12 @@ mod tests {
         let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> = iter::repeat_with(|| {
             Wrapping(SecretKeyShareSizedNumber::random_mod(
                 &mut OsRng,
-                &NonZero::new(
-                    SecretKeyShareSizedNumber::ONE
-                        .shl_vartime(secret_sharing_polynomial_coefficient_size_upper_bound(n)),
-                )
+                &NonZero::new(SecretKeyShareSizedNumber::ONE.shl_vartime(
+                    secret_sharing_polynomial_coefficient_size_upper_bound(
+                        usize::from(n),
+                        usize::from(t),
+                    ),
+                ))
                 .unwrap(),
             ))
         })
