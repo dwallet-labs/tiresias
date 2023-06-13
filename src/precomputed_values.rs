@@ -161,7 +161,7 @@ mod tests {
         assert_eq!(precomputed_values.factored_binomial_coefficients, factors);
 
         assert_eq!(
-            (LargeBiPrimeSizedNumber::from(4 * factorial(n) * factorial(n))
+            (LargeBiPrimeSizedNumber::from(4 * factorial(n) * factorial(n) * factorial(n))
                 .as_ring_element(&paillier_n)
                 * precomputed_values
                     .four_n_factorial_cubed_inverse_mod_n
