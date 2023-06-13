@@ -549,10 +549,7 @@ mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::{
-        tests::{BASE, CIPHERTEXT, N, WITNESS},
-        LargeBiPrimeSizedNumber,
-    };
+    use crate::tests::{BASE, CIPHERTEXT, N, WITNESS};
 
     #[test]
     fn valid_proof_verifies() {
@@ -833,10 +830,14 @@ mod tests {
             Error::InvalidParams()
         );
 
+        let two_n: PaillierModulusSizedNumber = N
+            .resize()
+            .wrapping_mul(&PaillierModulusSizedNumber::from(2u8));
+
         // Try to fool verification with fields that their square is zero mod N^2 (e.g. N)
         let crafted_proof = ProofOfEqualityOfDiscreteLogs {
-            base_randomizer: (N * LargeBiPrimeSizedNumber::from(2u8)),
-            decryption_share_base_randomizer: (N * LargeBiPrimeSizedNumber::from(2u8)),
+            base_randomizer: two_n,
+            decryption_share_base_randomizer: two_n,
             response: wrong_response,
         };
 
@@ -848,8 +849,8 @@ mod tests {
                     threshold,
                     base,
                     decryption_share_base,
-                    N * LargeBiPrimeSizedNumber::from(2u8),
-                    N * LargeBiPrimeSizedNumber::from(2u8),
+                    two_n,
+                    two_n,
                 )
                 .err()
                 .unwrap(),
@@ -863,11 +864,8 @@ mod tests {
                     num_parties,
                     threshold,
                     base,
-                    N * LargeBiPrimeSizedNumber::from(2u8),
-                    vec![(
-                        decryption_share_base,
-                        (N * LargeBiPrimeSizedNumber::from(2u8))
-                    )],
+                    two_n,
+                    vec![(decryption_share_base, two_n)],
                 )
                 .err()
                 .unwrap(),
