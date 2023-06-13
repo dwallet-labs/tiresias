@@ -20,6 +20,7 @@ mod precomputed_values;
 
 pub mod proofs;
 pub mod secret_sharing;
+mod multiexp;
 
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
 /// Set to a U128 for 128-bit security.
