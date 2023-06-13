@@ -25,7 +25,8 @@ pub mod secret_sharing;
 /// Set to a U128 for 128-bit security.
 pub type ComputationalSecuritySizedNumber = U128;
 
-type StatisticalSecuritySizedNumber = U128;
+// Being overly-conservative here
+type StatisticalSecuritySizedNumber = ComputationalSecuritySizedNumber;
 
 /// A type alias for an unsigned integer of the size of the Paillier large prime factors.
 /// Set to a U1024 for 112-bit security.
