@@ -11,9 +11,9 @@ use crate::{AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber, SecretKeySh
 pub struct PrecomputedValues {
     // A precomputed mapping of the party-id $j$ to the binomial coefficient ${n\choose j}$,
     pub(crate) factored_binomial_coefficients: HashMap<u16, SecretKeyShareSizedNumber>,
-    // The precomputed value $(4n!^{2})^{-1} mod(N)$ used for threshold_decryption (saved for
+    // The precomputed value $(4n!^3)^{-1} mod(N)$ used for threshold_decryption (saved for
     // optimization reasons)
-    pub(crate) four_n_factorial_squared_inverse_mod_n: LargeBiPrimeSizedNumber,
+    pub(crate) four_n_factorial_cubed_inverse_mod_n: LargeBiPrimeSizedNumber,
     // The precomputed value $n!$
     pub(crate) n_factorial: SecretKeyShareSizedNumber,
 }
@@ -57,22 +57,22 @@ impl PrecomputedValues {
             |acc, i| acc * LargeBiPrimeSizedNumber::from(i).as_ring_element(&paillier_n),
         );
 
-        let four_n_factorial_squared_inverse_mod_n = (LargeBiPrimeSizedNumber::from(4u8)
+        let four_n_factorial_cubed_inverse_mod_n = (LargeBiPrimeSizedNumber::from(4u8)
             .as_ring_element(&paillier_n)
-            * n_factorial.pow_bounded_exp(&LargeBiPrimeSizedNumber::from(2u8), 2))
+            * n_factorial.pow_bounded_exp(&LargeBiPrimeSizedNumber::from(3u8), 2))
         .invert() // safe to invert here, can fail only if we accidentally factorized $N$
         .0
         .as_natural_number();
 
         // Can't overflow
         let n_factorial = (2..=n)
-            .map(|x| SecretKeyShareSizedNumber::from(x))
+            .map(SecretKeyShareSizedNumber::from)
             .reduce(|a, b| a.wrapping_mul(&b))
             .unwrap();
 
         PrecomputedValues {
             factored_binomial_coefficients,
-            four_n_factorial_squared_inverse_mod_n,
+            four_n_factorial_cubed_inverse_mod_n,
             n_factorial,
         }
     }
@@ -164,7 +164,7 @@ mod tests {
             (LargeBiPrimeSizedNumber::from(4 * factorial(n) * factorial(n))
                 .as_ring_element(&paillier_n)
                 * precomputed_values
-                    .four_n_factorial_squared_inverse_mod_n
+                    .four_n_factorial_cubed_inverse_mod_n
                     .as_ring_element(&paillier_n))
             .as_natural_number(),
             LargeBiPrimeSizedNumber::ONE

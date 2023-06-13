@@ -391,7 +391,7 @@ impl DecryptionKeyShare {
 
                 (lo.as_ring_element(&paillier_n)
                     * precomputed_values
-                        .four_n_factorial_squared_inverse_mod_n
+                        .four_n_factorial_cubed_inverse_mod_n
                         .as_ring_element(&paillier_n))
                 .as_natural_number()
             })
