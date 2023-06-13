@@ -130,7 +130,12 @@ impl ProofOfEqualityOfDiscreteLogs {
         );
 
         // No overflow can happen here by the choice of sizes in types. See lib.rs
-        let response = randomizer.wrapping_sub(&(witness.wrapping_mul(&challenge.into()).into()));
+        let challenge: SecretKeyShareSizedNumber = challenge.resize();
+        let challenge_multiplied_by_witness: SecretKeyShareSizedNumber =
+            witness.wrapping_mul(&challenge);
+        let challenge_multiplied_by_witness: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber =
+            challenge_multiplied_by_witness.resize();
+        let response = randomizer.wrapping_sub(&challenge_multiplied_by_witness);
 
         ProofOfEqualityOfDiscreteLogs {
             base_randomizer,
@@ -1132,7 +1137,6 @@ mod benches {
 
     use criterion::Criterion;
     use crypto_bigint::{NonZero, RandomMod};
-    use rand::thread_rng;
     use rand_core::OsRng;
 
     use super::*;

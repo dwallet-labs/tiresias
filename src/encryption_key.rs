@@ -30,13 +30,10 @@ impl EncryptionKey {
         plaintext: &LargeBiPrimeSizedNumber,
         randomness: &LargeBiPrimeSizedNumber,
     ) -> PaillierModulusSizedNumber {
-        let n: PaillierRingElement =
-            PaillierModulusSizedNumber::from(self.n).as_ring_element(&self.n2);
+        let n: PaillierRingElement = self.n.resize().as_ring_element(&self.n2);
         let one: PaillierRingElement = PaillierModulusSizedNumber::ONE.as_ring_element(&self.n2);
-        let m: PaillierRingElement =
-            PaillierModulusSizedNumber::from(plaintext).as_ring_element(&self.n2);
-        let r: PaillierRingElement =
-            PaillierModulusSizedNumber::from(randomness).as_ring_element(&self.n2);
+        let m: PaillierRingElement = plaintext.resize().as_ring_element(&self.n2);
+        let r: PaillierRingElement = randomness.resize().as_ring_element(&self.n2);
 
         // $ c = (m*N + 1) * (r^N) mod N^2 $
         (

@@ -390,8 +390,7 @@ impl DecryptionKeyShare {
                     })
                     .as_natural_number();
 
-                let paillier_n =
-                    NonZero::new(PaillierModulusSizedNumber::from(&encryption_key.n)).unwrap();
+                let paillier_n = NonZero::new(encryption_key.n.resize()).unwrap();
 
                 // $c` >= 1$ so safe to perform a `.wrapping_sub()` here which will not overflow
                 // After dividing a number $ x < N^2 $ by $N$2
@@ -585,10 +584,10 @@ mod tests {
         .take(usize::from(t))
         .collect();
 
-        coefficients[0] = Wrapping(SecretKeyShareSizedNumber::from(SECRET_KEY));
+        let secret_key: SecretKeyShareSizedNumber = SECRET_KEY.resize();
 
         coefficients[0] = Wrapping(
-            SecretKeyShareSizedNumber::from(SECRET_KEY)
+            secret_key
                 .checked_mul(&precomputed_values.n_factorial)
                 .unwrap(),
         );
@@ -758,8 +757,9 @@ mod benches {
                 })
                 .collect();
 
+            let secret_key: SecretKeyShareSizedNumber = secret_key.resize();
             coefficients[0] = Wrapping(
-                SecretKeyShareSizedNumber::from(secret_key)
+                secret_key
                     .checked_mul(&precomputed_values.n_factorial)
                     .unwrap(),
             );
