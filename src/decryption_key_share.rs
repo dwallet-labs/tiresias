@@ -405,7 +405,7 @@ impl DecryptionKeyShare {
 mod tests {
     use std::iter;
 
-    use crypto_bigint::{NonZero, RandomMod, Wrapping};
+    use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
     use rand_core::OsRng;
     use rstest::rstest;
 
@@ -544,6 +544,8 @@ mod tests {
     fn decrypts(#[case] t: u16, #[case] n: u16, #[case] batch_size: usize) {
         let encryption_key = EncryptionKey::new(N);
 
+        let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
+
         // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of the
         // DKG.
         let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> = iter::repeat_with(|| {
@@ -561,9 +563,13 @@ mod tests {
 
         coefficients[0] = Wrapping(SecretKeyShareSizedNumber::from(SECRET_KEY));
 
-        let polynomial = Polynomial::try_from(coefficients).unwrap();
+        coefficients[0] = Wrapping(
+            SecretKeyShareSizedNumber::from(SECRET_KEY)
+                .checked_mul(&precomputed_values.n_factorial)
+                .unwrap(),
+        );
 
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
+        let polynomial = Polynomial::try_from(coefficients).unwrap();
 
         let base = BASE;
 
@@ -644,7 +650,7 @@ mod benches {
     use std::iter;
 
     use criterion::Criterion;
-    use crypto_bigint::{NonZero, RandomMod, Wrapping};
+    use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
     use rand_core::OsRng;
     use rayon::iter::IntoParallelIterator;
 
@@ -707,6 +713,8 @@ mod benches {
         // DKG.
 
         for (threshold, num_parties) in [(6, 10), (67, 100), (667, 1000)] {
+            let precomputed_values = PrecomputedValues::new(num_parties, n);
+
             let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> =
                 iter::repeat_with(|| {
                     Wrapping(SecretKeyShareSizedNumber::random_mod(
@@ -719,11 +727,13 @@ mod benches {
                 })
                 .collect();
 
-            coefficients[0] = Wrapping(SecretKeyShareSizedNumber::from(secret_key));
+            coefficients[0] = Wrapping(
+                SecretKeyShareSizedNumber::from(secret_key)
+                    .checked_mul(&precomputed_values.n_factorial)
+                    .unwrap(),
+            );
 
             let polynomial = Polynomial::try_from(coefficients).unwrap();
-
-            let precomputed_values = PrecomputedValues::new(num_parties, n);
 
             let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = (1..=threshold)
                 .into_par_iter()
