@@ -740,7 +740,7 @@ mod benches {
         // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of the
         // DKG.
 
-        for (threshold, num_parties) in [(6, 10), (67, 100), (667, 1000)] {
+        for (threshold, num_parties) in [(10, 16), (85, 128), (682, 1024)] {
             let precomputed_values = PrecomputedValues::new(num_parties, n);
 
             let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> =
@@ -748,7 +748,10 @@ mod benches {
                     Wrapping(SecretKeyShareSizedNumber::random_mod(
                         &mut OsRng,
                         &NonZero::new(SecretKeyShareSizedNumber::ONE.shl_vartime(
-                            secret_sharing_polynomial_coefficient_size_upper_bound(num_parties),
+                            secret_sharing_polynomial_coefficient_size_upper_bound(
+                                usize::from(num_parties),
+                                usize::from(threshold),
+                            ),
                         ))
                         .unwrap(),
                     ))
@@ -823,7 +826,7 @@ mod benches {
                     .as_ring_element(&encryption_key.n2)
                     .pow_bounded_exp(
                         &precomputed_values.n_factorial,
-                        factorial_upper_bound(num_parties),
+                        factorial_upper_bound(usize::from(num_parties)),
                     )
                     .as_natural_number();
 
