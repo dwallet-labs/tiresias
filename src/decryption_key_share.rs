@@ -10,7 +10,7 @@ use crypto_bigint::{modular::runtime_mod::DynResidueParams, rand_core::CryptoRng
 use rayon::prelude::*;
 
 use crate::{
-    adjusted_lagrange_coefficient_sized_number, binomial_coefficient_upper_bound,
+    adjusted_lagrange_coefficient_sized_number,
     error::{ProtocolError, SanityCheckError},
     factorial_upper_bound,
     multiexp::multi_exponentiate,
@@ -18,8 +18,7 @@ use crate::{
     proofs::ProofOfEqualityOfDiscreteLogs,
     secret_key_share_size_upper_bound, AdjustedLagrangeCoefficientSizedNumber, AsNaturalNumber,
     AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, Message,
-    PaillierModulusSizedNumber, PaillierRingElement, Result, SecretKeyShareSizedNumber,
-    MAX_PLAYERS,
+    PaillierModulusSizedNumber, Result, SecretKeyShareSizedNumber, MAX_PLAYERS,
 };
 
 #[derive(Clone)]
@@ -408,7 +407,7 @@ impl DecryptionKeyShare {
 
                 let c_prime = multi_exponentiate(
                     decryption_shares_and_adjusted_lagrange_coefficients,
-                    adjusted_lagrange_coefficient_sized_number(usize::from(n), usize::from(t)),
+                    adjusted_lagrange_coefficient_sized_number(usize::from(n)),
                     params,
                 );
 
