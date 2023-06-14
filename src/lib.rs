@@ -18,9 +18,9 @@ mod error;
 mod message;
 mod precomputed_values;
 
+mod multiexp;
 pub mod proofs;
 pub mod secret_sharing;
-mod multiexp;
 
 /// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
 /// Set to a U128 for 128-bit security.
@@ -85,11 +85,16 @@ fn binomial_coefficient_upper_bound(num_parties: u16) -> usize {
     usize::from(num_parties)
 }
 
+const fn adjusted_lagrange_coefficient_sized_number(num_parties: usize, threshold: usize) -> usize {
+    factorial_upper_bound(num_parties) + threshold * const_log(num_parties) + 1
+}
+
 pub const MAX_PLAYERS: usize = 1024;
 pub const SECRET_SHARING_POLYNOMIAL_COEFFICIENT_SIZE_UPPER_BOUND: usize =
     secret_sharing_polynomial_coefficient_size_upper_bound(MAX_PLAYERS, MAX_PLAYERS);
 pub const SECRET_KEY_SHARE_SIZE_UPPER_BOUND: usize =
     secret_key_share_size_upper_bound(MAX_PLAYERS, MAX_PLAYERS);
+pub const ADJUSTED_LAGRANGE_COEFFICIENT_SIZE_UPPER_BOUND: usize = adjusted_lagrange_coefficient_sized_number(MAX_PLAYERS, MAX_PLAYERS);
 
 pub type SecretKeyShareSizedNumber =
     Uint<{ SECRET_KEY_SHARE_SIZE_UPPER_BOUND.next_power_of_two() / Limb::BITS }>;
@@ -102,6 +107,8 @@ pub type SecretKeyShareSizedNumber =
 // carefully, account for the real size of these variables; but that does not mean that we're not
 // able to use the same underlying Uint type for both.
 pub(crate) type ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = SecretKeyShareSizedNumber;
+
+pub(crate) type AdjustedLagrangeCoefficientSizedNumber = Uint<{ ADJUSTED_LAGRANGE_COEFFICIENT_SIZE_UPPER_BOUND.next_power_of_two() / Limb::BITS }>;
 
 /// Retrieve the minimal natural number in the congruence class.
 pub(crate) trait AsNaturalNumber<T> {

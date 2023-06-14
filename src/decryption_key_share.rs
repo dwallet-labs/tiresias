@@ -5,19 +5,22 @@ use std::{
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_decryption_share;
+use crypto_bigint::modular::runtime_mod::DynResidueParams;
 use crypto_bigint::{rand_core::CryptoRngCore, NonZero};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+use crate::multiexp::multi_exponentiate;
 use crate::{
-    binomial_coefficient_upper_bound,
+    adjusted_lagrange_coefficient_sized_number, binomial_coefficient_upper_bound,
     error::{ProtocolError, SanityCheckError},
     factorial_upper_bound,
     precomputed_values::PrecomputedValues,
     proofs::ProofOfEqualityOfDiscreteLogs,
-    secret_key_share_size_upper_bound, AsNaturalNumber, AsRingElement, EncryptionKey, Error,
-    LargeBiPrimeSizedNumber, Message, PaillierModulusSizedNumber, Result,
-    SecretKeyShareSizedNumber, MAX_PLAYERS,
+    secret_key_share_size_upper_bound, AdjustedLagrangeCoefficientSizedNumber, AsNaturalNumber,
+    AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, Message,
+    PaillierModulusSizedNumber, PaillierRingElement, Result, SecretKeyShareSizedNumber,
+    MAX_PLAYERS,
 };
 
 #[derive(Clone)]
@@ -168,6 +171,37 @@ impl DecryptionKeyShare {
         })
     }
 
+    fn compute_absolute_adjusted_lagrange_coefficient(
+        j: u16,
+        n: u16,
+        decrypters: &Vec<u16>,
+        precomputed_values: &PrecomputedValues,
+    ) -> AdjustedLagrangeCoefficientSizedNumber {
+        // Compute the absolute value of the adjusted lagrange coefficient:
+        // $ 2n!\lambda_{0,j}^{S} =
+        //   2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n] \setminus S} (j'-j)\Pi_{j' \in S}j'} $
+        // Start from $2$
+        let adjusted_lagrange_coefficient = AdjustedLagrangeCoefficientSizedNumber::from(2u8);
+
+        // Next multiply by ${n\choose j}$
+        let adjusted_lagrange_coefficient = adjusted_lagrange_coefficient.wrapping_mul(
+            &precomputed_values
+                .factored_binomial_coefficients
+                .get(&j)
+                .unwrap()
+                .resize(),
+        );
+
+        // Finally multiply by $^{\Pi_{j'\in [n] \setminus S} |(j'-j)|}$
+        HashSet::<u16>::from_iter(1..=n)
+            .symmetric_difference(&HashSet::<u16>::from_iter(decrypters.clone()))
+            .fold(adjusted_lagrange_coefficient, |acc, j_prime| {
+                acc.wrapping_mul(&AdjustedLagrangeCoefficientSizedNumber::from(
+                    j_prime.abs_diff(j),
+                ))
+            })
+    }
+
     // TODO: multi-exponentiations
     // TODO: use non-constant time library here as it's all public computations?
     /// finalize the threshold decryption round by combining all decryption shares from the
@@ -193,6 +227,7 @@ impl DecryptionKeyShare {
         public_verification_keys: HashMap<u16, PaillierModulusSizedNumber>,
     ) -> Result<Vec<LargeBiPrimeSizedNumber>> {
         let n2 = encryption_key.n2;
+        let params = DynResidueParams::new(&n2);
         let batch_size = ciphertexts.len();
 
         if messages.len() != usize::from(t)
@@ -326,65 +361,62 @@ impl DecryptionKeyShare {
                 #[cfg(feature = "parallel")]
                 let iter = v.into_par_iter();
 
-                let c_prime = iter.map(|(j, decryption_share)| {
-                    // $c_{j}^{2{n\choose j}}$
-                    let c_j_prime = decryption_share
-                        .as_ring_element(&n2)
-                        .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
+                let decryption_shares_and_adjusted_lagrange_coefficients: Vec<(
+                    PaillierModulusSizedNumber,
+                    AdjustedLagrangeCoefficientSizedNumber,
+                )> = iter
+                    .map(|(j, decryption_share)| {
+                        // Since we can't raise by a negative number with `crypto_bigint`, we do this in two party
+                        // First, we compute the absolute value of the adjusted lagrange coefficient:
+                        let adjusted_lagrange_coefficient_absolute_value =
+                            Self::compute_absolute_adjusted_lagrange_coefficient(
+                                j,
+                                n,
+                                &decrypters,
+                                &precomputed_values,
+                            );
 
-                    let c_j_prime = c_j_prime.pow_bounded_exp(
-                        &precomputed_values
-                            .factored_binomial_coefficients
-                            .get(&j)
-                            .unwrap(),
-                        binomial_coefficient_upper_bound(n),
-                    );
-
-                    // $^{\Pi_{j'\in [n] \setminus S} (j'-j)}$
-                    // Since we can't raise by a negative number with `crypto_bigint`, we do this in
-                    // two parts. First, we compute on the absolute values:
-                    // $^{\Pi_{j'\in [n] \setminus S} (|j'-j|)}$
-                    let c_j_prime = HashSet::<u16>::from_iter(1..=n)
-                        .symmetric_difference(&HashSet::<u16>::from_iter(decrypters.clone()))
-                        .fold(c_j_prime, |acc, j_prime| {
-                            let exp = PaillierModulusSizedNumber::from(j_prime.abs_diff(j));
-                            acc.pow_bounded_exp(&exp, exp.bits_vartime())
+                        // And secondly we invert only if needed.
+                        // We `should_invert` if there are an odd numbers of elements larger than `j` in
+                        // `decrypters` ($S$)
+                        let should_invert = decrypters.iter().fold(1i16, |acc, j_prime| {
+                            if j > *j_prime {
+                                acc.neg()
+                            } else {
+                                acc
+                            }
                         });
 
-                    // And secondly we invert only if needed.
-                    // We `should_invert` if there are an odd numbers of elements larger than `j` in
-                    // `decrypters` ($S$)
-                    let should_invert =
-                        decrypters.iter().fold(
-                            1i16,
-                            |acc, j_prime| if j > *j_prime { acc.neg() } else { acc },
-                        );
+                        if should_invert == -1 {
+                            // We know we can invert safely because if we haven't, we reached
+                            // factorization. We can't invert x in the Paillier
+                            // ring if and only if GCD(x, N) != 1, and for our
+                            // case this is guaranteed for `decryption_share` by the
+                            // zero-knowledge proof, and therefore for all of its powers.
+                            (
+                                decryption_share.as_ring_element(&n2).invert().0.retrieve(),
+                                adjusted_lagrange_coefficient_absolute_value,
+                            )
+                        } else {
+                            (
+                                decryption_share,
+                                adjusted_lagrange_coefficient_absolute_value,
+                            )
+                        }
+                    })
+                    .collect();
 
-                    if should_invert == -1 {
-                        // We know we can invert safely because if we haven't, we reached
-                        // factorization. We can't invert x in the Paillier
-                        // ring if and only if GCD(x, N) != 1, and for our
-                        // case this is guaranteed for `decryption_share` by the
-                        // zero-knowledge proof, and therefore for all of its powers.
-                        c_j_prime.invert().0
-                    } else {
-                        c_j_prime
-                    }
-                });
-
-                #[cfg(not(feature = "parallel"))]
-                let c_prime = c_prime.reduce(|a, b| a * b).unwrap();
-                #[cfg(feature = "parallel")]
-                let c_prime = c_prime.reduce(
-                    || PaillierModulusSizedNumber::ONE.as_ring_element(&encryption_key.n2),
-                    |a, b| a * b,
+                let c_prime = multi_exponentiate(
+                    decryption_shares_and_adjusted_lagrange_coefficients,
+                    adjusted_lagrange_coefficient_sized_number(usize::from(n), usize::from(t)),
+                    params,
                 );
 
                 // $^{\Pi_{j' \in S}j'}$
                 // This computation is independent of `j` so it could be done outside the loop
                 let c_prime = decrypters
                     .iter()
-                    .fold(c_prime, |acc, j_prime| {
+                    .fold(c_prime.as_ring_element(&n2), |acc, j_prime| {
                         let exp = PaillierModulusSizedNumber::from(*j_prime);
                         acc.pow_bounded_exp(&exp, exp.bits_vartime())
                     })
