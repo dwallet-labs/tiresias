@@ -84,7 +84,7 @@ const fn factorial_upper_bound(num_parties: usize) -> usize {
 }
 
 const fn adjusted_lagrange_coefficient_sized_number(num_parties: usize) -> usize {
-    factorial_upper_bound(num_parties) + 2 * num_parties + 1 // TODO: do I need the + 1?
+    factorial_upper_bound(num_parties) + 2 * num_parties
 }
 
 pub const MAX_PLAYERS: usize = 1024;
