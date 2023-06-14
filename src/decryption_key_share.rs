@@ -200,8 +200,6 @@ impl DecryptionKeyShare {
             })
     }
 
-    // TODO: multi-exponentiations
-    // TODO: use non-constant time library here as it's all public computations?
     /// finalize the threshold decryption round by combining all decryption shares from the
     /// threshold-decryption round and decrypting the ciphertext.
     ///
