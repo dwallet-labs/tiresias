@@ -76,9 +76,9 @@ pub fn multi_exponentiate<const LIMBS: usize, const RHS_LIMBS: usize>(
                     idx &= starting_window_mask;
                 }
 
-                // TODO: when ConditionallySelectable becomes available, use it instead
-                // This code is non-constant time for now (?)
-                let power = powers[usize::try_from(idx).unwrap()]; // TODO: is this a safe conversion?
+                // DynResidue does not implement ConditionallySelectable, so we cannot perform a constant-time lookup here
+                // Until it becomes available, this code is variable time.
+                let power = powers[usize::try_from(idx).unwrap()];
 
                 z *= power;
             });
