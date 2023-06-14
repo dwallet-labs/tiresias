@@ -5,16 +5,15 @@ use std::{
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_decryption_share;
-use crypto_bigint::modular::runtime_mod::DynResidueParams;
-use crypto_bigint::{rand_core::CryptoRngCore, NonZero};
+use crypto_bigint::{modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, NonZero};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::multiexp::multi_exponentiate;
 use crate::{
     adjusted_lagrange_coefficient_sized_number, binomial_coefficient_upper_bound,
     error::{ProtocolError, SanityCheckError},
     factorial_upper_bound,
+    multiexp::multi_exponentiate,
     precomputed_values::PrecomputedValues,
     proofs::ProofOfEqualityOfDiscreteLogs,
     secret_key_share_size_upper_bound, AdjustedLagrangeCoefficientSizedNumber, AsNaturalNumber,
@@ -366,8 +365,9 @@ impl DecryptionKeyShare {
                     AdjustedLagrangeCoefficientSizedNumber,
                 )> = iter
                     .map(|(j, decryption_share)| {
-                        // Since we can't raise by a negative number with `crypto_bigint`, we do this in two party
-                        // First, we compute the absolute value of the adjusted lagrange coefficient:
+                        // Since we can't raise by a negative number with `crypto_bigint`, we do
+                        // this in two party First, we compute the absolute
+                        // value of the adjusted lagrange coefficient:
                         let adjusted_lagrange_coefficient_absolute_value =
                             Self::compute_absolute_adjusted_lagrange_coefficient(
                                 j,
@@ -377,8 +377,8 @@ impl DecryptionKeyShare {
                             );
 
                         // And secondly we invert only if needed.
-                        // We `should_invert` if there are an odd numbers of elements larger than `j` in
-                        // `decrypters` ($S$)
+                        // We `should_invert` if there are an odd numbers of elements larger than
+                        // `j` in `decrypters` ($S$)
                         let should_invert = decrypters.iter().fold(1i16, |acc, j_prime| {
                             if j > *j_prime {
                                 acc.neg()

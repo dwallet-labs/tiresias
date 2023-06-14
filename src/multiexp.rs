@@ -1,13 +1,15 @@
-use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-use crypto_bigint::{Limb, Uint, Word};
+use crypto_bigint::{
+    modular::runtime_mod::{DynResidue, DynResidueParams},
+    Limb, Uint, Word,
+};
 
 /// Performs modular multi-exponentiation using Montgomery's ladder.
 /// `exponent_bits` represents the number of bits to take into account for the exponent.
 ///
-/// See: Straus, E. G. Problems and solutions: Addition chains of vectors. American Mathematical Monthly 71 (1964), 806–808.
+/// See: Straus, E. G. Problems and solutions: Addition chains of vectors. American Mathematical
+/// Monthly 71 (1964), 806–808.
 ///
 /// This gives roughly a 2x improvement
-///
 pub fn multi_exponentiate<const LIMBS: usize, const RHS_LIMBS: usize>(
     bases_and_exponents: Vec<(Uint<LIMBS>, Uint<RHS_LIMBS>)>,
     exponent_bits: usize,
@@ -88,9 +90,12 @@ pub fn multi_exponentiate<const LIMBS: usize, const RHS_LIMBS: usize>(
 
 #[cfg(test)]
 mod tests {
+    use crypto_bigint::{
+        modular::runtime_mod::{DynResidue, DynResidueParams},
+        U256,
+    };
+
     use crate::multiexp::multi_exponentiate;
-    use crypto_bigint::modular::runtime_mod::{DynResidue, DynResidueParams};
-    use crypto_bigint::U256;
 
     #[test]
     fn test_multi_exp() {
