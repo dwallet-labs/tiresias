@@ -9,7 +9,7 @@ use crypto_bigint::{
 /// See: Straus, E. G. Problems and solutions: Addition chains of vectors. American Mathematical
 /// Monthly 71 (1964), 806–808.
 ///
-/// This gives roughly a 2x improvement
+/// This gives roughly a 3.5x improvement
 pub fn multi_exponentiate<const LIMBS: usize, const RHS_LIMBS: usize>(
     bases_and_exponents: Vec<(Uint<LIMBS>, Uint<RHS_LIMBS>)>,
     exponent_bits: usize,
