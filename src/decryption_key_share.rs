@@ -769,12 +769,11 @@ mod benches {
             }
         }
 
-        // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of the
-        // DKG.
-
         for (threshold, num_parties) in [(6, 10), (67, 100), (667, 1000)] {
             let precomputed_values = PrecomputedValues::new(num_parties, n);
 
+            // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of
+            // the DKG.
             let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> =
                 iter::repeat_with(|| {
                     Wrapping(SecretKeyShareSizedNumber::random_mod(
@@ -788,6 +787,7 @@ mod benches {
                         .unwrap(),
                     ))
                 })
+                .take(usize::from(threshold))
                 .collect();
 
             let secret_key: SecretKeyShareSizedNumber = secret_key.resize();
