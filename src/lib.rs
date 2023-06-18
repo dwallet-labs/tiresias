@@ -205,4 +205,5 @@ criterion_group!(
     benches,
     proofs::benchmark_proof_of_equality_of_discrete_logs,
     decryption_key_share::benchmark_decryption_share,
+    multiexp::benchmark_multiexp,
 );
