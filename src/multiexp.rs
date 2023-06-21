@@ -143,10 +143,11 @@ mod tests {
         assert_eq!(res, expected);
     }
 }
+
 #[cfg(feature = "benchmarking")]
 mod benches {
     use criterion::Criterion;
-    use crypto_bigint::{Random, U16384};
+    use crypto_bigint::Random;
     use rand_core::OsRng;
 
     use super::*;
@@ -160,35 +161,30 @@ mod benches {
         let n2 = n.square();
 
         for i in [1, 2, 3, 4, 10, 100] {
-            let bases_and_exponents: Vec<(PaillierModulusSizedNumber, U16384)> = (1..=i)
-                .map(|_| {
-                    let x = PaillierModulusSizedNumber::random(&mut OsRng);
-                    let p = U16384::random(&mut OsRng);
-                    (x, p)
-                })
-                .collect();
+            let bases_and_exponents: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)> =
+                (1..=i)
+                    .map(|_| {
+                        let x = PaillierModulusSizedNumber::random(&mut OsRng);
+                        let p = PaillierModulusSizedNumber::random(&mut OsRng);
+                        (x, p)
+                    })
+                    .collect();
 
             let params = DynResidueParams::new(&n2);
 
             g.bench_function(
-                format!("multi_exponentiate() for {i} bases, PaillierModulusSizedNumber^PaillierModulusSizedNumber"),
+                format!(
+                    "multi_exponentiate() for {i} bases,
+            PaillierModulusSizedNumber^PaillierModulusSizedNumber"
+                ),
                 |b| {
-                    b.iter(
-                        || {
-                            multi_exponentiate(
-                                bases_and_exponents.clone(),
-                                PaillierModulusSizedNumber::BITS,
-                                params,
-                            )
-                        },
-                    )
-                },
-            );
-
-            g.bench_function(
-                format!("multi_exponentiate() for {i} bases, PaillierModulusSizedNumber^U16384"),
-                |b| {
-                    b.iter(|| multi_exponentiate(bases_and_exponents.clone(), U16384::BITS, params))
+                    b.iter(|| {
+                        multi_exponentiate(
+                            bases_and_exponents.clone(),
+                            PaillierModulusSizedNumber::BITS,
+                            params,
+                        )
+                    })
                 },
             );
         }
