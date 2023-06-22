@@ -383,7 +383,7 @@ impl DecryptionKeyShare {
     ///
     /// Note: `base` is assumed to be raised by `n!` as in `new()`.  
     #[allow(clippy::too_many_arguments)]
-    pub fn combine_decryption_shares(
+    pub fn combine_decryption_shares<Rng: CryptoRngCore + Send + Sync + Clone>(
         t: u16,
         n: u16,
         encryption_key: EncryptionKey,
@@ -398,6 +398,7 @@ impl DecryptionKeyShare {
             u16,
             AdjustedLagrangeCoefficientSizedNumber,
         >,
+        rng: &mut Rng,
     ) -> Result<Vec<LargeBiPrimeSizedNumber>> {
         let n2 = encryption_key.n2;
         let batch_size = ciphertexts.len();
@@ -454,6 +455,7 @@ impl DecryptionKeyShare {
                             ciphertext_squared_n_factorial,
                             public_verification_key,
                             decryption_share,
+                            &mut rng.clone(),
                         )
                         .is_err()
                 } else {
@@ -475,6 +477,7 @@ impl DecryptionKeyShare {
                             base,
                             public_verification_key,
                             squared_ciphertexts_n_factorial_and_decryption_shares,
+                            &mut rng.clone(),
                         )
                         .is_err()
                 }
@@ -557,7 +560,8 @@ mod tests {
                 decryption_key_share.base,
                 decryption_share_base,
                 decryption_key_share.public_verification_key,
-                decryption_share
+                decryption_share,
+                &mut OsRng
             )
             .is_ok());
     }
@@ -636,7 +640,8 @@ mod tests {
                 decryption_share_bases
                     .into_iter()
                     .zip(message.decryption_shares)
-                    .collect()
+                    .collect(),
+                &mut OsRng
             )
             .is_ok());
     }
@@ -772,7 +777,8 @@ mod tests {
                 precomputed_values,
                 base,
                 public_verification_keys,
-                absolute_adjusted_lagrange_coefficients
+                absolute_adjusted_lagrange_coefficients,
+                &mut OsRng
             )
             .unwrap(),
         );
@@ -1017,6 +1023,7 @@ mod benches {
                                     base,
                                     public_verification_keys.clone(),
                                     absolute_adjusted_lagrange_coefficients.clone(),
+                                    &mut OsRng
                                 )
                                 .unwrap();
 

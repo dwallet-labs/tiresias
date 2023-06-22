@@ -18,6 +18,7 @@ mod error;
 mod message;
 mod precomputed_values;
 
+mod batch_verification;
 mod multiexp;
 pub mod proofs;
 pub mod secret_sharing;
@@ -42,6 +43,7 @@ pub type LargeBiPrimeSizedNumber = <LargePrimeSizedNumber as Concat>::Output;
 pub type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Output;
 
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
+
 pub(crate) type PaillierPlaintextRingElement = DynResidue<{ LargeBiPrimeSizedNumber::LIMBS }>;
 
 const fn secret_sharing_polynomial_coefficient_size_upper_bound(
