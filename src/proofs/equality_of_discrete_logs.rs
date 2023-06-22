@@ -86,6 +86,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn prove_inner(
         n2: PaillierModulusSizedNumber,
         num_parties: u16,
@@ -415,7 +416,8 @@ impl ProofOfEqualityOfDiscreteLogs {
     /// with respects to the bases $g$ and $h_i$ for every (`decryption_share_base`,
     /// `decryption_share`) in `decryption_shares_and_bases`.
     ///
-    /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
+    /// Implements PROTOCOL 4.2 from Section 4.4. of the paper
+    #[allow(clippy::too_many_arguments)]
     pub fn batch_verify(
         &self,
         // Paillier modulus
