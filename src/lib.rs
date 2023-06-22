@@ -52,7 +52,8 @@ const fn secret_sharing_polynomial_coefficient_size_upper_bound(
         + 1
         + PaillierModulusSizedNumber::BITS
         + StatisticalSecuritySizedNumber::BITS
-        + const_log(num_parties) // Account for summing up `num_parties` shamir shares (one from each party)
+        + const_log(num_parties) // Account for summing up `num_parties` shamir shares (one from
+                                 // each party)
 }
 
 const fn secret_key_share_size_upper_bound(num_parties: usize, threshold: usize) -> usize {
@@ -61,7 +62,8 @@ const fn secret_key_share_size_upper_bound(num_parties: usize, threshold: usize)
         + 1
 }
 
-// I don't like this either.. but `ilog2` returns `u32` and we don't have a `const` transition to `usize`
+// I don't like this either.. but `ilog2` returns `u32` and we don't have a `const` transition to
+// `usize`
 const fn const_log(n: usize) -> usize {
     let mut power = 1;
     let mut counter = 0;
@@ -141,9 +143,8 @@ impl AsRingElement<PaillierPlaintextRingElement> for LargeBiPrimeSizedNumber {
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
-
     use crypto_bigint::NonZero;
+    use rstest::rstest;
 
     use super::*;
 
