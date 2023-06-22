@@ -2,10 +2,11 @@
 pub(crate) use benches::benchmark_multiexp;
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
+    subtle::{ConditionallySelectable, ConstantTimeEq},
     Limb, Uint, Word,
 };
 
-/// Performs modular multi-exponentiation using Montgomery's ladder.
+/// Performs constant-time modular multi-exponentiation using Montgomery's ladder.
 /// `exponent_bits` represents the number of bits to take into account for the exponent.
 ///
 /// See: Straus, E. G. Problems and solutions: Addition chains of vectors. American Mathematical
@@ -26,9 +27,9 @@ pub fn multi_exponentiate<const LIMBS: usize, const RHS_LIMBS: usize>(
 
     let powers_and_exponents: Vec<([DynResidue<LIMBS>; 1 << WINDOW], Uint<RHS_LIMBS>)> =
         bases_and_exponents
-            .iter()
+            .into_iter()
             .map(|(base, exponent)| {
-                let base = DynResidue::new(base, residue_params);
+                let base = DynResidue::new(&base, residue_params);
 
                 // powers[i] contains x^i
                 let mut powers = [DynResidue::one(residue_params); 1 << WINDOW];
@@ -39,7 +40,7 @@ pub fn multi_exponentiate<const LIMBS: usize, const RHS_LIMBS: usize>(
                     powers[i] = powers[i - 1] * base;
                     i += 1;
                 }
-                (powers, *exponent)
+                (powers, exponent)
             })
             .collect();
 
@@ -78,12 +79,22 @@ pub fn multi_exponentiate<const LIMBS: usize, const RHS_LIMBS: usize>(
                     idx &= starting_window_mask;
                 }
 
-                // DynResidue does not implement ConditionallySelectable, so we cannot perform a
-                // constant-time lookup here Until it becomes available, this code
-                // is variable time.
-                let power = powers[usize::try_from(idx).unwrap()];
+                // Constant-time lookup in the array of powers
+                let mut power = *powers[0].as_montgomery();
+                let mut i = 1;
+                while i < 1 << WINDOW {
+                    let choice = <Limb as ConstantTimeEq>::ct_eq(&Limb(i as Word), &Limb(idx));
 
-                z *= power;
+                    power = <Uint<LIMBS> as ConditionallySelectable>::conditional_select(
+                        &power,
+                        powers[i].as_montgomery(),
+                        choice,
+                    );
+
+                    i += 1;
+                }
+
+                z *= DynResidue::from_montgomery(power, residue_params);
             });
         }
     }
