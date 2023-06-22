@@ -1,12 +1,13 @@
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
-use crypto_bigint::{rand_core::CryptoRngCore, NonZero, RandomMod};
+use crypto_bigint::{
+    modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, NonZero, RandomMod,
+};
 use merlin::Transcript;
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    multiexp::multi_exponentiate,
     proofs::{Error, Result, TranscriptProtocol},
     secret_key_share_size_upper_bound, AsNaturalNumber, AsRingElement,
     ComputationalSecuritySizedNumber, PaillierModulusSizedNumber,
@@ -481,63 +482,35 @@ impl ProofOfEqualityOfDiscreteLogs {
             })
             .collect();
 
-        let randomizers_decryption_shares_and_bases: Vec<(
-            (PaillierModulusSizedNumber, PaillierModulusSizedNumber),
+        let bases_and_exponents: Vec<(
+            PaillierModulusSizedNumber,
             ComputationalSecuritySizedNumber,
         )> = decryption_shares_and_bases
             .iter()
             .zip(randomizers.iter())
-            .map(|((a, b), c)| ((*a, *b), *c))
+            .map(|((a, _), c)| (*a, *c))
             .collect();
 
-        #[cfg(not(feature = "parallel"))]
-        let randomizers_decryption_shares_and_bases_iter =
-            randomizers_decryption_shares_and_bases.iter();
-        #[cfg(feature = "parallel")]
-        let randomizers_decryption_shares_and_bases_iter =
-            randomizers_decryption_shares_and_bases.par_iter();
-
-        let batched_decryption_share_base = randomizers_decryption_shares_and_bases_iter
-            .clone()
-            .map(|((decryption_share_base, _), randomizer)| {
-                decryption_share_base
-                    .as_ring_element(&n2)
-                    .pow_bounded_exp(randomizer, ComputationalSecuritySizedNumber::BITS)
-            });
-
-        #[cfg(not(feature = "parallel"))]
-        let batched_decryption_share_base = batched_decryption_share_base
-            .reduce(|x, y| x * y)
-            .unwrap()
-            .as_natural_number();
-        #[cfg(feature = "parallel")]
-        let batched_decryption_share_base = batched_decryption_share_base
-            .reduce(
-                || PaillierModulusSizedNumber::ONE.as_ring_element(&n2),
-                |x, y| x * y,
-            )
-            .as_natural_number();
-
-        let batched_decryption_share = randomizers_decryption_shares_and_bases_iter.map(
-            |((_, decryption_share), randomizer)| {
-                decryption_share
-                    .as_ring_element(&n2)
-                    .pow_bounded_exp(randomizer, ComputationalSecuritySizedNumber::BITS)
-            },
+        let batched_decryption_share_base: PaillierModulusSizedNumber = multi_exponentiate(
+            bases_and_exponents,
+            ComputationalSecuritySizedNumber::BITS,
+            DynResidueParams::new(&n2),
         );
 
-        #[cfg(not(feature = "parallel"))]
-        let batched_decryption_share = batched_decryption_share
-            .reduce(|x, y| x * y)
-            .unwrap()
-            .as_natural_number();
-        #[cfg(feature = "parallel")]
-        let batched_decryption_share = batched_decryption_share
-            .reduce(
-                || PaillierModulusSizedNumber::ONE.as_ring_element(&n2),
-                |x, y| x * y,
-            )
-            .as_natural_number();
+        let bases_and_exponents: Vec<(
+            PaillierModulusSizedNumber,
+            ComputationalSecuritySizedNumber,
+        )> = decryption_shares_and_bases
+            .iter()
+            .zip(randomizers.iter())
+            .map(|((_, b), c)| (*b, *c))
+            .collect();
+
+        let batched_decryption_share: PaillierModulusSizedNumber = multi_exponentiate(
+            bases_and_exponents,
+            ComputationalSecuritySizedNumber::BITS,
+            DynResidueParams::new(&n2),
+        );
 
         Ok((
             base,
@@ -1152,7 +1125,7 @@ mod benches {
         let n = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
         let n2 = n.square();
 
-        for (num_parties, threshold) in [(10, 16), (85, 128), (682, 1024)] {
+        for (threshold, num_parties) in [(6, 10), (67, 100), (667, 1000)] {
             let witness_size_upper_bound =
                 secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold));
             let witness = ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::random_mod(
