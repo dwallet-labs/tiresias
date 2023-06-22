@@ -21,7 +21,7 @@ pub struct PrecomputedValues {
 impl PrecomputedValues {
     pub fn new(n: u16, paillier_n: LargeBiPrimeSizedNumber) -> PrecomputedValues {
         // Factor the binomial coefficients by reducing the fractions ${n\choose j} = \frac{{n - j +
-        // 1}\cdots n}{1\cdots j}$. This could be done once an for all for a given number of
+        // 1}\cdots n}{1\cdots j}$. This could be done once and for all for a given number of
         // participants `n`.
         //
         // The binomial coefficient formula is symmetric, i.e. ${n\choose j} = {n\choose {n - j}}$.
@@ -54,10 +54,12 @@ impl PrecomputedValues {
             |acc, i| acc * LargeBiPrimeSizedNumber::from(i).as_ring_element(&paillier_n),
         );
 
+        // safe to invert here, since N=PQ and the number is composed of extremely small prime
+        // factors, in particular not from P or Q.
         let four_n_factorial_cubed_inverse_mod_n = (LargeBiPrimeSizedNumber::from(4u8)
             .as_ring_element(&paillier_n)
             * n_factorial.pow_bounded_exp(&LargeBiPrimeSizedNumber::from(3u8), 2))
-        .invert() // safe to invert here, can fail only if we accidentally factorized $N$
+        .invert()
         .0
         .as_natural_number();
 

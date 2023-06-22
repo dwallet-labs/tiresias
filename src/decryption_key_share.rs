@@ -220,7 +220,7 @@ impl DecryptionKeyShare {
             AdjustedLagrangeCoefficientSizedNumber,
         >,
     ) -> Vec<LargeBiPrimeSizedNumber> {
-        // We can't calculate the lagrange coefficients using the standard equations involves
+        // We can't calculate the lagrange coefficients using the standard equations involving
         // division, and division in the exponent in a ring requires knowing its order,
         // which we don't for the Paillier case because it is secret and knowing it implies
         // factorization. So instead, we are not calculating the lagrange coefficients
@@ -244,31 +244,28 @@ impl DecryptionKeyShare {
         // The set $S$ of parties participating in the threshold decryption sessions
         let decrypters: Vec<u16> = messages.clone().into_keys().collect();
 
-        let decrypters_requiring_inversion: Vec<u16> = decrypters
-            .clone()
-            .into_iter()
-            .filter(|j| {
-                // Since we can't raise by a negative number with `crypto_bigint`,
-                // we raise to the power of the absolute value,
-                // and use an inverted base if the exponent should have been negative.
-                //
-                // We should invert if there are an odd numbers of elements larger than
-                // `j` in `decrypters` ($S$)
-                let inversion_factor =
-                    decrypters.iter().fold(
-                        1i16,
-                        |acc, j_prime| {
-                            if j > j_prime {
-                                acc.neg()
-                            } else {
-                                acc
-                            }
-                        },
-                    );
+        let decrypters_requiring_inversion: Vec<u16> =
+            decrypters
+                .clone()
+                .into_iter()
+                .filter(|party_id| {
+                    // Since we can't raise by a negative number with `crypto_bigint`,
+                    // we raise to the power of the absolute value,
+                    // and use an inverted base if the exponent should have been negative.
+                    //
+                    // We should invert if there are an odd numbers of elements larger than
+                    // `j` in `decrypters` ($S$)
+                    let inversion_factor = decrypters.iter().fold(1i16, |acc, j_prime| {
+                        if party_id > j_prime {
+                            acc.neg()
+                        } else {
+                            acc
+                        }
+                    });
 
-                inversion_factor == -1
-            })
-            .collect();
+                    inversion_factor == -1
+                })
+                .collect();
 
         // Compute $c_j' = c_{j}^{2n!\lambda_{0,j}^{S}}=c_{j}^{2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n]
         // \setminus S} (j'-j)\Pi_{j' \in S}j'}$.
@@ -280,11 +277,13 @@ impl DecryptionKeyShare {
             )> = messages
                 .clone()
                 .into_iter()
-                .map(|(j, message)| {
+                .map(|(party_id, message)| {
                     (
-                        j,
+                        party_id,
                         *message.decryption_shares.get(i).unwrap(),
-                        *absolute_adjusted_lagrange_coefficients.get(&j).unwrap(),
+                        *absolute_adjusted_lagrange_coefficients
+                            .get(&party_id)
+                            .unwrap(),
                     )
                 })
                 .collect();
@@ -295,7 +294,7 @@ impl DecryptionKeyShare {
             )> = decryption_shares_and_absolute_adjusted_lagrange_coefficients
                 .clone()
                 .into_iter()
-                .filter(|(j, ..)| decrypters_requiring_inversion.contains(j))
+                .filter(|(party_id, ..)| decrypters_requiring_inversion.contains(party_id))
                 .map(
                     |(_, decryption_share, absolute_adjusted_lagrange_coefficient)| {
                         (decryption_share, absolute_adjusted_lagrange_coefficient)
@@ -308,7 +307,7 @@ impl DecryptionKeyShare {
                 AdjustedLagrangeCoefficientSizedNumber,
             )> = decryption_shares_and_absolute_adjusted_lagrange_coefficients
                 .into_iter()
-                .filter(|(j, ..)| !decrypters_requiring_inversion.contains(j))
+                .filter(|(party_id, ..)| !decrypters_requiring_inversion.contains(party_id))
                 .map(
                     |(_, decryption_share, absolute_adjusted_lagrange_coefficient)| {
                         (decryption_share, absolute_adjusted_lagrange_coefficient)
@@ -442,9 +441,9 @@ impl DecryptionKeyShare {
         #[cfg(feature = "parallel")]
         let iter = decrypters.into_par_iter();
         let malicious_parties: Vec<u16> = iter
-            .filter(|j| {
-                let public_verification_key = *public_verification_keys.get(j).unwrap();
-                let message = messages.get(j).unwrap();
+            .filter(|party_id| {
+                let public_verification_key = *public_verification_keys.get(party_id).unwrap();
+                let message = messages.get(party_id).unwrap();
 
                 if batch_size == 1 {
                     let decryption_share_base = *decryption_share_bases.get(0).unwrap();
