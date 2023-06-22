@@ -64,8 +64,8 @@ const fn secret_key_share_size_upper_bound(number_of_parties: usize, threshold: 
         + 1
 }
 
-// I don't like this either.. but `ilog2` returns `u32` and we don't have a `const` transition to
-// `usize`
+// Must use `const` functions for macros, unfortunately `ilog2` returns `u32` and we don't have a
+// `const` transition to `usize`
 const fn const_log(n: usize) -> usize {
     let mut power = 1;
     let mut counter = 0;
