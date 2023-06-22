@@ -433,7 +433,6 @@ impl DecryptionKeyShare {
             .collect();
 
         #[cfg(not(feature = "parallel"))]
-        let iter = decrypters.clone().into_iter();
         let iter = decrypters.into_iter();
         #[cfg(feature = "parallel")]
         let iter = decrypters.into_par_iter();
