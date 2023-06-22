@@ -42,10 +42,7 @@ impl PrecomputedValues {
                 if j == (n - j) {
                     vec![(j, factored_coefficient)]
                 } else {
-                    vec![
-                        (j, factored_coefficient.clone()),
-                        (n - j, factored_coefficient),
-                    ]
+                    vec![(j, factored_coefficient), (n - j, factored_coefficient)]
                 }
             })
             .collect();
