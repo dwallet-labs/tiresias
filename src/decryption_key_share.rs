@@ -387,6 +387,7 @@ impl DecryptionKeyShare {
     /// which can be performed by non-threshold-decryption parties.
     ///
     /// Note: `base` is assumed to be raised by `n!` as in `new()`.  
+    #[allow(clippy::too_many_arguments)]
     pub fn combine_decryption_shares<Rng: CryptoRngCore + Send + Sync + Clone>(
         threshold: u16,
         number_of_parties: u16,
