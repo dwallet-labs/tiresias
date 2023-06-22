@@ -1,12 +1,15 @@
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
-use crypto_bigint::{rand_core::CryptoRngCore, NonZero, RandomMod};
+use crypto_bigint::{
+    modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, NonZero, RandomMod,
+};
 use merlin::Transcript;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    multiexp::multi_exponentiate,
     proofs::{Error, Result, TranscriptProtocol},
     secret_key_share_size_upper_bound, AsNaturalNumber, AsRingElement,
     ComputationalSecuritySizedNumber, PaillierModulusSizedNumber,
@@ -476,63 +479,35 @@ impl ProofOfEqualityOfDiscreteLogs {
             })
             .collect();
 
-        let randomizers_decryption_shares_and_bases: Vec<(
-            (PaillierModulusSizedNumber, PaillierModulusSizedNumber),
+        let bases_and_exponents: Vec<(
+            PaillierModulusSizedNumber,
             ComputationalSecuritySizedNumber,
         )> = decryption_shares_and_bases
             .iter()
             .zip(randomizers.iter())
-            .map(|((a, b), c)| ((*a, *b), *c))
+            .map(|((a, _), c)| (*a, *c))
             .collect();
 
-        #[cfg(not(feature = "parallel"))]
-        let randomizers_decryption_shares_and_bases_iter =
-            randomizers_decryption_shares_and_bases.iter();
-        #[cfg(feature = "parallel")]
-        let randomizers_decryption_shares_and_bases_iter =
-            randomizers_decryption_shares_and_bases.par_iter();
-
-        let batched_decryption_share_base = randomizers_decryption_shares_and_bases_iter
-            .clone()
-            .map(|((decryption_share_base, _), randomizer)| {
-                decryption_share_base
-                    .as_ring_element(&n2)
-                    .pow_bounded_exp(&randomizer, ComputationalSecuritySizedNumber::BITS)
-            });
-
-        #[cfg(not(feature = "parallel"))]
-        let batched_decryption_share_base = batched_decryption_share_base
-            .reduce(|x, y| x * y)
-            .unwrap()
-            .as_natural_number();
-        #[cfg(feature = "parallel")]
-        let batched_decryption_share_base = batched_decryption_share_base
-            .reduce(
-                || PaillierModulusSizedNumber::ONE.as_ring_element(&n2),
-                |x, y| x * y,
-            )
-            .as_natural_number();
-
-        let batched_decryption_share = randomizers_decryption_shares_and_bases_iter.map(
-            |((_, decryption_share), randomizer)| {
-                decryption_share
-                    .as_ring_element(&n2)
-                    .pow_bounded_exp(&randomizer, ComputationalSecuritySizedNumber::BITS)
-            },
+        let batched_decryption_share_base: PaillierModulusSizedNumber = multi_exponentiate(
+            bases_and_exponents,
+            ComputationalSecuritySizedNumber::BITS,
+            DynResidueParams::new(&n2),
         );
 
-        #[cfg(not(feature = "parallel"))]
-        let batched_decryption_share = batched_decryption_share
-            .reduce(|x, y| x * y)
-            .unwrap()
-            .as_natural_number();
-        #[cfg(feature = "parallel")]
-        let batched_decryption_share = batched_decryption_share
-            .reduce(
-                || PaillierModulusSizedNumber::ONE.as_ring_element(&n2),
-                |x, y| x * y,
-            )
-            .as_natural_number();
+        let bases_and_exponents: Vec<(
+            PaillierModulusSizedNumber,
+            ComputationalSecuritySizedNumber,
+        )> = decryption_shares_and_bases
+            .iter()
+            .zip(randomizers.iter())
+            .map(|((_, b), c)| (*b, *c))
+            .collect();
+
+        let batched_decryption_share: PaillierModulusSizedNumber = multi_exponentiate(
+            bases_and_exponents,
+            ComputationalSecuritySizedNumber::BITS,
+            DynResidueParams::new(&n2),
+        );
 
         Ok((
             base,
