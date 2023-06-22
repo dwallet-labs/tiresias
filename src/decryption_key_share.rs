@@ -180,6 +180,7 @@ impl DecryptionKeyShare {
     /// which can be performed by non-threshold-decryption parties.
     ///
     /// Note: `base` is assumed to be raised by `n!` as in `new()`.  
+    #[allow(clippy::too_many_arguments)]
     pub fn combine_decryption_shares(
         t: u16,
         n: u16,
@@ -333,7 +334,7 @@ impl DecryptionKeyShare {
                         .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2);
 
                     let c_j_prime = c_j_prime.pow_bounded_exp(
-                        &precomputed_values
+                        precomputed_values
                             .factored_binomial_coefficients
                             .get(&j)
                             .unwrap(),

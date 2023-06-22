@@ -42,6 +42,7 @@ impl ProofOfEqualityOfDiscreteLogs {
     /// Create a `ProofOfEqualityOfDiscreteLogs` that proves the equality of the discrete logs of $a
     /// a = g^x$ and $b = h^x$ in zero-knowledge (i.e. without revealing the witness `x`).
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
+    #[allow(clippy::too_many_arguments)]
     pub fn prove(
         // The Paillier modulus
         n2: PaillierModulusSizedNumber,
@@ -83,6 +84,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn prove_inner(
         n2: PaillierModulusSizedNumber,
         num_parties: u16,
@@ -146,6 +148,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
     /// Verify that `self` proves the equality of the discrete logs of $a = g^d$ and $b = h^d$.
     /// Implements PROTOCOL 4.1 from Section 4.2. of the paper.
+    #[allow(clippy::too_many_arguments)]
     pub fn verify(
         &self,
         // The Paillier modulus
@@ -187,6 +190,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn verify_inner(
         &self,
         n2: PaillierModulusSizedNumber,
@@ -353,6 +357,7 @@ impl ProofOfEqualityOfDiscreteLogs {
     /// `decryption_shares_and_bases`.
     ///
     /// Implements PROTOCOL 4.2 from Section 4.4. of the paper.
+    #[allow(clippy::too_many_arguments)]
     pub fn batch_prove(
         // Paillier modulus
         n2: PaillierModulusSizedNumber,
@@ -497,7 +502,7 @@ impl ProofOfEqualityOfDiscreteLogs {
             .map(|((decryption_share_base, _), randomizer)| {
                 decryption_share_base
                     .as_ring_element(&n2)
-                    .pow_bounded_exp(&randomizer, ComputationalSecuritySizedNumber::BITS)
+                    .pow_bounded_exp(randomizer, ComputationalSecuritySizedNumber::BITS)
             });
 
         #[cfg(not(feature = "parallel"))]
@@ -517,7 +522,7 @@ impl ProofOfEqualityOfDiscreteLogs {
             |((_, decryption_share), randomizer)| {
                 decryption_share
                     .as_ring_element(&n2)
-                    .pow_bounded_exp(&randomizer, ComputationalSecuritySizedNumber::BITS)
+                    .pow_bounded_exp(randomizer, ComputationalSecuritySizedNumber::BITS)
             },
         );
 
