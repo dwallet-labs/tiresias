@@ -266,113 +266,110 @@ impl DecryptionKeyShare {
 
         // Compute $c_j' = c_{j}^{2n!\lambda_{0,j}^{S}}=c_{j}^{2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n]
         // \setminus S} (j'-j)\Pi_{j' \in S}j'}$.
-        let plaintexts = iter
-            .map(|i| {
-                let decryption_shares_and_absolute_adjusted_lagrange_coefficients: Vec<(
-                    u16,
-                    PaillierModulusSizedNumber,
-                    AdjustedLagrangeCoefficientSizedNumber,
-                )> = messages
-                    .clone()
-                    .into_iter()
-                    .map(|(j, message)| {
-                        (
-                            j,
-                            *message.decryption_shares.get(i).unwrap(),
-                            *absolute_adjusted_lagrange_coefficients.get(&j).unwrap(),
-                        )
-                    })
-                    .collect();
+        iter.map(|i| {
+            let decryption_shares_and_absolute_adjusted_lagrange_coefficients: Vec<(
+                u16,
+                PaillierModulusSizedNumber,
+                AdjustedLagrangeCoefficientSizedNumber,
+            )> = messages
+                .clone()
+                .into_iter()
+                .map(|(j, message)| {
+                    (
+                        j,
+                        *message.decryption_shares.get(i).unwrap(),
+                        *absolute_adjusted_lagrange_coefficients.get(&j).unwrap(),
+                    )
+                })
+                .collect();
 
-                let decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients: Vec<(
-                    PaillierModulusSizedNumber,
-                    AdjustedLagrangeCoefficientSizedNumber,
-                )> = decryption_shares_and_absolute_adjusted_lagrange_coefficients
-                    .clone()
-                    .into_iter()
-                    .filter(|(j, ..)| decrypters_requiring_inversion.contains(j))
-                    .map(
-                        |(_, decryption_share, absolute_adjusted_lagrange_coefficient)| {
-                            (decryption_share, absolute_adjusted_lagrange_coefficient)
+            let decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients: Vec<(
+                PaillierModulusSizedNumber,
+                AdjustedLagrangeCoefficientSizedNumber,
+            )> = decryption_shares_and_absolute_adjusted_lagrange_coefficients
+                .clone()
+                .into_iter()
+                .filter(|(j, ..)| decrypters_requiring_inversion.contains(j))
+                .map(
+                    |(_, decryption_share, absolute_adjusted_lagrange_coefficient)| {
+                        (decryption_share, absolute_adjusted_lagrange_coefficient)
+                    },
+                )
+                .collect();
+
+            let decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients: Vec<(
+                PaillierModulusSizedNumber,
+                AdjustedLagrangeCoefficientSizedNumber,
+            )> = decryption_shares_and_absolute_adjusted_lagrange_coefficients
+                .into_iter()
+                .filter(|(j, ..)| !decrypters_requiring_inversion.contains(j))
+                .map(
+                    |(_, decryption_share, absolute_adjusted_lagrange_coefficient)| {
+                        (decryption_share, absolute_adjusted_lagrange_coefficient)
+                    },
+                )
+                .collect();
+
+            (
+                decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
+                decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
+            )
+        })
+        .map(
+            |(
+                decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
+                decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
+            )| {
+                let [c_prime_part_needing_inversion, c_prime_part_not_needing_ivnersion] = [
+                    decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
+                    decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
+                ]
+                .map(|bases_and_exponents| {
+                    let exponent_bits = bases_and_exponents
+                        .iter()
+                        .map(|(_, exp)| exp.bits_vartime())
+                        .max()
+                        .unwrap();
+
+                    multi_exponentiate(bases_and_exponents, exponent_bits, params)
+                        .as_ring_element(&n2)
+                });
+
+                let c_prime =
+                    c_prime_part_needing_inversion.invert().0 * c_prime_part_not_needing_ivnersion;
+
+                // $^2{\Pi_{j' \in S}j'}$
+                // This computation is independent of `j` so it could be done outside the loop
+                let c_prime = decrypters
+                    .iter()
+                    .fold(
+                        c_prime.pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2),
+                        |acc, j_prime| {
+                            let exp = PaillierModulusSizedNumber::from(*j_prime);
+                            acc.pow_bounded_exp(&exp, exp.bits_vartime())
                         },
                     )
-                    .collect();
+                    .as_natural_number();
 
-                let decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients:
-                    Vec<(PaillierModulusSizedNumber, AdjustedLagrangeCoefficientSizedNumber)> =
-                    decryption_shares_and_absolute_adjusted_lagrange_coefficients
-                        .into_iter()
-                        .filter(|(j, ..)| !decrypters_requiring_inversion.contains(j))
-                        .map(
-                            |(_, decryption_share, absolute_adjusted_lagrange_coefficient)| {
-                                (decryption_share, absolute_adjusted_lagrange_coefficient)
-                            },
-                        )
-                        .collect();
+                let paillier_n = NonZero::new(encryption_key.n.resize()).unwrap();
 
-                (
-                    decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
-                    decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
-                )
-            })
-            .map(
-                |(
-                    decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
-                    decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
-                )| {
-                    let [c_prime_part_needing_inversion, c_prime_part_not_needing_ivnersion] = [
-                        decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
-                        decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
-                    ]
-                    .map(|bases_and_exponents| {
-                        let exponent_bits = bases_and_exponents
-                            .iter()
-                            .map(|(_, exp)| exp.bits_vartime())
-                            .max()
-                            .unwrap();
+                // $c` >= 1$ so safe to perform a `.wrapping_sub()` here which will not overflow
+                // After dividing a number $ x < N^2 $ by $N$2
+                // we will get a number that is smaller than $N$, so we can safely `.split()`
+                // and take the low part of the result.
+                let (_, lo) =
+                    ((c_prime.wrapping_sub(&PaillierModulusSizedNumber::ONE)) / paillier_n).split();
 
-                        multi_exponentiate(bases_and_exponents, exponent_bits, params)
-                            .as_ring_element(&n2)
-                    });
+                let paillier_n = encryption_key.n;
 
-                    let c_prime = c_prime_part_needing_inversion.invert().0
-                        * c_prime_part_not_needing_ivnersion;
-
-                    // $^2{\Pi_{j' \in S}j'}$
-                    // This computation is independent of `j` so it could be done outside the loop
-                    let c_prime = decrypters
-                        .iter()
-                        .fold(
-                            c_prime.pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2),
-                            |acc, j_prime| {
-                                let exp = PaillierModulusSizedNumber::from(*j_prime);
-                                acc.pow_bounded_exp(&exp, exp.bits_vartime())
-                            },
-                        )
-                        .as_natural_number();
-
-                    let paillier_n = NonZero::new(encryption_key.n.resize()).unwrap();
-
-                    // $c` >= 1$ so safe to perform a `.wrapping_sub()` here which will not overflow
-                    // After dividing a number $ x < N^2 $ by $N$2
-                    // we will get a number that is smaller than $N$, so we can safely `.split()`
-                    // and take the low part of the result.
-                    let (_, lo) = ((c_prime.wrapping_sub(&PaillierModulusSizedNumber::ONE))
-                        / paillier_n)
-                        .split();
-
-                    let paillier_n = encryption_key.n;
-
-                    (lo.as_ring_element(&paillier_n)
-                        * precomputed_values
-                            .four_n_factorial_cubed_inverse_mod_n
-                            .as_ring_element(&paillier_n))
-                    .as_natural_number()
-                },
-            )
-            .collect();
-
-        plaintexts
+                (lo.as_ring_element(&paillier_n)
+                    * precomputed_values
+                        .four_n_factorial_cubed_inverse_mod_n
+                        .as_ring_element(&paillier_n))
+                .as_natural_number()
+            },
+        )
+        .collect()
     }
 
     /// finalize the threshold decryption round by combining all decryption shares from the
@@ -435,9 +432,9 @@ impl DecryptionKeyShare {
             .collect();
 
         #[cfg(not(feature = "parallel"))]
-        let iter = decrypters.clone().into_iter();
+        let iter = decrypters.into_iter();
         #[cfg(feature = "parallel")]
-        let iter = decrypters.clone().into_par_iter();
+        let iter = decrypters.into_par_iter();
         let malicious_parties: Vec<u16> = iter
             .filter(|j| {
                 let public_verification_key = *public_verification_keys.get(j).unwrap();
