@@ -16,56 +16,6 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-fn batch_equation_side<
-    const LIMBS: usize,
-    const EXP_LIMBS: usize,
-    const COMPUTATIONAL_SECURITY_LIMBS: usize,
->(
-    bases: Vec<Vec<Uint<LIMBS>>>,
-    exponents: Vec<(Uint<EXP_LIMBS>, usize)>,
-    residue_params: DynResidueParams<LIMBS>,
-    randomizers: Vec<Uint<COMPUTATIONAL_SECURITY_LIMBS>>,
-) -> Uint<LIMBS> {
-    let number_of_columns = bases
-        .iter()
-        .map(|equation_bases| equation_bases.len())
-        .max()
-        .unwrap();
-
-    let batched_columns: Vec<DynResidue<LIMBS>> = (0..number_of_columns)
-        .map(|i| {
-            let bases_and_exponents: Vec<(Uint<LIMBS>, Uint<COMPUTATIONAL_SECURITY_LIMBS>)> = bases
-                .iter()
-                .map(|equation_bases| equation_bases.get(i).copied().unwrap_or(Uint::<LIMBS>::ONE))
-                .zip(randomizers.clone())
-                .collect();
-
-            let batched_column = DynResidue::new(
-                &multi_exponentiate(
-                    bases_and_exponents,
-                    Uint::<COMPUTATIONAL_SECURITY_LIMBS>::BITS,
-                    residue_params,
-                ),
-                residue_params,
-            );
-
-            if i < exponents.len() {
-                let (exponent, exponent_bits) = exponents.get(i).unwrap();
-
-                batched_column.pow_bounded_exp(exponent, *exponent_bits)
-            } else {
-                batched_column
-            }
-        })
-        .collect();
-
-    batched_columns
-        .into_iter()
-        .reduce(|a, b| a * b)
-        .unwrap()
-        .retrieve()
-}
-
 /// Performs batch verification of multiple equations.
 ///
 /// Returns `Ok(())` if (and `Err(())` otherwise):
@@ -120,6 +70,56 @@ pub fn batch_verification<
         return Ok(());
     }
     Err(Error::EquationsVerificationError())
+}
+
+fn batch_equation_side<
+    const LIMBS: usize,
+    const EXP_LIMBS: usize,
+    const COMPUTATIONAL_SECURITY_LIMBS: usize,
+>(
+    bases: Vec<Vec<Uint<LIMBS>>>,
+    exponents: Vec<(Uint<EXP_LIMBS>, usize)>,
+    residue_params: DynResidueParams<LIMBS>,
+    randomizers: Vec<Uint<COMPUTATIONAL_SECURITY_LIMBS>>,
+) -> Uint<LIMBS> {
+    let number_of_columns = bases
+        .iter()
+        .map(|equation_bases| equation_bases.len())
+        .max()
+        .unwrap();
+
+    let batched_columns: Vec<DynResidue<LIMBS>> = (0..number_of_columns)
+        .map(|i| {
+            let bases_and_exponents: Vec<(Uint<LIMBS>, Uint<COMPUTATIONAL_SECURITY_LIMBS>)> = bases
+                .iter()
+                .map(|equation_bases| equation_bases.get(i).copied().unwrap_or(Uint::<LIMBS>::ONE))
+                .zip(randomizers.clone())
+                .collect();
+
+            let batched_column = DynResidue::new(
+                &multi_exponentiate(
+                    bases_and_exponents,
+                    Uint::<COMPUTATIONAL_SECURITY_LIMBS>::BITS,
+                    residue_params,
+                ),
+                residue_params,
+            );
+
+            if i < exponents.len() {
+                let (exponent, exponent_bits) = exponents.get(i).unwrap();
+
+                batched_column.pow_bounded_exp(exponent, *exponent_bits)
+            } else {
+                batched_column
+            }
+        })
+        .collect();
+
+    batched_columns
+        .into_iter()
+        .reduce(|a, b| a * b)
+        .unwrap()
+        .retrieve()
 }
 
 #[cfg(test)]
