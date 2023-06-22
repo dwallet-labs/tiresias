@@ -4,11 +4,10 @@ use crypto_bigint::{
     modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, NonZero, RandomMod,
 };
 use merlin::Transcript;
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    batch_verification::batch_verification,
     multiexp::multi_exponentiate,
     proofs::{Error, Result, TranscriptProtocol},
     secret_key_share_size_upper_bound, AsNaturalNumber, AsRingElement,
@@ -166,6 +165,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         public_verification_key: PaillierModulusSizedNumber,
         // The decryption share $\ct_j=\ct^{2n!d_j}$
         decryption_share: PaillierModulusSizedNumber,
+        rng: &mut impl CryptoRngCore,
     ) -> Result<()> {
         let (base, public_verification_key, decryption_shares_and_bases, mut transcript) =
             Self::setup_protocol(
@@ -187,6 +187,7 @@ impl ProofOfEqualityOfDiscreteLogs {
             public_verification_key,
             *decryption_share,
             &mut transcript,
+            rng,
         )
     }
 
@@ -200,6 +201,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         public_verification_key: PaillierModulusSizedNumber,
         decryption_share: PaillierModulusSizedNumber,
         transcript: &mut Transcript,
+        rng: &mut impl CryptoRngCore,
     ) -> Result<()> {
         let witness_size_upper_bound =
             secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold));
@@ -212,7 +214,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // take e.g. g = N != 0 -> g^2 = N^2 mod N^2 = 0 (accepting this value would have allowed
         // bypassing of the proof).
         //
-        // For self.ciphertext_biquadrated_randomizer and self.base_squared_randomizer checking it
+        // For self.decryption_share_base_randomizer and self.base_randomizer checking it
         // is non-zero is sufficient and we don't have to check their in the
         // quadratic-residue group otherwise the proof verification formula will fail
         if base == PaillierModulusSizedNumber::ZERO
@@ -225,39 +227,48 @@ impl ProofOfEqualityOfDiscreteLogs {
             return Err(Error::InvalidParams());
         }
 
-        let base_squared_raised_to_the_response = base.as_ring_element(&n2).pow_bounded_exp(
-            &self.response,
-            witness_size_upper_bound + 2 * ComputationalSecuritySizedNumber::BITS,
-        );
-
-        let ciphertext_biquadrated_raised_to_the_response =
-            decryption_share_base.as_ring_element(&n2).pow_bounded_exp(
-                &self.response,
-                witness_size_upper_bound + 2 * ComputationalSecuritySizedNumber::BITS,
-            );
-
-        let challenge = Self::compute_challenge(
+        let challenge: ComputationalSecuritySizedNumber = Self::compute_challenge(
             self.base_randomizer,
             self.decryption_share_base_randomizer,
             transcript,
-        );
+        )
+        .resize();
 
-        let public_verification_key_squared_raised_to_the_challenge = public_verification_key
-            .as_ring_element(&n2)
-            .pow_bounded_exp(&challenge, ComputationalSecuritySizedNumber::BITS);
+        // We resize the challenge to be of equal size of the other exponent, the response, so we
+        // can use batched_verification().
+        let challenge: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = challenge.resize();
 
-        let decryption_share_squared_raised_to_the_challenge = decryption_share
-            .as_ring_element(&n2)
-            .pow_bounded_exp(&challenge, ComputationalSecuritySizedNumber::BITS);
+        let bases_lhs = vec![
+            vec![base, public_verification_key],
+            vec![decryption_share_base, decryption_share],
+        ];
 
-        if (base_squared_raised_to_the_response
-            * public_verification_key_squared_raised_to_the_challenge)
-            .as_natural_number()
-            == self.base_randomizer
-            && (ciphertext_biquadrated_raised_to_the_response
-                * decryption_share_squared_raised_to_the_challenge)
-                .as_natural_number()
-                == self.decryption_share_base_randomizer
+        let bases_rhs = vec![
+            vec![self.base_randomizer],
+            vec![self.decryption_share_base_randomizer],
+        ];
+
+        let exponents_lhs = vec![
+            (
+                self.response,
+                witness_size_upper_bound + 2 * ComputationalSecuritySizedNumber::BITS,
+            ),
+            (challenge, ComputationalSecuritySizedNumber::BITS),
+        ];
+
+        if batch_verification::<
+            { PaillierModulusSizedNumber::LIMBS },
+            { ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::LIMBS },
+            { ComputationalSecuritySizedNumber::LIMBS },
+        >(
+            bases_lhs,
+            bases_rhs,
+            exponents_lhs,
+            vec![],
+            DynResidueParams::new(&n2),
+            rng,
+        )
+        .is_ok()
         {
             return Ok(());
         }
@@ -333,11 +344,11 @@ impl ProofOfEqualityOfDiscreteLogs {
     }
 
     fn compute_challenge(
-        base_squared_randomizer: PaillierModulusSizedNumber,
+        base_randomizer: PaillierModulusSizedNumber,
         decryption_share_base_randomizer: PaillierModulusSizedNumber,
         transcript: &mut Transcript,
     ) -> ComputationalSecuritySizedNumber {
-        transcript.append_statement(b"The base randomizer $u=g^r$", &base_squared_randomizer);
+        transcript.append_statement(b"The base randomizer $u=g^r$", &base_randomizer);
         transcript.append_statement(
             b"The decryption share base randomizer $v=h^r$",
             &decryption_share_base_randomizer,
@@ -417,6 +428,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // are the ciphertexts to be decrypted and their matching decryption shares
         // ${\ct^i_j}_i = {{\tilde{h_i}^d}}_i$
         decryption_shares_and_bases: Vec<(PaillierModulusSizedNumber, PaillierModulusSizedNumber)>,
+        rng: &mut impl CryptoRngCore,
     ) -> Result<()> {
         let (
             base,
@@ -440,6 +452,7 @@ impl ProofOfEqualityOfDiscreteLogs {
             public_verification_key,
             batched_decryption_share,
             &mut transcript,
+            rng,
         )
     }
 
@@ -581,6 +594,7 @@ mod tests {
                 decryption_share_base,
                 public_verification_key,
                 decryption_share,
+                &mut OsRng
             )
             .is_ok());
     }
@@ -640,6 +654,7 @@ mod tests {
                 base,
                 public_verification_key,
                 decryption_shares_and_bases,
+                &mut OsRng
             )
             .is_ok());
 
@@ -682,6 +697,7 @@ mod tests {
                 base,
                 public_verification_key,
                 decryption_shares_and_bases,
+                &mut OsRng
             )
             .is_ok());
     }
@@ -728,6 +744,7 @@ mod tests {
                     decryption_share_base,
                     wrong_public_verification_key,
                     wrong_decryption_share,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -743,6 +760,7 @@ mod tests {
                     base,
                     wrong_public_verification_key,
                     vec![(decryption_share_base, wrong_decryption_share)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -784,6 +802,7 @@ mod tests {
                     decryption_share_base,
                     PaillierModulusSizedNumber::ZERO,
                     PaillierModulusSizedNumber::ZERO,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -799,6 +818,7 @@ mod tests {
                     base,
                     PaillierModulusSizedNumber::ZERO,
                     vec![(decryption_share_base, PaillierModulusSizedNumber::ZERO)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -826,6 +846,7 @@ mod tests {
                     decryption_share_base,
                     two_n,
                     two_n,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -841,6 +862,7 @@ mod tests {
                     base,
                     two_n,
                     vec![(decryption_share_base, two_n)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -883,6 +905,7 @@ mod tests {
                     decryption_share_base,
                     public_verification_key,
                     decryption_share,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -898,6 +921,7 @@ mod tests {
                     wrong_base,
                     public_verification_key,
                     vec![(decryption_share_base, decryption_share)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -914,6 +938,7 @@ mod tests {
                     wrong_decryption_share_base,
                     public_verification_key,
                     decryption_share,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -929,6 +954,7 @@ mod tests {
                     base,
                     public_verification_key,
                     vec![(wrong_decryption_share_base, decryption_share)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -945,6 +971,7 @@ mod tests {
                     decryption_share_base,
                     wrong_public_verification_key,
                     decryption_share,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -960,6 +987,7 @@ mod tests {
                     base,
                     wrong_public_verification_key,
                     vec![(decryption_share_base, decryption_share)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -976,6 +1004,7 @@ mod tests {
                     decryption_share_base,
                     public_verification_key,
                     wrong_decryption_share,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -991,6 +1020,7 @@ mod tests {
                     base,
                     public_verification_key,
                     vec![(decryption_share_base, wrong_decryption_share)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -1009,6 +1039,7 @@ mod tests {
                     decryption_share_base,
                     public_verification_key,
                     decryption_share,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -1026,6 +1057,7 @@ mod tests {
                     base,
                     public_verification_key,
                     vec![(decryption_share_base, decryption_share)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -1044,6 +1076,7 @@ mod tests {
                     decryption_share_base,
                     public_verification_key,
                     decryption_share,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -1061,6 +1094,7 @@ mod tests {
                     base,
                     public_verification_key,
                     vec![(decryption_share_base, decryption_share)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -1079,6 +1113,7 @@ mod tests {
                     decryption_share_base,
                     public_verification_key,
                     decryption_share,
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -1096,6 +1131,7 @@ mod tests {
                     base,
                     public_verification_key,
                     vec![(decryption_share_base, decryption_share)],
+                    &mut OsRng
                 )
                 .err()
                 .unwrap(),
@@ -1196,6 +1232,7 @@ mod benches {
                                 decryption_share_base,
                                 public_verification_key,
                                 decryption_share,
+                                &mut OsRng
                             )
                             .is_ok());
                     });
@@ -1269,7 +1306,8 @@ mod benches {
                                     threshold,
                                     base,
                                     public_verification_key,
-                                    decryption_shares_and_bases.clone()
+                                    decryption_shares_and_bases.clone(),
+                                    &mut OsRng
                                 )
                                 .is_ok());
                         });

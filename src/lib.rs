@@ -18,6 +18,7 @@ mod error;
 mod message;
 mod precomputed_values;
 
+mod batch_verification;
 mod multiexp;
 pub mod proofs;
 pub mod secret_sharing;
