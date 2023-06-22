@@ -1,8 +1,8 @@
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
+    rand_core::CryptoRngCore,
     Random, Uint,
 };
-use rand_core::CryptoRngCore;
 
 use crate::multiexp::multi_exponentiate;
 
