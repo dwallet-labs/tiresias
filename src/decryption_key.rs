@@ -30,7 +30,7 @@ impl DecryptionKey {
     /// `self.encryption_key.n`) - supplying a wrong ciphertext will return an undefined result.
     pub fn decrypt(&self, ciphertext: &PaillierModulusSizedNumber) -> LargeBiPrimeSizedNumber {
         let c = ciphertext.as_ring_element(&self.encryption_key.n2);
-        let n = NonZero::new(PaillierModulusSizedNumber::from(&self.encryption_key.n)).unwrap();
+        let n = NonZero::new(self.encryption_key.n.resize()).unwrap();
 
         // $ D(c,d)=\left(\frac{(c^{d}\mod(N^{2}))-1}{N}\right)\mod(N) $
         let (_, lo): (LargeBiPrimeSizedNumber, LargeBiPrimeSizedNumber) = (((c
