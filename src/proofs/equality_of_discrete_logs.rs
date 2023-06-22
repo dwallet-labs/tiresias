@@ -4,8 +4,6 @@ use crypto_bigint::{
     modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, NonZero, RandomMod,
 };
 use merlin::Transcript;
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
