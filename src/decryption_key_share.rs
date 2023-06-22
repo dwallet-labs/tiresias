@@ -385,6 +385,7 @@ impl DecryptionKeyShare {
     /// which can be performed by non-threshold-decryption parties.
     ///
     /// Note: `base` is assumed to be raised by `n!` as in `new()`.  
+    #[allow(clippy::too_many_arguments)]
     pub fn combine_decryption_shares(
         t: u16,
         n: u16,
