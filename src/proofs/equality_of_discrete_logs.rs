@@ -48,7 +48,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // The Paillier modulus
         n2: PaillierModulusSizedNumber,
         // The number of parties $n$
-        num_parties: u16,
+        number_of_parties: u16,
         // The threshold $t$
         threshold: u16,
         // Witness $x$ (the secret key share $d_j$ in threshold decryption)
@@ -75,7 +75,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         Self::prove_inner(
             n2,
-            num_parties,
+            number_of_parties,
             threshold,
             witness,
             base,
@@ -87,7 +87,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
     fn prove_inner(
         n2: PaillierModulusSizedNumber,
-        num_parties: u16,
+        number_of_parties: u16,
         threshold: u16,
         witness: SecretKeyShareSizedNumber,
         base: PaillierModulusSizedNumber,
@@ -95,8 +95,10 @@ impl ProofOfEqualityOfDiscreteLogs {
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
     ) -> ProofOfEqualityOfDiscreteLogs {
-        let witness_size_upper_bound =
-            secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold));
+        let witness_size_upper_bound = secret_key_share_size_upper_bound(
+            usize::from(number_of_parties),
+            usize::from(threshold),
+        );
 
         // TODO: can we do better? perhaps introduce a rand_bits() to crypto_bigint
         let randomizer = ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::random_mod(
@@ -153,7 +155,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // The Paillier modulus
         n2: PaillierModulusSizedNumber,
         // The number of parties $n$
-        num_parties: u16,
+        number_of_parties: u16,
         // The threshold $t$
         threshold: u16,
         // The base $\tilde{g}$
@@ -180,7 +182,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         self.verify_inner(
             n2,
-            num_parties,
+            number_of_parties,
             threshold,
             base,
             *decryption_share_base,
@@ -194,7 +196,7 @@ impl ProofOfEqualityOfDiscreteLogs {
     fn verify_inner(
         &self,
         n2: PaillierModulusSizedNumber,
-        num_parties: u16,
+        number_of_parties: u16,
         threshold: u16,
         base: PaillierModulusSizedNumber,
         decryption_share_base: PaillierModulusSizedNumber,
@@ -203,8 +205,10 @@ impl ProofOfEqualityOfDiscreteLogs {
         transcript: &mut Transcript,
         rng: &mut impl CryptoRngCore,
     ) -> Result<()> {
-        let witness_size_upper_bound =
-            secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold));
+        let witness_size_upper_bound = secret_key_share_size_upper_bound(
+            usize::from(number_of_parties),
+            usize::from(threshold),
+        );
 
         // Every square number except for zero that is not co-primed to $N^2$ yields factorization
         // of $N$, Therefore checking that a square number is not zero sufficiently assures
@@ -371,7 +375,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // Paillier modulus
         n2: PaillierModulusSizedNumber,
         // The number of parties $n$
-        num_parties: u16,
+        number_of_parties: u16,
         // The threshold $t$
         threshold: u16,
         // Witness $d$ (the secret key share in threshold decryption)
@@ -396,7 +400,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         Ok(Self::prove_inner(
             n2,
-            num_parties,
+            number_of_parties,
             threshold,
             witness,
             base,
@@ -417,7 +421,7 @@ impl ProofOfEqualityOfDiscreteLogs {
         // Paillier modulus
         n2: PaillierModulusSizedNumber,
         // The number of parties $n$
-        num_parties: u16,
+        number_of_parties: u16,
         // The threshold $t$
         threshold: u16,
         // Base $\tilde{g}$
@@ -445,7 +449,7 @@ impl ProofOfEqualityOfDiscreteLogs {
 
         self.verify_inner(
             n2,
-            num_parties,
+            number_of_parties,
             threshold,
             base,
             batched_decryption_share_base,
@@ -542,7 +546,7 @@ mod tests {
     #[test]
     fn valid_proof_verifies() {
         let n2 = N.square();
-        let num_parties = 3;
+        let number_of_parties = 3;
         let threshold = 2;
         let n_factorial: u8 = 2 * 3;
 
@@ -562,20 +566,26 @@ mod tests {
             .as_ring_element(&n2)
             .pow_bounded_exp(
                 &witness,
-                secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold)),
+                secret_key_share_size_upper_bound(
+                    usize::from(number_of_parties),
+                    usize::from(threshold),
+                ),
             )
             .as_natural_number();
         let decryption_share = decryption_share_base
             .as_ring_element(&n2)
             .pow_bounded_exp(
                 &witness,
-                secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold)),
+                secret_key_share_size_upper_bound(
+                    usize::from(number_of_parties),
+                    usize::from(threshold),
+                ),
             )
             .as_natural_number();
 
         let proof = ProofOfEqualityOfDiscreteLogs::prove(
             n2,
-            num_parties,
+            number_of_parties,
             threshold,
             witness,
             base,
@@ -588,7 +598,7 @@ mod tests {
         assert!(proof
             .verify(
                 n2,
-                num_parties,
+                number_of_parties,
                 threshold,
                 base,
                 decryption_share_base,
@@ -602,7 +612,7 @@ mod tests {
     #[test]
     fn valid_batched_proof_verifies() {
         let n2 = N.square();
-        let num_parties = 3;
+        let number_of_parties = 3;
         let threshold = 2;
         let n_factorial: u8 = 2 * 3;
 
@@ -621,14 +631,20 @@ mod tests {
             .as_ring_element(&n2)
             .pow_bounded_exp(
                 &witness,
-                secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold)),
+                secret_key_share_size_upper_bound(
+                    usize::from(number_of_parties),
+                    usize::from(threshold),
+                ),
             )
             .as_natural_number();
         let decryption_share = decryption_share_base
             .as_ring_element(&n2)
             .pow_bounded_exp(
                 &witness,
-                secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold)),
+                secret_key_share_size_upper_bound(
+                    usize::from(number_of_parties),
+                    usize::from(threshold),
+                ),
             )
             .as_natural_number();
 
@@ -636,7 +652,7 @@ mod tests {
 
         let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
             n2,
-            num_parties,
+            number_of_parties,
             threshold,
             witness,
             base,
@@ -649,7 +665,7 @@ mod tests {
         assert!(proof
             .batch_verify(
                 n2,
-                num_parties,
+                number_of_parties,
                 threshold,
                 base,
                 public_verification_key,
@@ -668,7 +684,10 @@ mod tests {
             .as_ring_element(&n2)
             .pow_bounded_exp(
                 &witness,
-                secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold)),
+                secret_key_share_size_upper_bound(
+                    usize::from(number_of_parties),
+                    usize::from(threshold),
+                ),
             )
             .as_natural_number();
 
@@ -679,7 +698,7 @@ mod tests {
 
         let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
             n2,
-            num_parties,
+            number_of_parties,
             threshold,
             witness,
             base,
@@ -692,7 +711,7 @@ mod tests {
         assert!(proof
             .batch_verify(
                 n2,
-                num_parties,
+                number_of_parties,
                 threshold,
                 base,
                 public_verification_key,
@@ -705,7 +724,7 @@ mod tests {
     #[test]
     fn invalid_proof_fails_verification() {
         let n2 = N.square();
-        let num_parties = 3;
+        let number_of_parties = 3;
         let threshold = 2;
         let n_factorial: u8 = 2 * 3;
 
@@ -738,7 +757,7 @@ mod tests {
             invalid_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     decryption_share_base,
@@ -755,7 +774,7 @@ mod tests {
             invalid_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     wrong_public_verification_key,
@@ -773,7 +792,10 @@ mod tests {
             .as_ring_element(&n2)
             .pow_bounded_exp(
                 &witness,
-                secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold)),
+                secret_key_share_size_upper_bound(
+                    usize::from(number_of_parties),
+                    usize::from(threshold),
+                ),
             )
             .as_natural_number();
 
@@ -781,7 +803,10 @@ mod tests {
             .as_ring_element(&n2)
             .pow_bounded_exp(
                 &witness,
-                secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold)),
+                secret_key_share_size_upper_bound(
+                    usize::from(number_of_parties),
+                    usize::from(threshold),
+                ),
             )
             .as_natural_number();
 
@@ -796,7 +821,7 @@ mod tests {
             crafted_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     decryption_share_base,
@@ -813,7 +838,7 @@ mod tests {
             crafted_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     PaillierModulusSizedNumber::ZERO,
@@ -840,7 +865,7 @@ mod tests {
             crafted_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     decryption_share_base,
@@ -857,7 +882,7 @@ mod tests {
             crafted_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     two_n,
@@ -872,7 +897,7 @@ mod tests {
         // Now generate a valid proof, and make sure that if we change any field it fails
         let valid_proof = ProofOfEqualityOfDiscreteLogs::prove(
             n2,
-            num_parties,
+            number_of_parties,
             threshold,
             witness,
             base,
@@ -884,7 +909,7 @@ mod tests {
 
         let valid_batched_proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
             n2,
-            num_parties,
+            number_of_parties,
             threshold,
             witness,
             base,
@@ -899,7 +924,7 @@ mod tests {
             valid_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     wrong_base,
                     decryption_share_base,
@@ -916,7 +941,7 @@ mod tests {
             valid_batched_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     wrong_base,
                     public_verification_key,
@@ -932,7 +957,7 @@ mod tests {
             valid_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     wrong_decryption_share_base,
@@ -949,7 +974,7 @@ mod tests {
             valid_batched_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     public_verification_key,
@@ -965,7 +990,7 @@ mod tests {
             valid_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     decryption_share_base,
@@ -982,7 +1007,7 @@ mod tests {
             valid_batched_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     wrong_public_verification_key,
@@ -998,7 +1023,7 @@ mod tests {
             valid_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     decryption_share_base,
@@ -1015,7 +1040,7 @@ mod tests {
             valid_batched_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     public_verification_key,
@@ -1033,7 +1058,7 @@ mod tests {
             invalid_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     decryption_share_base,
@@ -1052,7 +1077,7 @@ mod tests {
             invalid_batched_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     public_verification_key,
@@ -1070,7 +1095,7 @@ mod tests {
             invalid_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     decryption_share_base,
@@ -1089,7 +1114,7 @@ mod tests {
             invalid_batched_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     public_verification_key,
@@ -1107,7 +1132,7 @@ mod tests {
             invalid_proof
                 .verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     decryption_share_base,
@@ -1126,7 +1151,7 @@ mod tests {
             invalid_batched_proof
                 .batch_verify(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     base,
                     public_verification_key,
@@ -1158,9 +1183,11 @@ mod benches {
         let n = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
         let n2 = n.square();
 
-        for (threshold, num_parties) in [(6, 10), (67, 100), (667, 1000)] {
-            let witness_size_upper_bound =
-                secret_key_share_size_upper_bound(usize::from(num_parties), usize::from(threshold));
+        for (threshold, number_of_parties) in [(6, 10), (67, 100), (667, 1000)] {
+            let witness_size_upper_bound = secret_key_share_size_upper_bound(
+                usize::from(number_of_parties),
+                usize::from(threshold),
+            );
             let witness = ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::random_mod(
                 &mut OsRng,
                 &NonZero::new(
@@ -1189,12 +1216,12 @@ mod benches {
                 .as_natural_number();
 
             g.bench_function(
-                format!("equality of discrete logs prove() for {num_parties} parties"),
+                format!("equality of discrete logs prove() for {number_of_parties} parties"),
                 |bench| {
                     bench.iter(|| {
                         ProofOfEqualityOfDiscreteLogs::prove(
                             n2,
-                            num_parties,
+                            number_of_parties,
                             threshold,
                             witness,
                             base,
@@ -1209,7 +1236,7 @@ mod benches {
 
             let proof = ProofOfEqualityOfDiscreteLogs::prove(
                 n2,
-                num_parties,
+                number_of_parties,
                 threshold,
                 witness,
                 base,
@@ -1220,13 +1247,13 @@ mod benches {
             );
 
             g.bench_function(
-                format!("equality of discrete logs verify() for {num_parties} parties"),
+                format!("equality of discrete logs verify() for {number_of_parties} parties"),
                 |bench| {
                     bench.iter(|| {
                         assert!(proof
                             .verify(
                                 n2,
-                                num_parties,
+                                number_of_parties,
                                 threshold,
                                 base,
                                 decryption_share_base,
@@ -1264,12 +1291,12 @@ mod benches {
                     .collect();
 
                 g.bench_function(
-                    format!("equality of discrete logs batch_prove() for {batch_size} decryptions and {num_parties} parties"),
+                    format!("equality of discrete logs batch_prove() for {batch_size} decryptions and {number_of_parties} parties"),
                     |bench| {
                         bench.iter(|| {
                             ProofOfEqualityOfDiscreteLogs::batch_prove(
                                 n2,
-                                num_parties,
+                                number_of_parties,
                                 threshold,
                                 witness,
                                 base,
@@ -1283,7 +1310,7 @@ mod benches {
 
                 let batched_proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
                     n2,
-                    num_parties,
+                    number_of_parties,
                     threshold,
                     witness,
                     base,
@@ -1295,14 +1322,14 @@ mod benches {
 
                 g.bench_function(
                     format!(
-                        "equality of discrete logs batch_verify() for {batch_size} decryptions and {num_parties} parties"
+                        "equality of discrete logs batch_verify() for {batch_size} decryptions and {number_of_parties} parties"
                     ),
                     |bench| {
                         bench.iter(|| {
                             assert!(batched_proof
                                 .batch_verify(
                                     n2,
-                                    num_parties,
+                                    number_of_parties,
                                     threshold,
                                     base,
                                     public_verification_key,

@@ -46,21 +46,22 @@ pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::L
 pub(crate) type PaillierPlaintextRingElement = DynResidue<{ LargeBiPrimeSizedNumber::LIMBS }>;
 
 const fn secret_sharing_polynomial_coefficient_size_upper_bound(
-    num_parties: usize,
+    number_of_parties: usize,
     threshold: usize,
 ) -> usize {
-    factorial_upper_bound(num_parties)
+    factorial_upper_bound(number_of_parties)
         + 2 * const_log(threshold)
         + 1
         + PaillierModulusSizedNumber::BITS
         + StatisticalSecuritySizedNumber::BITS
-        + const_log(num_parties) // Account for summing up `num_parties` shamir shares (one from
-                                 // each party)
+        + const_log(number_of_parties) // Account for summing up `number_of_parties` shamir shares
+                                       // (one from
+                                       // each party)
 }
 
-const fn secret_key_share_size_upper_bound(num_parties: usize, threshold: usize) -> usize {
-    secret_sharing_polynomial_coefficient_size_upper_bound(num_parties, threshold)
-        + threshold * const_log(num_parties)
+const fn secret_key_share_size_upper_bound(number_of_parties: usize, threshold: usize) -> usize {
+    secret_sharing_polynomial_coefficient_size_upper_bound(number_of_parties, threshold)
+        + threshold * const_log(number_of_parties)
         + 1
 }
 
@@ -78,16 +79,21 @@ const fn const_log(n: usize) -> usize {
     counter
 }
 
-const fn factorial_upper_bound(num_parties: usize) -> usize {
+const fn factorial_upper_bound(number_of_parties: usize) -> usize {
     // See https://math.stackexchange.com/questions/55709/how-to-prove-this-approximation-of-logarithm-of-factorial
     // This expands to $(n+1)log(n+1) - n$ when further bounding $e$ to its floor $2$.
-    (num_parties + 1) * const_log(num_parties + 1) - num_parties
+    (number_of_parties + 1) * const_log(number_of_parties + 1) - number_of_parties
 }
 
-const fn adjusted_lagrange_coefficient_sized_number(num_parties: usize, threshold: usize) -> usize {
+const fn adjusted_lagrange_coefficient_sized_number(
+    number_of_parties: usize,
+    threshold: usize,
+) -> usize {
     // An upper bound for:
     //  $ 2{n\choose j}\Pi_{j'\in [n] \setminus S} |j'-j| $
-    (num_parties - threshold) * const_log(num_parties) + 4 * num_parties + 2 * threshold
+    (number_of_parties - threshold) * const_log(number_of_parties)
+        + 4 * number_of_parties
+        + 2 * threshold
 }
 
 pub const MAX_PLAYERS: usize = 1024;
