@@ -655,7 +655,7 @@ mod tests {
             .collect();
 
         let base = decryption_key_shares
-            .get(&decrypters.first().unwrap())
+            .get(decrypters.first().unwrap())
             .unwrap()
             .base;
 
