@@ -6,6 +6,7 @@ on:
 jobs:
   benchmarks:
     name: Benchmarks
+    timeout-minutes: 10080
     runs-on: self-hosted
     steps:
       - name: Checkout repository
