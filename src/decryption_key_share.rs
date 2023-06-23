@@ -137,7 +137,6 @@ impl DecryptionKeyShare {
             let (decryption_share_base, decryption_share) =
                 decryption_shares_and_bases.get(0).unwrap();
 
-            // TODO: add SID, PID?
             let proof = ProofOfEqualityOfDiscreteLogs::prove(
                 n2,
                 self.number_of_parties,
@@ -802,12 +801,12 @@ mod benches {
 
     use super::*;
     use crate::{
-        adjusted_lagrange_coefficient_sized_number, secret_sharing::shamir::Polynomial,
-        secret_sharing_polynomial_coefficient_size_upper_bound, LargeBiPrimeSizedNumber,
+        secret_sharing::shamir::Polynomial, secret_sharing_polynomial_coefficient_size_upper_bound,
+        LargeBiPrimeSizedNumber,
     };
 
     pub(crate) fn benchmark_decryption_share(c: &mut Criterion) {
-        let mut g = c.benchmark_group("decryption key share's decryption_share()");
+        let mut g = c.benchmark_group("decryption_share()");
         g.sample_size(10);
 
         let n = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
@@ -816,7 +815,7 @@ mod benches {
 
         for number_of_parties in [10, 100, 1000] {
             let precomputed_values = PrecomputedValues::new(number_of_parties, n);
-            for batch_size in [1, 10, 100, 1000] {
+            for batch_size in [1, 10, 100, 1000, 10000] {
                 let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
                     LargeBiPrimeSizedNumber::random_mod(&mut OsRng, &NonZero::new(n).unwrap())
                 })
@@ -859,23 +858,17 @@ mod benches {
     }
 
     pub(crate) fn benchmark_combine_decryption_shares(c: &mut Criterion) {
-        let mut g = c.benchmark_group("decryption key share's combine_decryption_shares()");
+        let mut g = c.benchmark_group("combine_decryption_shares()");
         g.sample_size(10);
 
         let n = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
         let secret_key = PaillierModulusSizedNumber::from_be_hex("19d698592b9ccb2890fb84be46cd2b18c360153b740aeccb606cf4168ee2de399f05273182bf468978508a5f4869cb867b340e144838dfaf4ca9bfd38cd55dc2837688aed2dbd76d95091640c47b2037d3d0ca854ffb4c84970b86f905cef24e876ddc8ab9e04f2a5f171b9c7146776c469f0d90908aa436b710cf4489afc73cd3ee38bb81e80a22d5d9228b843f435c48c5eb40088623a14a12b44e2721b56625da5d56d257bb27662c6975630d51e8f5b930d05fc5ba461a0e158cbda0f3266408c9bf60ff617e39ae49e707cbb40958adc512f3b4b69a5c3dc8b6d34cf45bc9597840057438598623fb65254869a165a6030ec6bec12fd59e192b3c1eefd33ef5d9336e0666aa8f36c6bd2749f86ea82290488ee31bf7498c2c77a8900bae00efcff418b62d41eb93502a245236b89c241ad6272724858122a2ebe1ae7ec4684b29048ba25b3a516c281a93043d58844cf3fa0c6f1f73db5db7ecba179652349dea8df5454e0205e910e0206736051ac4b7c707c3013e190423532e907af2e85e5bb6f6f0b9b58257ca1ec8b0318dd197f30352a96472a5307333f0e6b83f4f775fb302c1e10f21e1fcbfff17e3a4aa8bb6f553d9c6ebc2c884ae9b140dd66f21afc8610418e9f0ba2d14ecfa51ff08744a3470ebe4bb21bd6d65b58ac154630b8331ea620673ffbabb179a971a6577c407a076654a629c7733836c250000");
         let base: PaillierModulusSizedNumber = PaillierModulusSizedNumber::from_be_hex("03B4EFB895D3A85104F1F93744F9DB8924911747DE87ACEC55F1BF37C4531FD7F0A5B498A943473FFA65B89A04FAC2BBDF76FF14D81EB0A0DAD7414CF697E554A93C8495658A329A1907339F9438C1048A6E14476F9569A14BD092BCB2730DCE627566808FD686008F46A47964732DC7DCD2E6ECCE83F7BCCAB2AFDF37144ED153A118B683FF6A3C6971B08DE53DA5D2FEEF83294C21998FC0D1E219A100B6F57F2A2458EA9ABCFA8C5D4DF14B286B71BF5D7AD4FFEEEF069B64E0FC4F1AB684D6B2F20EAA235892F360AA2ECBF361357405D77E5023DF7BEDC12F10F6C35F3BE1163BC37B6C97D62616260A2862F659EB1811B1DDA727847E810D0C2FA120B18E99C9008AA4625CF1862460F8AB3A41E3FDB552187E0408E60885391A52EE2A89DD2471ECBA0AD922DEA0B08474F0BED312993ECB90C90C0F44EF267124A6217BC372D36F8231EB76B0D31DDEB183283A46FAAB74052A01F246D1C638BC00A47D25978D7DF9513A99744D8B65F2B32E4D945B0BA3B7E7A797604173F218D116A1457D20A855A52BBD8AC15679692C5F6AC4A8AF425370EF1D4184322F317203BE9678F92BFD25C7E6820D70EE08809424720249B4C58B81918DA02CFD2CAB3C42A02B43546E64430F529663FCEFA51E87E63F0813DA52F3473506E9E98DCD3142D830F1C1CDF6970726C190EAE1B5D5A26BC30857B4DF639797895E5D61A5EE");
+        let plaintext: LargeBiPrimeSizedNumber = LargeBiPrimeSizedNumber::from_be_hex("23f6379f4b0435dd50c0eb12454495c99db09aed97fe498c0dba7c51f6c52ab7b8d8ba47896ee0c43d567a1b3611cb2d53ee74574acc9c4520106c0f6e5d0376817febb477bb729405387b6ae6e213b3b34c0eb0cbe5dff49452979ab7f0b514560b5c9b659732efd0d67a3d7b7512a5d97f1bde1c2263f741838a7c62d78133396715c9568c0524e20a3147cda4510ef2f32cefa6fb92caf3a26da63aba3693efce706303fe399b6c86664b1ccaa9fe6e1505d82c4dd9b0a60ea29ec88a91bf2656a3927ad39d561bfe4009f94398a9a7782383f063adeb922275efd950ef3739dee7854bbf93f939a947e3aec7344135e6b0623aff35e802311c10ede8b0d4");
+        let ciphertext: PaillierModulusSizedNumber = PaillierModulusSizedNumber::from_be_hex("0d1a2a781bf90133552b120beb2745bbe02b47cc4e5cc65b6eb5294770bd44b52ce581c4aec199687283360ab0c46bb3f0bb33733dbbf2d7e95a7c600ed20e990e8c3133f7ec238c0b47882363df7748757717443a3d1f9e85f0fb27e665844f591a0f922f42436688a72a71bdf7e93c764a84aff5b813c034787f5cf35a7102fe3be8c670ac26b83b08dabca47d9156ce09d7349ac73d269b7355d5266720654b83b09857add1a6c0be4677115f461ea15907e1472d3d7dcde351f9eff7e43968ae7012a67eeca940c25d3dd5694c5bbf1ed702bfd2094e424bb17bbf00270ded29320cd2e50af2283121ecf5f8593de49b18e465f3b1e1a39daca4d7382e4a610bdbd21dfd343108085b6e2c743f295df3785d3766b56c36efc0ea10ba3de8c16c43fcc051e7c27d835a481c0fdd48819ca9398043689027b00b275ca048018788a5133b280981afb0d6da7e64f3cf5f9e39e501fe7b80807b872ece22f6e4b6b0d8279656ceef614c87ce7ee314a339ef44c3adc4f5e5451b2649c215a358c0682095e19d52ed454d5f4e364397928996823cb02c61f8304561cb21e3bd0f4399f283b0b1ded686ace5dc653b240760c6437323fab45418b904d2eef8ab0639b4cba7cccee58f471413505ca0f8bb5a859769ad9465ddac949d22114cacaeadb72962816c49f50adc6338da7a54bdda29f8e6e667d832bd9c9f9841be8b18");
         let encryption_key = &EncryptionKey::new(n);
 
         for (threshold, number_of_parties) in [(6, 10), (67, 100), (667, 1000)] {
-            println!(
-                "adjusted_lagrange_coefficient_sized_number({number_of_parties}): {:?}",
-                adjusted_lagrange_coefficient_sized_number(
-                    usize::from(number_of_parties),
-                    usize::from(threshold)
-                )
-            );
-
             let precomputed_values = PrecomputedValues::new(number_of_parties, n);
             // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of
             // the DKG.
@@ -926,8 +919,6 @@ mod benches {
                 })
                 .collect();
 
-            println!("Evaluating secret key shares");
-
             let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = decrypters
                 .into_par_iter()
                 .map(|j| {
@@ -958,32 +949,7 @@ mod benches {
                     })
                     .collect();
 
-            for batch_size in [1, 10, 100, 1000] {
-                let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
-                    LargeBiPrimeSizedNumber::random_mod(&mut OsRng, &NonZero::new(n).unwrap())
-                })
-                .take(batch_size)
-                .collect();
-
-                let ciphertexts: Vec<PaillierModulusSizedNumber> = plaintexts
-                    .iter()
-                    .map(|m| encryption_key.encrypt(m, &mut OsRng))
-                    .collect();
-
-                println!("Generating decryption key shares");
-
-                let messages: HashMap<u16, Message> = decryption_key_shares
-                    .par_iter()
-                    .map(|(j, decryption_key_share)| {
-                        (
-                            *j,
-                            decryption_key_share
-                                .generate_decryption_shares(ciphertexts.clone(), &mut OsRng)
-                                .unwrap(),
-                        )
-                    })
-                    .collect();
-
+            for batch_size in [1, 10, 100, 1000, 10000] {
                 let base = base
                     .as_ring_element(&encryption_key.n2)
                     .pow_bounded_exp(
@@ -992,9 +958,82 @@ mod benches {
                     )
                     .as_natural_number();
 
+                let plaintexts: Vec<LargeBiPrimeSizedNumber> = vec![plaintext; batch_size];
+                let ciphertexts: Vec<PaillierModulusSizedNumber> = vec![ciphertext; batch_size];
+                let decryption_share_base = ciphertext
+                    .as_ring_element(&encryption_key.n2)
+                    .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
+                    .pow_bounded_exp(
+                        &precomputed_values.n_factorial,
+                        factorial_upper_bound(usize::from(number_of_parties)),
+                    )
+                    .as_natural_number();
+
+                let messages: HashMap<u16, Message> = decryption_key_shares
+                    .par_iter()
+                    .map(|(j, decryption_key_share)| {
+                        // Generating this via `generate_decryption_shares` for all parties is too
+                        // slow, so we're optimizing by doing `batch_size` decryptions over the same
+                        // ciphertexts `combine_decryption_shares` has no
+                        // knowledge of this and does not take advantage of this, so results should
+                        // stay the same.
+                        let decryption_share = decryption_share_base
+                            .as_ring_element(&encryption_key.n2)
+                            .pow_bounded_exp(
+                                &decryption_key_share.decryption_key_share,
+                                secret_key_share_size_upper_bound(
+                                    usize::from(number_of_parties),
+                                    usize::from(threshold),
+                                ),
+                            )
+                            .as_natural_number();
+
+                        let decryption_shares = vec![decryption_share; batch_size];
+
+                        let decryption_shares_and_bases: Vec<(
+                            PaillierModulusSizedNumber,
+                            PaillierModulusSizedNumber,
+                        )> = vec![(decryption_share_base, decryption_share); batch_size];
+
+                        let proof = if batch_size == 1 {
+                            ProofOfEqualityOfDiscreteLogs::prove(
+                                encryption_key.n2,
+                                number_of_parties,
+                                threshold,
+                                decryption_key_share.decryption_key_share,
+                                decryption_key_share.base,
+                                decryption_share_base,
+                                decryption_key_share.public_verification_key,
+                                decryption_share,
+                                &mut OsRng,
+                            )
+                        } else {
+                            ProofOfEqualityOfDiscreteLogs::batch_prove(
+                                encryption_key.n2,
+                                number_of_parties,
+                                threshold,
+                                decryption_key_share.decryption_key_share,
+                                decryption_key_share.base,
+                                decryption_key_share.public_verification_key,
+                                decryption_shares_and_bases,
+                                &mut OsRng,
+                            )
+                            .unwrap()
+                        };
+
+                        (
+                            *j,
+                            Message {
+                                decryption_shares,
+                                proof,
+                            },
+                        )
+                    })
+                    .collect();
+
                 g.bench_function(
                     format!(
-                        "semi-honest combine_decryption_shares(): {batch_size} decryptions with {threshold}-out-of-{number_of_parties} parties"
+                        "semi-honest: {batch_size} decryptions with {threshold}-out-of-{number_of_parties} parties"
                     ),
                     |bench| {
                         bench.iter(|| {
@@ -1014,7 +1053,7 @@ mod benches {
 
                 g.bench_function(
                     format!(
-                        "maliciously-secure combine_decryption_shares(): {batch_size} decryptions with {threshold}-out-of-{number_of_parties} parties"
+                        "maliciously-secure: {batch_size} decryptions with {threshold}-out-of-{number_of_parties} parties"
                     ),
                     |bench| {
                         bench.iter(|| {
