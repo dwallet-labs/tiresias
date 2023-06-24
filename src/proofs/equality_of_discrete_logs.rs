@@ -1272,7 +1272,7 @@ mod benches {
                 },
             );
 
-            for batch_size in [10, 100, 1000, 10000] {
+            for batch_size in [10, 100, 1000] {
                 let decryption_share_bases = iter::repeat_with(|| {
                     PaillierModulusSizedNumber::random_mod(&mut OsRng, &NonZero::new(n2).unwrap())
                         .as_ring_element(&n2)
