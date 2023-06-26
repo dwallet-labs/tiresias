@@ -2,6 +2,8 @@
 name = "threshold-paillier"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
+license-file = "LICENSE"
 
 [dependencies]
 crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "24bfae5", features = ["rand_core", "serde"], default-features = false }
