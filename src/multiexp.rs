@@ -1,14 +1,13 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto_bigint::{
-    Limb,
-    modular::runtime_mod::{DynResidue, DynResidueParams},
-    subtle::{ConditionallySelectable, ConstantTimeEq}, Uint, Word,
-};
-
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_multiexp;
+use crypto_bigint::{
+    modular::runtime_mod::{DynResidue, DynResidueParams},
+    subtle::{ConditionallySelectable, ConstantTimeEq},
+    Limb, Uint, Word,
+};
 
 /// Performs constant-time modular multi-exponentiation using Montgomery's ladder.
 /// `exponent_bits` represents the number of bits to take into account for the exponent.
@@ -165,9 +164,8 @@ mod benches {
     use crypto_bigint::Random;
     use rand_core::OsRng;
 
-    use crate::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
-
     use super::*;
+    use crate::{LargeBiPrimeSizedNumber, PaillierModulusSizedNumber};
 
     pub(crate) fn benchmark_multiexp(c: &mut Criterion) {
         let mut g = c.benchmark_group("multi-exponentiation");

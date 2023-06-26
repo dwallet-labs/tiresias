@@ -6,22 +6,21 @@ use std::{
     ops::Neg,
 };
 
-use crypto_bigint::{modular::runtime_mod::DynResidueParams, NonZero, rand_core::CryptoRngCore};
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::{benchmark_combine_decryption_shares, benchmark_decryption_share};
+use crypto_bigint::{modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, NonZero};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-#[cfg(feature = "benchmarking")]
-pub(crate) use benches::{benchmark_combine_decryption_shares, benchmark_decryption_share};
-
 use crate::{
-    AdjustedLagrangeCoefficientSizedNumber,
-    AsNaturalNumber,
-    AsRingElement,
-    EncryptionKey,
     error::{ProtocolError, SanityCheckError},
-    Error, factorial_upper_bound, LargeBiPrimeSizedNumber,
-    MAX_PLAYERS, Message, multiexp::multi_exponentiate, PaillierModulusSizedNumber, precomputed_values::PrecomputedValues,
-    proofs::ProofOfEqualityOfDiscreteLogs, Result, secret_key_share_size_upper_bound, SecretKeyShareSizedNumber,
+    factorial_upper_bound,
+    multiexp::multi_exponentiate,
+    precomputed_values::PrecomputedValues,
+    proofs::ProofOfEqualityOfDiscreteLogs,
+    secret_key_share_size_upper_bound, AdjustedLagrangeCoefficientSizedNumber, AsNaturalNumber,
+    AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, Message,
+    PaillierModulusSizedNumber, Result, SecretKeyShareSizedNumber, MAX_PLAYERS,
 };
 
 #[derive(Clone)]
@@ -389,7 +388,7 @@ impl DecryptionKeyShare {
     /// This is an associated function and not a method for there is a public operation
     /// which can be performed by non-threshold-decryption parties.
     ///
-    /// Note: `base` is assumed to be raised by `n!` as in `new()`.  
+    /// Note: `base` is assumed to be raised by `n!` as in `new()`.
     #[allow(clippy::too_many_arguments)]
     pub fn combine_decryption_shares<Rng: CryptoRngCore + Send + Sync + Clone>(
         threshold: u16,
@@ -517,14 +516,13 @@ mod tests {
     use rand_core::OsRng;
     use rstest::rstest;
 
+    use super::*;
     use crate::{
-        LargeBiPrimeSizedNumber,
         secret_sharing::shamir::Polynomial,
         secret_sharing_polynomial_coefficient_size_upper_bound,
         tests::{BASE, CIPHERTEXT, N, N2, SECRET_KEY, WITNESS},
+        LargeBiPrimeSizedNumber,
     };
-
-    use super::*;
 
     #[test]
     fn generates_decryption_share() {
@@ -804,12 +802,11 @@ mod benches {
     use rand_core::OsRng;
     use rayon::iter::IntoParallelIterator;
 
-    use crate::{
-        LargeBiPrimeSizedNumber, secret_sharing::shamir::Polynomial,
-        secret_sharing_polynomial_coefficient_size_upper_bound,
-    };
-
     use super::*;
+    use crate::{
+        secret_sharing::shamir::Polynomial, secret_sharing_polynomial_coefficient_size_upper_bound,
+        LargeBiPrimeSizedNumber,
+    };
 
     pub(crate) fn benchmark_decryption_share(c: &mut Criterion) {
         let mut g = c.benchmark_group("decryption_share()");
