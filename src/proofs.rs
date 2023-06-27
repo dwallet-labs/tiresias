@@ -1,3 +1,6 @@
+// Author: dWallet Labs, Ltd.
+// SPDX-License-Identifier: Apache-2.0
+
 use crypto_bigint::{Encoding, Limb, Uint};
 #[cfg(feature = "benchmarking")]
 pub(crate) use equality_of_discrete_logs::benchmark_proof_of_equality_of_discrete_logs;

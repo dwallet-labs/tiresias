@@ -1,3 +1,6 @@
+// Author: dWallet Labs, Ltd.
+// SPDX-License-Identifier: Apache-2.0
+
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
     #[error("The following protocol error occurred: {0}")]

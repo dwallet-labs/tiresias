@@ -1,3 +1,6 @@
+// Author: dWallet Labs, Ltd.
+// SPDX-License-Identifier: Apache-2.0
+
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_multiexp;
 use crypto_bigint::{

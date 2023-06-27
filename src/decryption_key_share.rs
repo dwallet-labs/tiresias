@@ -1,3 +1,6 @@
+// Author: dWallet Labs, Ltd.
+// SPDX-License-Identifier: Apache-2.0
+
 use std::{
     collections::{HashMap, HashSet},
     ops::Neg,
@@ -385,7 +388,7 @@ impl DecryptionKeyShare {
     /// This is an associated function and not a method for there is a public operation
     /// which can be performed by non-threshold-decryption parties.
     ///
-    /// Note: `base` is assumed to be raised by `n!` as in `new()`.  
+    /// Note: `base` is assumed to be raised by `n!` as in `new()`.
     #[allow(clippy::too_many_arguments)]
     pub fn combine_decryption_shares<Rng: CryptoRngCore + Send + Sync + Clone>(
         threshold: u16,
