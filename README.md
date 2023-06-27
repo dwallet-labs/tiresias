@@ -1,6 +1,6 @@
 # Tiresias: Scalable, Maliciously Secure Threshold Paillier
 
-A pure-Rust implementation of the UC-secure "Tiresias: Large Scale, Maliciously Secure Threshold Paillier" paper by:
+A pure-Rust implementation of the UC-secure ["Tiresias: Large Scale, Maliciously Secure Threshold Paillier"](https://eprint.iacr.org/2023/998) paper by:
 
 - Offir Friedman (dWallet Labs)
 - Avichai Marmor (dWallet Labs)
@@ -19,9 +19,13 @@ That being said, this code has not been audited by a third party yet; use it at 
 ## Releases
 This code has no official releases as of yet, and we reserve ourselves the right to change some of the public API until then.
 
-## Setup & Running
+## Performance & Benchmarking
+Our code achieves unprecedented scale & performance, with a throughput of about **50 and 3.6 decryptions per _second_**, when run over a network of **100 and 1000 parties**, respectively.
+
+We have set up an automated GitHub action for benchmarking over an EC2 C6i machine, the result of which could be [viewed here](https://github.com/odsy-network/tiresias/actions/runs/5363804053/jobs/9731618097).
 
 With the `parallel` feature, we rely on [`rayon`](https://github.com/rayon-rs/rayon) for data parallelism, which, as
-shown theoretically in the paper and experimentally by our `benchmarking` feature, works extremely well in this scheme.
+shown theoretically in the paper and experimentally, works extremely well in this scheme.
 
+## Setup & Running
 See [Makefile](Makefile)
