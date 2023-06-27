@@ -13,7 +13,7 @@ A pure-Rust implementation of the UC-secure "Tiresias: Large Scale, Maliciously 
 This implementation relies on [`crypto_bigint`](https://github.com/RustCrypto/crypto-bigint) for constant-time big
 integer arithmetics whenever dealing with key material or any other secret information.  
 
-We have gone through a rigorous internal auditing process throughout development, requiring the approval of two more cryptographers and one more programmer in every pull request. 
+We have gone through a rigorous internal auditing process throughout development, requiring the approval of two additional cryptographers and one additional programmer in every pull request. 
 That being said, this code has not been audited by a third party yet; use it at your own risk. 
 
 ## Releases
