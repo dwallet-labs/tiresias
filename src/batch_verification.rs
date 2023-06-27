@@ -155,14 +155,12 @@ mod tests {
             U256::from_be_hex("0000000000000000000000000000000025B6BAD17FC578099DD91D1EE3E28454");
 
         let rhs_exponent1 = first_exponent
-            .resize()
-            .wrapping_mul(&s1.resize())
-            .wrapping_add(&second_exponent.resize().wrapping_mul(&t1.resize()));
+            .wrapping_mul(&s1)
+            .wrapping_add(&second_exponent.wrapping_mul(&t1));
 
         let rhs_exponent2 = first_exponent
-            .resize()
-            .wrapping_mul(&s2.resize())
-            .wrapping_add(&second_exponent.resize().wrapping_mul(&t2.resize()));
+            .wrapping_mul(&s2)
+            .wrapping_add(&second_exponent.wrapping_mul(&t2));
 
         let residue_params = DynResidueParams::new(&n);
         let g = DynResidue::new(&generator, residue_params);

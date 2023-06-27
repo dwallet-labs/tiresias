@@ -6,7 +6,7 @@ license = "Apache-2.0"
 license-file = "LICENSE"
 
 [dependencies]
-crypto-bigint = { git = "https://github.com/ycscaly/crypto-bigint.git", rev = "24bfae5", features = ["rand_core", "serde"], default-features = false }
+crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git", features = ["rand_core", "serde"], default-features = false }
 merlin = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.163", features = ["derive"] }
 thiserror = "1.0.40"
