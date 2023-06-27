@@ -1,3 +1,6 @@
+// Author: dWallet Labs, Ltd.
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize};
 
 use crate::{proofs::ProofOfEqualityOfDiscreteLogs, PaillierModulusSizedNumber};

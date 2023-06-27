@@ -1,3 +1,6 @@
+// Author: dWallet Labs, Ltd.
+// SPDX-License-Identifier: Apache-2.0
+
 #[cfg(feature = "benchmarking")]
 use criterion::criterion_group;
 use crypto_bigint::{

@@ -1,3 +1,6 @@
+// Author: dWallet Labs, Ltd.
+// SPDX-License-Identifier: Apache-2.0
+
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     rand_core::CryptoRngCore,
