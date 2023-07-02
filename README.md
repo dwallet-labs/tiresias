@@ -10,9 +10,12 @@ UC-secure ["Tiresias: Large Scale, Maliciously Secure Threshold Paillier"](https
 - Yuval Spiizer (dWallet Labs)
 - Avishay Yanai
 
-This is an implementation of the *threshold decryption* protocol only. For *distributed key generation*, a protocol like *Diogenes* ([paper](https://eprint.iacr.org/2020/374), [implementation](https://github.com/JustinDrake/LigeroRSA)) should be used. 
+This is an implementation of the *threshold decryption* protocol only. For *distributed key generation*, a protocol like
+*Diogenes* ([paper](https://eprint.iacr.org/2020/374), [implementation](https://github.com/JustinDrake/LigeroRSA))
+should be used.
 
-It is worth mentioning that we also support the *trusted dealer* setting for which one can see examples in our testing & benchmarking code that uses `secret_sharing/shamir` to deal a secret.
+It is worth mentioning that we also support the *trusted dealer* setting for which one can see examples in our testing &
+benchmarking code that uses `secret_sharing/shamir` to deal a secret.
 
 ## Security
 
