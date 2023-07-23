@@ -1,6 +1,5 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
-
 use std::{
     collections::{HashMap, HashSet},
     ops::Neg,
@@ -327,7 +326,8 @@ impl DecryptionKeyShare {
                 decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
                 decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
             )| {
-                let [c_prime_part_needing_inversion, c_prime_part_not_needing_ivnersion] = [
+                #[allow(clippy::tuple_array_conversions)]
+                let [c_prime_part_needing_inversion, c_prime_part_not_needing_inversion] = [
                     decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
                     decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
                 ]
@@ -343,7 +343,7 @@ impl DecryptionKeyShare {
                 });
 
                 let c_prime =
-                    c_prime_part_needing_inversion.invert().0 * c_prime_part_not_needing_ivnersion;
+                    c_prime_part_needing_inversion.invert().0 * c_prime_part_not_needing_inversion;
 
                 // $^2{\Pi_{j' \in S}j'}$
                 // This computation is independent of `j` so it could be done outside the loop
@@ -472,7 +472,7 @@ impl DecryptionKeyShare {
                     )> = decryption_share_bases
                         .clone()
                         .into_iter()
-                        .zip(message.decryption_shares.clone().into_iter())
+                        .zip(message.decryption_shares.clone())
                         .collect();
 
                     message
