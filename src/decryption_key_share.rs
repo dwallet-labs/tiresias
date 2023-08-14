@@ -1071,7 +1071,7 @@ mod benches {
                                     base,
                                     public_verification_keys.clone(),
                                     absolute_adjusted_lagrange_coefficients.clone(),
-                                    &mut OsRng
+                                    &OsRng
                                 )
                                 .unwrap();
 
