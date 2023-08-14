@@ -405,7 +405,7 @@ impl DecryptionKeyShare {
             u16,
             AdjustedLagrangeCoefficientSizedNumber,
         >,
-        rng: &mut Rng,
+        rng: &Rng,
     ) -> Result<Vec<LargeBiPrimeSizedNumber>> {
         let n2 = encryption_key.n2;
         let batch_size = ciphertexts.len();
@@ -785,7 +785,7 @@ mod tests {
                 base,
                 public_verification_keys,
                 absolute_adjusted_lagrange_coefficients,
-                &mut OsRng
+                &OsRng
             )
             .unwrap(),
         );
@@ -1071,7 +1071,7 @@ mod benches {
                                     base,
                                     public_verification_keys.clone(),
                                     absolute_adjusted_lagrange_coefficients.clone(),
-                                    &mut OsRng
+                                    &OsRng
                                 )
                                 .unwrap();
 
