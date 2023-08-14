@@ -785,7 +785,7 @@ mod tests {
                 base,
                 public_verification_keys,
                 absolute_adjusted_lagrange_coefficients,
-                &mut OsRng
+                &OsRng
             )
             .unwrap(),
         );
