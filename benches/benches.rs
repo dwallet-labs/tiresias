@@ -3,4 +3,4 @@
 
 use criterion::criterion_main;
 
-criterion_main!(threshold_paillier::benches);
+criterion_main!(tiresias::benches);
