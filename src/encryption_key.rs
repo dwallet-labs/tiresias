@@ -10,7 +10,7 @@ use crate::{
 
 /// A Paillier public encryption key, holding both the bi-prime `n` ($N=PQ$) and the Paillier
 /// modulus `n2` ($N^2$)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EncryptionKey {
     pub n: LargeBiPrimeSizedNumber,
     pub n2: PaillierModulusSizedNumber,
