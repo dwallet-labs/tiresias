@@ -137,7 +137,7 @@ impl DecryptionKeyShare {
 
         if decryption_shares_and_bases.len() == 1 {
             let (decryption_share_base, decryption_share) =
-                decryption_shares_and_bases.get(0).unwrap();
+                decryption_shares_and_bases.first().unwrap();
 
             let proof = ProofOfEqualityOfDiscreteLogs::prove(
                 n2,
@@ -449,8 +449,8 @@ impl DecryptionKeyShare {
                 let message = messages.get(party_id).unwrap();
 
                 if batch_size == 1 {
-                    let decryption_share_base = *decryption_share_bases.get(0).unwrap();
-                    let decryption_share = *message.decryption_shares.get(0).unwrap();
+                    let decryption_share_base = *decryption_share_bases.first().unwrap();
+                    let decryption_share = *message.decryption_shares.first().unwrap();
 
                     message
                         .proof
@@ -546,7 +546,7 @@ mod tests {
             .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
             .as_natural_number();
 
-        let decryption_share = *message.decryption_shares.get(0).unwrap();
+        let decryption_share = *message.decryption_shares.first().unwrap();
 
         let expected_decryption_share = decryption_share_base
             .as_ring_element(&N2)

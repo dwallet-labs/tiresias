@@ -49,6 +49,12 @@ impl DecryptionKey {
     }
 }
 
+impl AsRef<EncryptionKey> for DecryptionKey {
+    fn as_ref(&self) -> &EncryptionKey {
+        &self.encryption_key
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand_core::OsRng;
@@ -67,11 +73,5 @@ mod tests {
             .encryption_key
             .encrypt(&plaintext, &mut OsRng);
         assert_eq!(decryption_key.decrypt(&ciphertext), plaintext);
-    }
-}
-
-impl AsRef<EncryptionKey> for DecryptionKey {
-    fn as_ref(&self) -> &EncryptionKey {
-        &self.encryption_key
     }
 }
