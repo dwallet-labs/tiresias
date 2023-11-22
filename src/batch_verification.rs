@@ -4,10 +4,10 @@
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     rand_core::CryptoRngCore,
-    Random, Uint,
+    MultiExponentiateBoundedExp, Random, Uint,
 };
 
-use crate::multiexp::multi_exponentiate;
+use crate::PaillierRingElement;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
@@ -93,19 +93,20 @@ fn batch_equation_side<
 
     let batched_columns: Vec<DynResidue<LIMBS>> = (0..number_of_columns)
         .map(|i| {
-            let bases_and_exponents: Vec<(Uint<LIMBS>, Uint<COMPUTATIONAL_SECURITY_LIMBS>)> = bases
+            let bases_and_exponents: Vec<_> = bases
                 .iter()
-                .map(|equation_bases| equation_bases.get(i).copied().unwrap_or(Uint::<LIMBS>::ONE))
+                .map(|equation_bases| {
+                    DynResidue::new(
+                        &equation_bases.get(i).copied().unwrap_or(Uint::<LIMBS>::ONE),
+                        residue_params,
+                    )
+                })
                 .zip(randomizers.clone())
                 .collect();
 
-            let batched_column = DynResidue::new(
-                &multi_exponentiate(
-                    bases_and_exponents,
-                    Uint::<COMPUTATIONAL_SECURITY_LIMBS>::BITS,
-                    residue_params,
-                ),
-                residue_params,
+            let batched_column = DynResidue::multi_exponentiate_bounded_exp(
+                bases_and_exponents.as_slice(),
+                Uint::<COMPUTATIONAL_SECURITY_LIMBS>::BITS,
             );
 
             if i < exponents.len() {

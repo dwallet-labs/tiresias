@@ -7,19 +7,22 @@ use std::{
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::{benchmark_combine_decryption_shares, benchmark_decryption_share};
-use crypto_bigint::{modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, NonZero};
+use crypto_bigint::{
+    modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, MultiExponentiateBoundedExp,
+    NonZero,
+};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use crate::{
     error::{ProtocolError, SanityCheckError},
     factorial_upper_bound,
-    multiexp::multi_exponentiate,
     precomputed_values::PrecomputedValues,
     proofs::ProofOfEqualityOfDiscreteLogs,
     secret_key_share_size_upper_bound, AdjustedLagrangeCoefficientSizedNumber, AsNaturalNumber,
     AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, Message,
-    PaillierModulusSizedNumber, Result, SecretKeyShareSizedNumber, MAX_PLAYERS,
+    PaillierModulusSizedNumber, PaillierRingElement, Result, SecretKeyShareSizedNumber,
+    MAX_PLAYERS,
 };
 
 #[derive(Clone)]
@@ -338,8 +341,15 @@ impl DecryptionKeyShare {
                         .max()
                         .unwrap();
 
-                    multi_exponentiate(bases_and_exponents, exponent_bits, params)
-                        .as_ring_element(&n2)
+                    let bases_and_exponents: Vec<_> = bases_and_exponents
+                        .into_iter()
+                        .map(|(base, exponent)| (base.as_ring_element(&n2), exponent))
+                        .collect();
+
+                    PaillierRingElement::multi_exponentiate_bounded_exp(
+                        bases_and_exponents.as_slice(),
+                        exponent_bits,
+                    )
                 });
 
                 let c_prime =
