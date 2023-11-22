@@ -5,7 +5,7 @@ use crypto_bigint::NonZero;
 
 use crate::{
     AsNaturalNumber, AsRingElement, EncryptionKey, LargeBiPrimeSizedNumber,
-    PaillierModulusSizedNumber,
+    PaillierModulusSizedNumber, PaillierRingElement,
 };
 
 /// A paillier decryption key.
@@ -33,11 +33,14 @@ impl DecryptionKey {
     /// Performs no validation (that the `ciphertext` is a valid Paillier ciphertext encrypted for
     /// `self.encryption_key.n`) - supplying a wrong ciphertext will return an undefined result.
     pub fn decrypt(&self, ciphertext: &PaillierModulusSizedNumber) -> LargeBiPrimeSizedNumber {
-        let c = ciphertext.as_ring_element(&self.encryption_key.n2);
+        self.decrypt_inner(ciphertext.as_ring_element(&self.encryption_key.n2))
+    }
+
+    pub fn decrypt_inner(&self, ciphertext: PaillierRingElement) -> LargeBiPrimeSizedNumber {
         let n = NonZero::new(self.encryption_key.n.resize()).unwrap();
 
         // $ D(c,d)=\left(\frac{(c^{d}\mod(N^{2}))-1}{N}\right)\mod(N) $
-        let (_, lo): (LargeBiPrimeSizedNumber, LargeBiPrimeSizedNumber) = (((c
+        let (_, lo): (LargeBiPrimeSizedNumber, LargeBiPrimeSizedNumber) = (((ciphertext
             .pow(&self.secret_key)
             .as_natural_number()
             .wrapping_sub(&PaillierModulusSizedNumber::ONE))
@@ -46,6 +49,12 @@ impl DecryptionKey {
             .split();
 
         lo
+    }
+}
+
+impl AsRef<EncryptionKey> for DecryptionKey {
+    fn as_ref(&self) -> &EncryptionKey {
+        &self.encryption_key
     }
 }
 
@@ -67,11 +76,5 @@ mod tests {
             .encryption_key
             .encrypt(&plaintext, &mut OsRng);
         assert_eq!(decryption_key.decrypt(&ciphertext), plaintext);
-    }
-}
-
-impl AsRef<EncryptionKey> for DecryptionKey {
-    fn as_ref(&self) -> &EncryptionKey {
-        &self.encryption_key
     }
 }

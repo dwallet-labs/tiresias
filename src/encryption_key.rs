@@ -47,6 +47,22 @@ impl EncryptionKey {
         .as_natural_number()
     }
 
+    pub fn encrypt_with_randomness_inner(
+        &self,
+        plaintext: &LargeBiPrimeSizedNumber,
+        randomness: &LargeBiPrimeSizedNumber,
+    ) -> PaillierRingElement {
+        let n: PaillierRingElement = self.n.resize().as_ring_element(&self.n2);
+        let one: PaillierRingElement = PaillierModulusSizedNumber::ONE.as_ring_element(&self.n2);
+        let m: PaillierRingElement = plaintext.resize().as_ring_element(&self.n2);
+        let r: PaillierRingElement = randomness.resize().as_ring_element(&self.n2);
+
+        // $ c = (m*N + 1) * (r^N) mod N^2 $
+        (m * n + one) * // $ (m*N + 1) * $
+            r.pow_bounded_exp(&self.n, LargeBiPrimeSizedNumber::BITS)
+        // $ (r^N) $
+    }
+
     /// Encrypt `plaintext` to `self.n`.
     ///
     /// This is the probabilistic variant of the Paillier encryption scheme, that samples randomness
