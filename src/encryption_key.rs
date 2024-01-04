@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crypto_bigint::{rand_core::CryptoRngCore, Random};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber,
@@ -14,6 +15,26 @@ use crate::{
 pub struct EncryptionKey {
     pub n: LargeBiPrimeSizedNumber,
     pub n2: PaillierModulusSizedNumber,
+}
+
+impl Serialize for EncryptionKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.n.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for EncryptionKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let n = LargeBiPrimeSizedNumber::deserialize(deserializer)?;
+
+        Ok(Self::new(n))
+    }
 }
 
 impl EncryptionKey {
