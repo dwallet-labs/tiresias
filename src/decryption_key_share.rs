@@ -22,7 +22,7 @@ use crate::{
     MAX_PLAYERS,
 };
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecryptionKeyShare {
     pub party_id: u16,          // The party's index in the protocol $P_j$
     pub threshold: u16,         // The threshold $t$
