@@ -4,17 +4,17 @@
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::benchmark_proof_of_equality_of_discrete_logs;
 use crypto_bigint::{
-    modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, NonZero, RandomMod,
+    modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, MultiExponentiateBoundedExp,
+    NonZero, RandomMod,
 };
 use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     batch_verification::batch_verification,
-    multiexp::multi_exponentiate,
     proofs::{Error, Result, TranscriptProtocol},
     secret_key_share_size_upper_bound, AsNaturalNumber, AsRingElement,
-    ComputationalSecuritySizedNumber, PaillierModulusSizedNumber,
+    ComputationalSecuritySizedNumber, PaillierModulusSizedNumber, PaillierRingElement,
     ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber, SecretKeyShareSizedNumber,
 };
 
@@ -505,35 +505,31 @@ impl ProofOfEqualityOfDiscreteLogs {
             })
             .collect();
 
-        let bases_and_exponents: Vec<(
-            PaillierModulusSizedNumber,
-            ComputationalSecuritySizedNumber,
-        )> = decryption_shares_and_bases
+        let bases_and_exponents: Vec<_> = decryption_shares_and_bases
             .iter()
             .zip(randomizers.iter())
-            .map(|((a, _), c)| (*a, *c))
+            .map(|((a, _), c)| (a.as_ring_element(&n2), *c))
             .collect();
 
-        let batched_decryption_share_base: PaillierModulusSizedNumber = multi_exponentiate(
-            bases_and_exponents,
-            ComputationalSecuritySizedNumber::BITS,
-            DynResidueParams::new(&n2),
-        );
+        let batched_decryption_share_base: PaillierModulusSizedNumber =
+            PaillierRingElement::multi_exponentiate_bounded_exp(
+                bases_and_exponents.as_slice(),
+                ComputationalSecuritySizedNumber::BITS,
+            )
+            .as_natural_number();
 
-        let bases_and_exponents: Vec<(
-            PaillierModulusSizedNumber,
-            ComputationalSecuritySizedNumber,
-        )> = decryption_shares_and_bases
+        let bases_and_exponents: Vec<_> = decryption_shares_and_bases
             .iter()
             .zip(randomizers.iter())
-            .map(|((_, b), c)| (*b, *c))
+            .map(|((_, b), c)| (b.as_ring_element(&n2), *c))
             .collect();
 
-        let batched_decryption_share: PaillierModulusSizedNumber = multi_exponentiate(
-            bases_and_exponents,
-            ComputationalSecuritySizedNumber::BITS,
-            DynResidueParams::new(&n2),
-        );
+        let batched_decryption_share: PaillierModulusSizedNumber =
+            PaillierRingElement::multi_exponentiate_bounded_exp(
+                bases_and_exponents.as_slice(),
+                ComputationalSecuritySizedNumber::BITS,
+            )
+            .as_natural_number();
 
         Ok((
             base,

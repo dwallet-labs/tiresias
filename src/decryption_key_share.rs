@@ -7,19 +7,19 @@ use std::{
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::{benchmark_combine_decryption_shares, benchmark_decryption_share};
-use crypto_bigint::{modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, NonZero};
+use crypto_bigint::{rand_core::CryptoRngCore, MultiExponentiateBoundedExp, NonZero};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use crate::{
     error::{ProtocolError, SanityCheckError},
     factorial_upper_bound,
-    multiexp::multi_exponentiate,
     precomputed_values::PrecomputedValues,
     proofs::ProofOfEqualityOfDiscreteLogs,
     secret_key_share_size_upper_bound, AdjustedLagrangeCoefficientSizedNumber, AsNaturalNumber,
     AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, Message,
-    PaillierModulusSizedNumber, Result, SecretKeyShareSizedNumber, MAX_PLAYERS,
+    PaillierModulusSizedNumber, PaillierRingElement, Result, SecretKeyShareSizedNumber,
+    MAX_PLAYERS,
 };
 
 #[derive(Clone)]
@@ -254,12 +254,11 @@ impl DecryptionKeyShare {
         // integer:
         //      $2n!\lambda_{0,j}^{S}=2n!\Pi_{j'\in S\setminus\{j\}}\frac{j'}{j'-j}=\frac{2n!\Pi_{j'
         // \in [n]\setminus S}(j'-j)\Pi_{j'\in S\setminus{j}}j'}{\Pi_{j'\in [n]\setminus{j}}(j'-j)}$
-        // Or, more compcatly:
+        // Or, more compactly:
         //      $2n!\lambda_{0,j}^{S}=2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n] \setminus S}
         // (j'-j)\Pi_{j' \in S}j'$.
 
         let n2 = encryption_key.n2;
-        let params = DynResidueParams::new(&n2);
 
         let batch_size = ciphertexts.len();
         #[cfg(not(feature = "parallel"))]
@@ -363,8 +362,15 @@ impl DecryptionKeyShare {
                         .max()
                         .unwrap();
 
-                    multi_exponentiate(bases_and_exponents, exponent_bits, params)
-                        .as_ring_element(&n2)
+                    let bases_and_exponents: Vec<_> = bases_and_exponents
+                        .into_iter()
+                        .map(|(base, exponent)| (base.as_ring_element(&n2), exponent))
+                        .collect();
+
+                    PaillierRingElement::multi_exponentiate_bounded_exp(
+                        bases_and_exponents.as_slice(),
+                        exponent_bits,
+                    )
                 });
 
                 let c_prime =
