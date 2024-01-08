@@ -10,7 +10,7 @@ use crate::{
 
 /// A paillier decryption key.
 /// Holds both the `secret_key` and its corresponding `encryption_key`
-#[derive(PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecryptionKey {
     pub encryption_key: EncryptionKey,
     secret_key: PaillierModulusSizedNumber,
