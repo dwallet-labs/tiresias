@@ -27,7 +27,7 @@ pub struct DecryptionKeyShare {
     pub party_id: u16,          // The party's index in the protocol $P_j$
     pub threshold: u16,         // The threshold $t$
     pub number_of_parties: u16, // The number of parties $n$
-    encryption_key: EncryptionKey,
+    pub encryption_key: EncryptionKey,
     // The base $g$ for proofs of equality of discrete logs
     base: PaillierModulusSizedNumber,
     // The public verification key $v_j$ for proofs of equality of discrete logs
