@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use crate::{AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber, SecretKeyShareSizedNumber};
 
 /// This struct holds precomputed values that are computationally expensive to compute
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrecomputedValues {
     // A precomputed mapping of the party-id $j$ to the binomial coefficient ${n\choose j}$,
     pub(crate) factored_binomial_coefficients: HashMap<u16, SecretKeyShareSizedNumber>,
