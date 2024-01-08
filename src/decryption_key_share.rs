@@ -232,7 +232,7 @@ impl DecryptionKeyShare {
         // integer:
         //      $2n!\lambda_{0,j}^{S}=2n!\Pi_{j'\in S\setminus\{j\}}\frac{j'}{j'-j}=\frac{2n!\Pi_{j'
         // \in [n]\setminus S}(j'-j)\Pi_{j'\in S\setminus{j}}j'}{\Pi_{j'\in [n]\setminus{j}}(j'-j)}$
-        // Or, more compcatly:
+        // Or, more compactly:
         //      $2n!\lambda_{0,j}^{S}=2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n] \setminus S}
         // (j'-j)\Pi_{j' \in S}j'$.
 
