@@ -81,11 +81,25 @@ impl DecryptionKeyShare {
         }
     }
 
-    pub fn generate_decryption_shares(
+    pub fn generate_decryption_shares_semi_honest(
         &self,
         ciphertexts: Vec<PaillierModulusSizedNumber>,
         rng: &mut impl CryptoRngCore,
-    ) -> Result<Message> {
+    ) -> Result<Vec<PaillierModulusSizedNumber>> {
+        let (_, decryption_shares) =
+            self.generate_decryption_shares_semi_honest_internal(ciphertexts, rng)?;
+
+        Ok(decryption_shares)
+    }
+
+    fn generate_decryption_shares_semi_honest_internal(
+        &self,
+        ciphertexts: Vec<PaillierModulusSizedNumber>,
+        rng: &mut impl CryptoRngCore,
+    ) -> Result<(
+        Vec<PaillierModulusSizedNumber>,
+        Vec<PaillierModulusSizedNumber>,
+    )> {
         let n2 = self.encryption_key.n2;
 
         #[cfg(not(feature = "parallel"))]
@@ -111,7 +125,7 @@ impl DecryptionKeyShare {
         #[cfg(feature = "parallel")]
         let iter = decryption_share_bases.par_iter();
 
-        let decryption_shares: Vec<PaillierModulusSizedNumber> = iter
+        let decryption_shares = iter
             .map(|decryption_share_base| {
                 // $ c_i = c^{2n!d_i} $
                 decryption_share_base
@@ -126,6 +140,19 @@ impl DecryptionKeyShare {
                     .as_natural_number()
             })
             .collect();
+
+        Ok((decryption_share_bases, decryption_shares))
+    }
+
+    pub fn generate_decryption_shares(
+        &self,
+        ciphertexts: Vec<PaillierModulusSizedNumber>,
+        rng: &mut impl CryptoRngCore,
+    ) -> Result<Message> {
+        let n2 = self.encryption_key.n2;
+
+        let (decryption_share_bases, decryption_shares) =
+            self.generate_decryption_shares_semi_honest_internal(ciphertexts, rng)?;
 
         let decryption_shares_and_bases: Vec<(
             PaillierModulusSizedNumber,
