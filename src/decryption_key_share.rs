@@ -87,7 +87,7 @@ impl DecryptionKeyShare {
         rng: &mut impl CryptoRngCore,
     ) -> Result<Vec<PaillierModulusSizedNumber>> {
         let (_, decryption_shares) =
-            self.generate_decryption_shares_semi_honest_internal(ciphertexts, rng)?;
+            self.generate_decryption_shares_semi_honest_internal(ciphertexts)?;
 
         Ok(decryption_shares)
     }
@@ -95,7 +95,6 @@ impl DecryptionKeyShare {
     fn generate_decryption_shares_semi_honest_internal(
         &self,
         ciphertexts: Vec<PaillierModulusSizedNumber>,
-        rng: &mut impl CryptoRngCore,
     ) -> Result<(
         Vec<PaillierModulusSizedNumber>,
         Vec<PaillierModulusSizedNumber>,
@@ -152,7 +151,7 @@ impl DecryptionKeyShare {
         let n2 = self.encryption_key.n2;
 
         let (decryption_share_bases, decryption_shares) =
-            self.generate_decryption_shares_semi_honest_internal(ciphertexts, rng)?;
+            self.generate_decryption_shares_semi_honest_internal(ciphertexts)?;
 
         let decryption_shares_and_bases: Vec<(
             PaillierModulusSizedNumber,
