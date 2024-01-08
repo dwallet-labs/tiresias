@@ -1081,11 +1081,10 @@ mod benches {
                             let decrypted_ciphertexts =
                                 DecryptionKeyShare::combine_decryption_shares_semi_honest(
                                     encryption_key.clone(),
-                                    ciphertexts.clone(),
                                     messages.clone(),
                                     precomputed_values.clone(),
                                     absolute_adjusted_lagrange_coefficients.clone(),
-                                );
+                                ).unwrap();
 
                             assert_eq!(decrypted_ciphertexts, plaintexts);
                         });
