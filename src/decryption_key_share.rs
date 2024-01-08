@@ -238,14 +238,13 @@ impl DecryptionKeyShare {
 
     fn combine_decryption_shares_semi_honest(
         encryption_key: EncryptionKey,
-        ciphertexts: Vec<PaillierModulusSizedNumber>,
         messages: HashMap<u16, Message>,
         precomputed_values: PrecomputedValues,
         absolute_adjusted_lagrange_coefficients: HashMap<
             u16,
             AdjustedLagrangeCoefficientSizedNumber,
         >,
-    ) -> Vec<LargeBiPrimeSizedNumber> {
+    ) -> Result<Vec<LargeBiPrimeSizedNumber>> {
         // We can't calculate the lagrange coefficients using the standard equations involving
         // division, and division in the exponent in a ring requires knowing its order,
         // which we don't for the Paillier case because it is secret and knowing it implies
@@ -260,7 +259,14 @@ impl DecryptionKeyShare {
 
         let n2 = encryption_key.n2;
 
-        let batch_size = ciphertexts.len();
+        let batch_size = messages
+            .iter()
+            .next()
+            .ok_or(Error::SanityCheckError(SanityCheckError::InvalidParams()))?
+            .1
+            .decryption_shares
+            .len();
+
         #[cfg(not(feature = "parallel"))]
         let iter = 0..batch_size;
         #[cfg(feature = "parallel")]
@@ -294,7 +300,7 @@ impl DecryptionKeyShare {
 
         // Compute $c_j' = c_{j}^{2n!\lambda_{0,j}^{S}}=c_{j}^{2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n]
         // \setminus S} (j'-j)\Pi_{j' \in S}j'}$.
-        iter.map(|i| {
+        let plaintexts = iter.map(|i| {
             let decryption_shares_and_absolute_adjusted_lagrange_coefficients: Vec<(
                 u16,
                 PaillierModulusSizedNumber,
@@ -407,7 +413,9 @@ impl DecryptionKeyShare {
                 .as_natural_number()
             },
         )
-        .collect()
+        .collect();
+
+        Ok(plaintexts)
     }
 
     /// finalize the threshold decryption round by combining all decryption shares from the
@@ -528,13 +536,12 @@ impl DecryptionKeyShare {
             ));
         };
 
-        Ok(Self::combine_decryption_shares_semi_honest(
+        Self::combine_decryption_shares_semi_honest(
             encryption_key,
-            decryption_share_bases,
             messages,
             precomputed_values,
             absolute_adjusted_lagrange_coefficients,
-        ))
+        )
     }
 }
 
