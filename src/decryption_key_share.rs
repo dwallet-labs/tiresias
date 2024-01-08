@@ -7,10 +7,7 @@ use std::{
 
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::{benchmark_combine_decryption_shares, benchmark_decryption_share};
-use crypto_bigint::{
-    modular::runtime_mod::DynResidueParams, rand_core::CryptoRngCore, MultiExponentiateBoundedExp,
-    NonZero,
-};
+use crypto_bigint::{rand_core::CryptoRngCore, MultiExponentiateBoundedExp, NonZero};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -262,7 +259,6 @@ impl DecryptionKeyShare {
         // (j'-j)\Pi_{j' \in S}j'$.
 
         let n2 = encryption_key.n2;
-        let params = DynResidueParams::new(&n2);
 
         let batch_size = ciphertexts.len();
         #[cfg(not(feature = "parallel"))]

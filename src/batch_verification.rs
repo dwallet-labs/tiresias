@@ -7,8 +7,6 @@ use crypto_bigint::{
     MultiExponentiateBoundedExp, Random, Uint,
 };
 
-use crate::PaillierRingElement;
-
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
     #[error("Invalid Params")]
