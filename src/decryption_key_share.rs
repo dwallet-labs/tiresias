@@ -27,7 +27,7 @@ pub struct DecryptionKeyShare {
     pub party_id: u16,          // The party's index in the protocol $P_j$
     pub threshold: u16,         // The threshold $t$
     pub number_of_parties: u16, // The number of parties $n$
-    encryption_key: EncryptionKey,
+    pub encryption_key: EncryptionKey,
     // The base $g$ for proofs of equality of discrete logs
     base: PaillierModulusSizedNumber,
     // The public verification key $v_j$ for proofs of equality of discrete logs
@@ -236,9 +236,9 @@ impl DecryptionKeyShare {
             })
     }
 
-    fn combine_decryption_shares_semi_honest(
+    pub fn combine_decryption_shares_semi_honest(
         encryption_key: EncryptionKey,
-        messages: HashMap<u16, Message>,
+        decryption_shares: HashMap<u16, Vec<PaillierModulusSizedNumber>>,
         precomputed_values: PrecomputedValues,
         absolute_adjusted_lagrange_coefficients: HashMap<
             u16,
@@ -259,12 +259,11 @@ impl DecryptionKeyShare {
 
         let n2 = encryption_key.n2;
 
-        let batch_size = messages
+        let batch_size = decryption_shares
             .iter()
             .next()
             .ok_or(Error::SanityCheckError(SanityCheckError::InvalidParams()))?
             .1
-            .decryption_shares
             .len();
 
         #[cfg(not(feature = "parallel"))]
@@ -273,7 +272,7 @@ impl DecryptionKeyShare {
         let iter = (0..batch_size).into_par_iter();
 
         // The set $S$ of parties participating in the threshold decryption sessions
-        let decrypters: Vec<u16> = messages.clone().into_keys().collect();
+        let decrypters: Vec<u16> = decryption_shares.clone().into_keys().collect();
 
         let decrypters_requiring_inversion: Vec<u16> =
             decrypters
@@ -305,13 +304,13 @@ impl DecryptionKeyShare {
                 u16,
                 PaillierModulusSizedNumber,
                 AdjustedLagrangeCoefficientSizedNumber,
-            )> = messages
+            )> = decryption_shares
                 .clone()
                 .into_iter()
-                .map(|(party_id, message)| {
+                .map(|(party_id, decryption_shares)| {
                     (
                         party_id,
-                        *message.decryption_shares.get(i).unwrap(),
+                        *decryption_shares.get(i).unwrap(),
                         *absolute_adjusted_lagrange_coefficients
                             .get(&party_id)
                             .unwrap(),
@@ -536,9 +535,14 @@ impl DecryptionKeyShare {
             ));
         };
 
+        let decryption_shares = messages
+            .into_iter()
+            .map(|(party_id, message)| (party_id, message.decryption_shares))
+            .collect();
+
         Self::combine_decryption_shares_semi_honest(
             encryption_key,
-            messages,
+            decryption_shares,
             precomputed_values,
             absolute_adjusted_lagrange_coefficients,
         )
@@ -1072,6 +1076,12 @@ mod benches {
                     })
                     .collect();
 
+                let decryption_shares: HashMap<_, _> = messages
+                    .clone()
+                    .into_iter()
+                    .map(|(party_id, message)| (party_id, message.decryption_shares))
+                    .collect();
+
                 g.bench_function(
                     format!(
                         "semi-honest: {batch_size} decryptions with {threshold}-out-of-{number_of_parties} parties"
@@ -1081,7 +1091,7 @@ mod benches {
                             let decrypted_ciphertexts =
                                 DecryptionKeyShare::combine_decryption_shares_semi_honest(
                                     encryption_key.clone(),
-                                    messages.clone(),
+                                    decryption_shares.clone(),
                                     precomputed_values.clone(),
                                     absolute_adjusted_lagrange_coefficients.clone(),
                                 ).unwrap();

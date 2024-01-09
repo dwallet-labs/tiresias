@@ -1,7 +1,7 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum Error {
     #[error("The following protocol error occurred: {0}")]
     ProtocolError(ProtocolError),
@@ -9,13 +9,13 @@ pub enum Error {
     SanityCheckError(SanityCheckError),
 }
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum ProtocolError {
     #[error("The following parties {malicious_parties:?} behaved maliciously by submitting invalid proofs")]
     ProofVerificationError { malicious_parties: Vec<u16> },
 }
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum SanityCheckError {
     #[error("Invalid Params")]
     InvalidParams(),
