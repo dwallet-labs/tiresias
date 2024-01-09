@@ -157,8 +157,9 @@ impl AsRingElement<PaillierPlaintextRingElement> for LargeBiPrimeSizedNumber {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crypto_bigint::NonZero;
+    pub use decryption_key_share::tests::deal_trusted_decryption_key_shares;
     use rstest::rstest;
 
     use super::*;

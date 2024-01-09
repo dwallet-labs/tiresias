@@ -695,7 +695,7 @@ pub mod tests {
             .is_ok());
     }
 
-    pub fn deal_trusted_decryption_share(
+    pub fn deal_trusted_decryption_key_shares(
         t: u16,
         n: u16,
     ) -> (
@@ -817,7 +817,7 @@ pub mod tests {
             base,
             public_verification_keys,
             absolute_adjusted_lagrange_coefficients,
-        ) = deal_trusted_decryption_share(t, n);
+        ) = deal_trusted_decryption_key_shares(t, n);
 
         let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
             LargeBiPrimeSizedNumber::random_mod(
