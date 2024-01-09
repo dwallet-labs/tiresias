@@ -7,6 +7,6 @@ use crate::{proofs::ProofOfEqualityOfDiscreteLogs, PaillierModulusSizedNumber};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Message {
-    pub(crate) decryption_shares: Vec<PaillierModulusSizedNumber>,
-    pub(crate) proof: ProofOfEqualityOfDiscreteLogs,
+    pub decryption_shares: Vec<PaillierModulusSizedNumber>,
+    pub proof: ProofOfEqualityOfDiscreteLogs,
 }
