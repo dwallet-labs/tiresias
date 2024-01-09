@@ -29,9 +29,9 @@ pub struct DecryptionKeyShare {
     pub number_of_parties: u16, // The number of parties $n$
     pub encryption_key: EncryptionKey,
     // The base $g$ for proofs of equality of discrete logs
-    base: PaillierModulusSizedNumber,
+    pub base: PaillierModulusSizedNumber,
     // The public verification key $v_j$ for proofs of equality of discrete logs
-    public_verification_key: PaillierModulusSizedNumber,
+    pub public_verification_key: PaillierModulusSizedNumber,
     // $ d_j $
     decryption_key_share: SecretKeyShareSizedNumber,
     pub precomputed_values: PrecomputedValues,
