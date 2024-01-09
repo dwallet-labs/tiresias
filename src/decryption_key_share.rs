@@ -550,7 +550,7 @@ impl DecryptionKeyShare {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::iter;
 
     use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
@@ -695,12 +695,17 @@ mod tests {
             .is_ok());
     }
 
-    #[rstest]
-    #[case(2, 3, 1)]
-    #[case(2, 3, 2)]
-    #[case(5, 5, 1)]
-    #[case(6, 10, 5)]
-    fn decrypts(#[case] t: u16, #[case] n: u16, #[case] batch_size: usize) {
+    pub fn deal_trusted_decryption_share(
+        t: u16,
+        n: u16,
+    ) -> (
+        EncryptionKey,
+        HashMap<u16, DecryptionKeyShare>,
+        PrecomputedValues,
+        PaillierModulusSizedNumber,
+        HashMap<u16, PaillierModulusSizedNumber>,
+        HashMap<u16, AdjustedLagrangeCoefficientSizedNumber>,
+    ) {
         let encryption_key = EncryptionKey::new(N);
 
         let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
@@ -784,6 +789,36 @@ mod tests {
                 .map(|(j, decryption_key_share)| (j, decryption_key_share.public_verification_key))
                 .collect();
 
+        let base = decryption_key_shares
+            .get(decrypters.first().unwrap())
+            .unwrap()
+            .base;
+
+        (
+            encryption_key,
+            decryption_key_shares,
+            precomputed_values,
+            base,
+            public_verification_keys,
+            absolute_adjusted_lagrange_coefficients,
+        )
+    }
+
+    #[rstest]
+    #[case(2, 3, 1)]
+    #[case(2, 3, 2)]
+    #[case(5, 5, 1)]
+    #[case(6, 10, 5)]
+    fn decrypts(#[case] t: u16, #[case] n: u16, #[case] batch_size: usize) {
+        let (
+            encryption_key,
+            decryption_key_shares,
+            precomputed_values,
+            base,
+            public_verification_keys,
+            absolute_adjusted_lagrange_coefficients,
+        ) = deal_trusted_decryption_share(t, n);
+
         let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
             LargeBiPrimeSizedNumber::random_mod(
                 &mut OsRng,
@@ -809,11 +844,6 @@ mod tests {
                 )
             })
             .collect();
-
-        let base = decryption_key_shares
-            .get(decrypters.first().unwrap())
-            .unwrap()
-            .base;
 
         assert_eq!(
             plaintexts,
