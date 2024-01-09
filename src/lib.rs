@@ -116,7 +116,7 @@ pub(crate) type ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber = Uint<
     },
 >;
 
-pub(crate) type AdjustedLagrangeCoefficientSizedNumber =
+pub type AdjustedLagrangeCoefficientSizedNumber =
     Uint<{ ADJUSTED_LAGRANGE_COEFFICIENT_SIZE_UPPER_BOUND.next_power_of_two() / Limb::BITS }>;
 
 /// Retrieve the minimal natural number in the congruence class.

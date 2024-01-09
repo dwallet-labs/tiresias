@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{proofs::ProofOfEqualityOfDiscreteLogs, PaillierModulusSizedNumber};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Message {
     pub decryption_shares: Vec<PaillierModulusSizedNumber>,
     pub proof: ProofOfEqualityOfDiscreteLogs,
