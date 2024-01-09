@@ -33,7 +33,7 @@ use crate::{
 ///     - $\tilde{h}=\ct^{2n!}\in\ZZ_{N^2}^*$ where $\ct$ is the ciphertext to be decrypted.
 ///     - For prover $P_j$, $b$ is set to the decryption share of $\ct$, namely,
 ///       $\ct_j=\ct^{2n!d_j}$.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProofOfEqualityOfDiscreteLogs {
     // Base randomizer $u=g^r \in \mathbb{Z}_{N^2}^*$.
     base_randomizer: PaillierModulusSizedNumber,
