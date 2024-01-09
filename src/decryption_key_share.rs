@@ -34,7 +34,7 @@ pub struct DecryptionKeyShare {
     public_verification_key: PaillierModulusSizedNumber,
     // $ d_j $
     decryption_key_share: SecretKeyShareSizedNumber,
-    precomputed_values: PrecomputedValues,
+    pub precomputed_values: PrecomputedValues,
 }
 
 impl DecryptionKeyShare {
