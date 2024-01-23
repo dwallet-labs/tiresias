@@ -5,11 +5,14 @@ edition = "2021"
 license = "BSD-3-Clause-Clear"
 
 [dependencies]
+group = { git = "https://github.com/dwallet-labs/group.git", branch = "additive" }
+homomorphic-encryption = { git = "https://github.com/dwallet-labs/homomorphic-encryption.git", branch = "decryption_key_share" }
 crypto-bigint = { version = "0.5.5", features = ["rand_core", "serde", "alloc"], default-features = false }
 merlin = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.163", features = ["derive"] }
 thiserror = "1.0.40"
 gcd = "2.3.0"
+subtle = { version = "2.5", features = ["const-generics"] }
 
 rayon = { version = "1.7.0", optional = true }
 

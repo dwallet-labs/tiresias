@@ -33,11 +33,11 @@ impl DecryptionKey {
     /// Performs no validation (that the `ciphertext` is a valid Paillier ciphertext encrypted for
     /// `self.encryption_key.n`) - supplying a wrong ciphertext will return an undefined result.
     pub fn decrypt(&self, ciphertext: &PaillierModulusSizedNumber) -> LargeBiPrimeSizedNumber {
-        self.decrypt_inner(ciphertext.as_ring_element(&self.encryption_key.n2))
+        self.decrypt_inner(ciphertext.as_ring_element(&self.encryption_key.ciphertext_modulus))
     }
 
     pub fn decrypt_inner(&self, ciphertext: PaillierRingElement) -> LargeBiPrimeSizedNumber {
-        let n = NonZero::new(self.encryption_key.n.resize()).unwrap();
+        let n = NonZero::new(self.encryption_key.biprime_modulus.resize()).unwrap();
 
         // $ D(c,d)=\left(\frac{(c^{d}\mod(N^{2}))-1}{N}\right)\mod(N) $
         let (_, lo): (LargeBiPrimeSizedNumber, LargeBiPrimeSizedNumber) = (((ciphertext
@@ -77,4 +77,6 @@ mod tests {
             .encrypt(&plaintext, &mut OsRng);
         assert_eq!(decryption_key.decrypt(&ciphertext), plaintext);
     }
+
+    // todo: use the test from he crate
 }

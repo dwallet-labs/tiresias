@@ -51,7 +51,7 @@ impl DecryptionKeyShare {
         assert!(usize::from(number_of_parties) <= MAX_PLAYERS);
 
         let base = base
-            .as_ring_element(&encryption_key.n2)
+            .as_ring_element(&encryption_key.ciphertext_modulus)
             .pow_bounded_exp(
                 &precomputed_values.n_factorial,
                 factorial_upper_bound(usize::from(number_of_parties)),
@@ -59,7 +59,7 @@ impl DecryptionKeyShare {
             .as_natural_number();
 
         let public_verification_key = base
-            .as_ring_element(&encryption_key.n2)
+            .as_ring_element(&encryption_key.ciphertext_modulus)
             .pow_bounded_exp(
                 &decryption_key_share,
                 secret_key_share_size_upper_bound(
@@ -98,7 +98,7 @@ impl DecryptionKeyShare {
         Vec<PaillierModulusSizedNumber>,
         Vec<PaillierModulusSizedNumber>,
     )> {
-        let n2 = self.encryption_key.n2;
+        let n2 = self.encryption_key.ciphertext_modulus;
 
         #[cfg(not(feature = "parallel"))]
         let iter = ciphertexts.iter();
@@ -147,7 +147,7 @@ impl DecryptionKeyShare {
         ciphertexts: Vec<PaillierModulusSizedNumber>,
         rng: &mut impl CryptoRngCore,
     ) -> Result<Message> {
-        let n2 = self.encryption_key.n2;
+        let n2 = self.encryption_key.ciphertext_modulus;
 
         let (decryption_share_bases, decryption_shares) =
             self.generate_decryption_shares_semi_honest_internal(ciphertexts)?;
@@ -257,7 +257,7 @@ impl DecryptionKeyShare {
         //      $2n!\lambda_{0,j}^{S}=2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n] \setminus S}
         // (j'-j)\Pi_{j' \in S}j'$.
 
-        let n2 = encryption_key.n2;
+        let n2 = encryption_key.ciphertext_modulus;
 
         let batch_size = decryption_shares
             .iter()
@@ -394,7 +394,7 @@ impl DecryptionKeyShare {
                     )
                     .as_natural_number();
 
-                let paillier_n = NonZero::new(encryption_key.n.resize()).unwrap();
+                let paillier_n = NonZero::new(encryption_key.biprime_modulus.resize()).unwrap();
 
                 // $c` >= 1$ so safe to perform a `.wrapping_sub()` here which will not overflow
                 // After dividing a number $ x < N^2 $ by $N$2
@@ -403,7 +403,7 @@ impl DecryptionKeyShare {
                 let (_, lo) =
                     ((c_prime.wrapping_sub(&PaillierModulusSizedNumber::ONE)) / paillier_n).split();
 
-                let paillier_n = encryption_key.n;
+                let paillier_n = encryption_key.biprime_modulus;
 
                 (lo.as_ring_element(&paillier_n)
                     * precomputed_values
@@ -445,7 +445,7 @@ impl DecryptionKeyShare {
         >,
         rng: &Rng,
     ) -> Result<Vec<LargeBiPrimeSizedNumber>> {
-        let n2 = encryption_key.n2;
+        let n2 = encryption_key.ciphertext_modulus;
         let batch_size = ciphertexts.len();
 
         if messages.len() != usize::from(threshold)
@@ -574,7 +574,7 @@ mod tests {
 
         let encryption_key = EncryptionKey::new(N);
 
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
+        let precomputed_values = PrecomputedValues::new(n, encryption_key.biprime_modulus);
 
         let decryption_key_share =
             DecryptionKeyShare::new(j, t, n, encryption_key, BASE, WITNESS, precomputed_values);
@@ -603,7 +603,7 @@ mod tests {
         assert!(message
             .proof
             .verify(
-                decryption_key_share.encryption_key.n2,
+                decryption_key_share.encryption_key.ciphertext_modulus,
                 n,
                 t,
                 decryption_key_share.base,
@@ -622,7 +622,7 @@ mod tests {
 
         let encryption_key = &EncryptionKey::new(N);
 
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
+        let precomputed_values = PrecomputedValues::new(n, encryption_key.biprime_modulus);
 
         let decryption_key_share = DecryptionKeyShare::new(
             1,
@@ -638,7 +638,7 @@ mod tests {
         let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
             LargeBiPrimeSizedNumber::random_mod(
                 &mut OsRng,
-                &NonZero::new(encryption_key.n).unwrap(),
+                &NonZero::new(encryption_key.biprime_modulus).unwrap(),
             )
         })
         .take(batch_size)
@@ -657,7 +657,7 @@ mod tests {
             .iter()
             .map(|ciphertext| {
                 ciphertext
-                    .as_ring_element(&encryption_key.n2)
+                    .as_ring_element(&encryption_key.ciphertext_modulus)
                     .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
                     .as_natural_number()
             })
@@ -681,7 +681,7 @@ mod tests {
         assert!(message
             .proof
             .batch_verify(
-                decryption_key_share.encryption_key.n2,
+                decryption_key_share.encryption_key.ciphertext_modulus,
                 n,
                 t,
                 decryption_key_share.base,
@@ -703,7 +703,7 @@ mod tests {
     fn decrypts(#[case] t: u16, #[case] n: u16, #[case] batch_size: usize) {
         let encryption_key = EncryptionKey::new(N);
 
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
+        let precomputed_values = PrecomputedValues::new(n, encryption_key.biprime_modulus);
 
         // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of the
         // DKG.
@@ -787,7 +787,7 @@ mod tests {
         let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
             LargeBiPrimeSizedNumber::random_mod(
                 &mut OsRng,
-                &NonZero::new(encryption_key.n).unwrap(),
+                &NonZero::new(encryption_key.biprime_modulus).unwrap(),
             )
         })
         .take(batch_size)
@@ -996,7 +996,7 @@ mod benches {
 
             for batch_size in [1, 10, 100, 1000] {
                 let base = base
-                    .as_ring_element(&encryption_key.n2)
+                    .as_ring_element(&encryption_key.ciphertext_modulus)
                     .pow_bounded_exp(
                         &precomputed_values.n_factorial,
                         factorial_upper_bound(usize::from(number_of_parties)),
@@ -1006,7 +1006,7 @@ mod benches {
                 let plaintexts: Vec<LargeBiPrimeSizedNumber> = vec![plaintext; batch_size];
                 let ciphertexts: Vec<PaillierModulusSizedNumber> = vec![ciphertext; batch_size];
                 let decryption_share_base = ciphertext
-                    .as_ring_element(&encryption_key.n2)
+                    .as_ring_element(&encryption_key.ciphertext_modulus)
                     .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
                     .pow_bounded_exp(
                         &precomputed_values.n_factorial,
@@ -1023,7 +1023,7 @@ mod benches {
                         // knowledge of this and does not take advantage of this, so results should
                         // stay the same.
                         let decryption_share = decryption_share_base
-                            .as_ring_element(&encryption_key.n2)
+                            .as_ring_element(&encryption_key.ciphertext_modulus)
                             .pow_bounded_exp(
                                 &decryption_key_share.decryption_key_share,
                                 secret_key_share_size_upper_bound(
@@ -1042,7 +1042,7 @@ mod benches {
 
                         let proof = if batch_size == 1 {
                             ProofOfEqualityOfDiscreteLogs::prove(
-                                encryption_key.n2,
+                                encryption_key.ciphertext_modulus,
                                 number_of_parties,
                                 threshold,
                                 decryption_key_share.decryption_key_share,
@@ -1054,7 +1054,7 @@ mod benches {
                             )
                         } else {
                             ProofOfEqualityOfDiscreteLogs::batch_prove(
-                                encryption_key.n2,
+                                encryption_key.ciphertext_modulus,
                                 number_of_parties,
                                 threshold,
                                 decryption_key_share.decryption_key_share,

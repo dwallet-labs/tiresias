@@ -5,32 +5,34 @@
 use criterion::criterion_group;
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Concat, Limb, Uint, U1024, U128,
+    Concat, Limb, Uint, U1024,
 };
-pub use decryption_key::DecryptionKey;
-pub use decryption_key_share::DecryptionKeyShare;
-pub use encryption_key::EncryptionKey;
+// pub use decryption_key::DecryptionKey;
+// pub use decryption_key_share::DecryptionKeyShare;
+// pub use encryption_key::EncryptionKey;
 pub use error::{Error, Result};
-pub use message::Message;
-pub use precomputed_values::PrecomputedValues;
+// pub use message::Message;
+// pub use precomputed_values::PrecomputedValues;
 
-mod decryption_key;
-mod decryption_key_share;
+// mod decryption_key;
+// mod decryption_key_share;
 mod encryption_key;
 mod error;
-mod message;
-mod precomputed_values;
+// mod message;
+// mod precomputed_values;
+//
+// mod batch_verification;
+mod group;
+// pub mod proofs;
+// pub mod secret_sharing;
 
-mod batch_verification;
-pub mod proofs;
-pub mod secret_sharing;
-
-/// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
-/// Set to a U128 for 128-bit security.
-pub type ComputationalSecuritySizedNumber = U128;
-
-// Being overly-conservative here
-type StatisticalSecuritySizedNumber = ComputationalSecuritySizedNumber;
+pub use ::group::{ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber};
+pub use group::{
+    CiphertextSpaceGroupElement, CiphertextSpacePublicParameters, CiphertextSpaceValue,
+    PlaintextSpaceGroupElement, PlaintextSpacePublicParameters, PlaintextSpaceValue,
+    RandomnessSpaceGroupElement, RandomnessSpacePublicParameters, RandomnessSpaceValue,
+    CIPHERTEXT_SPACE_SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS,
+};
 
 /// A type alias for an unsigned integer of the size of the Paillier large prime factors.
 /// Set to a U1024 for 112-bit security.
@@ -44,6 +46,7 @@ pub type LargeBiPrimeSizedNumber = <LargePrimeSizedNumber as Concat>::Output;
 /// size of the Paillier associated bi-prime `n` ($N$)). Set to a U4096 for 112-bit security.
 pub type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Output;
 
+// TODO: delete these
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
 pub(crate) type PaillierPlaintextRingElement = DynResidue<{ LargeBiPrimeSizedNumber::LIMBS }>;
 
@@ -209,10 +212,10 @@ mod tests {
     }
 }
 
-#[cfg(feature = "benchmarking")]
-criterion_group!(
-    benches,
-    proofs::benchmark_proof_of_equality_of_discrete_logs,
-    decryption_key_share::benchmark_decryption_share,
-    decryption_key_share::benchmark_combine_decryption_shares,
-);
+// #[cfg(feature = "benchmarking")]
+// criterion_group!(
+//     benches,
+//     proofs::benchmark_proof_of_equality_of_discrete_logs,
+//     decryption_key_share::benchmark_decryption_share,
+//     decryption_key_share::benchmark_combine_decryption_shares,
+// );
