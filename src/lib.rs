@@ -7,14 +7,14 @@ use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
     Concat, Limb, Uint, U1024,
 };
-// pub use decryption_key::DecryptionKey;
+pub use decryption_key::DecryptionKey;
 // pub use decryption_key_share::DecryptionKeyShare;
-// pub use encryption_key::EncryptionKey;
+pub use encryption_key::EncryptionKey;
 pub use error::{Error, Result};
 // pub use message::Message;
 // pub use precomputed_values::PrecomputedValues;
 
-// mod decryption_key;
+mod decryption_key;
 // mod decryption_key_share;
 mod encryption_key;
 mod error;

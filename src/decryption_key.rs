@@ -2,80 +2,152 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
 use crypto_bigint::NonZero;
+use group::GroupElement;
+use homomorphic_encryption::{
+    AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
+    GroupsPublicParametersAccessors,
+};
 
 use crate::{
-    AsNaturalNumber, AsRingElement, EncryptionKey, LargeBiPrimeSizedNumber,
-    PaillierModulusSizedNumber, PaillierRingElement,
+    encryption_key, encryption_key::PublicParameters, AsNaturalNumber, AsRingElement,
+    CiphertextSpaceGroupElement, CiphertextSpaceValue, EncryptionKey, LargeBiPrimeSizedNumber,
+    PaillierModulusSizedNumber, PaillierRingElement, PlaintextSpaceGroupElement,
+    RandomnessSpaceGroupElement, RandomnessSpaceValue, PLAINTEXT_SPACE_SCALAR_LIMBS,
 };
 
 /// A paillier decryption key.
 /// Holds both the `secret_key` and its corresponding `encryption_key`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecryptionKey {
-    pub encryption_key: EncryptionKey,
+    encryption_key: EncryptionKey,
     secret_key: PaillierModulusSizedNumber,
 }
 
-impl DecryptionKey {
-    /// Create a `DecryptionKey` from a previously-generated `secret_key` and its corresponding
-    /// `encryption_key`. Performs no validations
-    pub fn new(
-        encryption_key: EncryptionKey,
-        secret_key: PaillierModulusSizedNumber,
-    ) -> DecryptionKey {
-        DecryptionKey {
-            encryption_key,
-            secret_key,
-        }
+impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for DecryptionKey {
+    type PlaintextSpaceGroupElement = PlaintextSpaceGroupElement;
+    type RandomnessSpaceGroupElement = RandomnessSpaceGroupElement;
+    type CiphertextSpaceGroupElement = CiphertextSpaceGroupElement;
+    type PublicParameters = encryption_key::PublicParameters;
+
+    fn new(
+        public_parameters: &encryption_key::PublicParameters,
+    ) -> homomorphic_encryption::Result<Self> {
+        Err(homomorphic_encryption::Error::WrongConstructor)
     }
 
-    /// Decrypts `ciphertext`
-    /// Performs no validation (that the `ciphertext` is a valid Paillier ciphertext encrypted for
-    /// `self.encryption_key.n`) - supplying a wrong ciphertext will return an undefined result.
-    pub fn decrypt(&self, ciphertext: &PaillierModulusSizedNumber) -> LargeBiPrimeSizedNumber {
-        self.decrypt_inner(ciphertext.as_ring_element(&self.encryption_key.ciphertext_modulus))
-    }
-
-    pub fn decrypt_inner(&self, ciphertext: PaillierRingElement) -> LargeBiPrimeSizedNumber {
-        let n = NonZero::new(self.encryption_key.biprime_modulus.resize()).unwrap();
-
-        // $ D(c,d)=\left(\frac{(c^{d}\mod(N^{2}))-1}{N}\right)\mod(N) $
-        let (_, lo): (LargeBiPrimeSizedNumber, LargeBiPrimeSizedNumber) = (((ciphertext
-            .pow(&self.secret_key)
-            .as_natural_number()
-            .wrapping_sub(&PaillierModulusSizedNumber::ONE))
-            / n)
-            % n)
-            .split();
-
-        lo
+    fn encrypt_with_randomness(
+        &self,
+        plaintext: &PlaintextSpaceGroupElement,
+        randomness: &RandomnessSpaceGroupElement,
+        public_parameters: &PublicParameters,
+    ) -> CiphertextSpaceGroupElement {
+        self.encryption_key
+            .encrypt_with_randomness(plaintext, randomness, public_parameters)
     }
 }
 
-impl AsRef<EncryptionKey> for DecryptionKey {
-    fn as_ref(&self) -> &EncryptionKey {
-        &self.encryption_key
+impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for DecryptionKey {
+    type SecretKey = PaillierModulusSizedNumber;
+
+    fn new(
+        secret_key: Self::SecretKey,
+        public_parameters: &encryption_key::PublicParameters,
+    ) -> homomorphic_encryption::Result<Self> {
+        let encryption_key = EncryptionKey::new(public_parameters)?;
+
+        Ok(DecryptionKey {
+            encryption_key,
+            secret_key,
+        })
+    }
+
+    fn decrypt(
+        &self,
+        ciphertext: &CiphertextSpaceGroupElement,
+        public_parameters: &PublicParameters,
+    ) -> PlaintextSpaceGroupElement {
+        let n = NonZero::new(
+            public_parameters
+                .plaintext_space_public_parameters()
+                .modulus
+                .resize(),
+        )
+        .unwrap();
+
+        // $ D(c,d)=\left(\frac{(c^{d}\mod(N^{2}))-1}{N}\right)\mod(N) $
+        let plaintext: PaillierModulusSizedNumber =
+            (crate::PaillierModulusSizedNumber::from(ciphertext.scalar_mul(&self.secret_key))
+                .wrapping_sub(&PaillierModulusSizedNumber::ONE)
+                / n)
+                % n;
+
+        PlaintextSpaceGroupElement::new(
+            (&plaintext).into(),
+            public_parameters.plaintext_space_public_parameters(),
+        )
+        .unwrap()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use group::GroupElement;
+    use homomorphic_encryption::{
+        AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
+    };
     use rand_core::OsRng;
 
     use super::*;
-    use crate::tests::{CIPHERTEXT, N, PLAINTEXT, SECRET_KEY};
+    use crate::{
+        encryption_key::PublicParameters,
+        tests::{CIPHERTEXT, N, PLAINTEXT, RANDOMNESS, SECRET_KEY},
+        CiphertextSpaceGroupElement, CiphertextSpaceValue, LargeBiPrimeSizedNumber,
+        PlaintextSpaceGroupElement, RandomnessSpaceValue,
+    };
 
     #[test]
     fn decrypts() {
-        let encryption_key = EncryptionKey::new(N);
-        let decryption_key = DecryptionKey::new(encryption_key, SECRET_KEY);
-        assert_eq!(decryption_key.decrypt(&CIPHERTEXT), PLAINTEXT);
+        let public_parameters = PublicParameters::new(N).unwrap();
+        let decryption_key = <DecryptionKey as AdditivelyHomomorphicDecryptionKey<
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+        >>::new(SECRET_KEY, &public_parameters)
+        .unwrap();
+        let plaintext = PlaintextSpaceGroupElement::new(
+            PLAINTEXT,
+            public_parameters.plaintext_space_public_parameters(),
+        )
+        .unwrap();
 
-        let plaintext = LargeBiPrimeSizedNumber::from(42u8);
-        let ciphertext = decryption_key
+        let ciphertext = CiphertextSpaceGroupElement::new(
+            CiphertextSpaceValue::new(
+                CIPHERTEXT,
+                public_parameters.ciphertext_space_public_parameters(),
+            )
+            .unwrap(),
+            public_parameters.ciphertext_space_public_parameters(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            decryption_key.decrypt(&ciphertext, &public_parameters),
+            plaintext
+        );
+
+        let plaintext = PlaintextSpaceGroupElement::new(
+            LargeBiPrimeSizedNumber::from(42u8),
+            public_parameters.plaintext_space_public_parameters(),
+        )
+        .unwrap();
+
+        let (_, ciphertext) = decryption_key
             .encryption_key
-            .encrypt(&plaintext, &mut OsRng);
-        assert_eq!(decryption_key.decrypt(&ciphertext), plaintext);
+            .encrypt(&plaintext, &public_parameters, &mut OsRng)
+            .unwrap();
+
+        assert_eq!(
+            decryption_key.decrypt(&ciphertext, &public_parameters,),
+            plaintext
+        );
     }
 
     // todo: use the test from he crate
