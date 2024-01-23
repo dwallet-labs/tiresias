@@ -94,6 +94,7 @@ mod tests {
     fn decrypts() {
         let public_parameters = PublicParameters::new(N).unwrap();
         let decryption_key = DecryptionKey::new(SECRET_KEY, &public_parameters).unwrap();
+
         let plaintext = PlaintextSpaceGroupElement::new(
             PLAINTEXT,
             public_parameters.plaintext_space_public_parameters(),
@@ -132,5 +133,27 @@ mod tests {
         );
     }
 
-    // todo: use the test from he crate
+    #[test]
+    fn encrypt_decrypts() {
+        let public_parameters = PublicParameters::new(N).unwrap();
+        let decryption_key = DecryptionKey::new(SECRET_KEY, &public_parameters).unwrap();
+
+        homomorphic_encryption::tests::encrypt_decrypts(
+            decryption_key,
+            public_parameters,
+            &mut OsRng,
+        );
+    }
+
+    #[test]
+    fn evaluates() {
+        let public_parameters = PublicParameters::new(N).unwrap();
+        let decryption_key = DecryptionKey::new(SECRET_KEY, &public_parameters).unwrap();
+
+        homomorphic_encryption::tests::encrypt_decrypts(
+            decryption_key,
+            public_parameters,
+            &mut OsRng,
+        );
+    }
 }

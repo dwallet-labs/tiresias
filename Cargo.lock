@@ -358,7 +358,7 @@ checksum = "5d3d0e0f38255e7fa3cf31335b3a56f05febd18025f4db5ef7a0cfb4f8da651f"
 [[package]]
 name = "homomorphic-encryption"
 version = "0.1.0"
-source = "git+https://github.com/dwallet-labs/homomorphic-encryption.git?branch=decryption_key_share#8c3c8c1db0a5ea3da90cf41a1127c09331518208"
+source = "git+https://github.com/dwallet-labs/homomorphic-encryption.git?branch=decryption_key_share#c459433b3476b23b82f53351530af2a7382b9f41"
 dependencies = [
  "crypto-bigint",
  "group",
