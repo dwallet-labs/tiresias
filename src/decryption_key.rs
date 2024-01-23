@@ -23,30 +23,9 @@ pub struct DecryptionKey {
     secret_key: PaillierModulusSizedNumber,
 }
 
-impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for DecryptionKey {
-    type PlaintextSpaceGroupElement = PlaintextSpaceGroupElement;
-    type RandomnessSpaceGroupElement = RandomnessSpaceGroupElement;
-    type CiphertextSpaceGroupElement = CiphertextSpaceGroupElement;
-    type PublicParameters = encryption_key::PublicParameters;
-
-    fn new(
-        public_parameters: &encryption_key::PublicParameters,
-    ) -> homomorphic_encryption::Result<Self> {
-        Err(homomorphic_encryption::Error::WrongConstructor)
-    }
-
-    fn encrypt_with_randomness(
-        &self,
-        plaintext: &PlaintextSpaceGroupElement,
-        randomness: &RandomnessSpaceGroupElement,
-        public_parameters: &PublicParameters,
-    ) -> CiphertextSpaceGroupElement {
-        self.encryption_key
-            .encrypt_with_randomness(plaintext, randomness, public_parameters)
-    }
-}
-
-impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for DecryptionKey {
+impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, EncryptionKey>
+    for DecryptionKey
+{
     type SecretKey = PaillierModulusSizedNumber;
 
     fn new(
@@ -89,6 +68,12 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Decryp
     }
 }
 
+impl AsRef<EncryptionKey> for DecryptionKey {
+    fn as_ref(&self) -> &EncryptionKey {
+        &self.encryption_key
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use group::GroupElement;
@@ -108,10 +93,7 @@ mod tests {
     #[test]
     fn decrypts() {
         let public_parameters = PublicParameters::new(N).unwrap();
-        let decryption_key = <DecryptionKey as AdditivelyHomomorphicDecryptionKey<
-            PLAINTEXT_SPACE_SCALAR_LIMBS,
-        >>::new(SECRET_KEY, &public_parameters)
-        .unwrap();
+        let decryption_key = DecryptionKey::new(SECRET_KEY, &public_parameters).unwrap();
         let plaintext = PlaintextSpaceGroupElement::new(
             PLAINTEXT,
             public_parameters.plaintext_space_public_parameters(),
