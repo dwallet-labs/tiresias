@@ -11,20 +11,19 @@ pub use decryption_key::DecryptionKey;
 // pub use decryption_key_share::DecryptionKeyShare;
 pub use encryption_key::EncryptionKey;
 pub use error::{Error, Result};
-// pub use message::Message;
-// pub use precomputed_values::PrecomputedValues;
+pub use message::Message;
+pub use precomputed_values::PrecomputedValues;
 
 mod decryption_key;
 // mod decryption_key_share;
+mod batch_verification;
 mod encryption_key;
 mod error;
-// mod message;
-// mod precomputed_values;
-//
-// mod batch_verification;
 mod group;
-// pub mod proofs;
-// pub mod secret_sharing;
+mod message;
+mod precomputed_values;
+pub mod proofs;
+pub mod secret_sharing;
 
 pub use ::group::{ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber};
 pub use group::{
@@ -46,7 +45,6 @@ pub type LargeBiPrimeSizedNumber = <LargePrimeSizedNumber as Concat>::Output;
 /// size of the Paillier associated bi-prime `n` ($N$)). Set to a U4096 for 112-bit security.
 pub type PaillierModulusSizedNumber = <LargeBiPrimeSizedNumber as Concat>::Output;
 
-// TODO: delete these
 pub(crate) type PaillierRingElement = DynResidue<{ PaillierModulusSizedNumber::LIMBS }>;
 pub(crate) type PaillierPlaintextRingElement = DynResidue<{ LargeBiPrimeSizedNumber::LIMBS }>;
 
