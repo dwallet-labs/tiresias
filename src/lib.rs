@@ -12,17 +12,17 @@ pub use decryption_key::DecryptionKey;
 pub use encryption_key::EncryptionKey;
 pub use error::{Error, Result};
 pub use message::Message;
-pub use precomputed_values::PrecomputedValues;
+pub use public_parameters::PublicParameters;
 
+mod batch_verification;
 mod decryption_key;
 // mod decryption_key_share;
-mod batch_verification;
 mod encryption_key;
 mod error;
 mod group;
 mod message;
-mod precomputed_values;
 pub mod proofs;
+mod public_parameters;
 pub mod secret_sharing;
 
 pub use ::group::{ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber};

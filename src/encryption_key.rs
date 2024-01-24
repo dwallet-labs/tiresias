@@ -78,7 +78,7 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq)]
 pub struct PublicParameters(
     homomorphic_encryption::GroupsPublicParameters<
         PlaintextSpacePublicParameters,

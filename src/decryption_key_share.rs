@@ -24,9 +24,9 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecryptionKeyShare {
-    pub party_id: u16,          // The party's index in the protocol $P_j$
-    pub threshold: u16,         // The threshold $t$
-    pub number_of_parties: u16, // The number of parties $n$
+    pub party_id: PartyID,          // The party's index in the protocol $P_j$
+    pub threshold: PartyID,         // The threshold $t$
+    pub number_of_parties: PartyID, // The number of parties $n$
     pub encryption_key: EncryptionKey,
     // The base $g$ for proofs of equality of discrete logs
     pub base: PaillierModulusSizedNumber,
@@ -40,9 +40,9 @@ pub struct DecryptionKeyShare {
 impl DecryptionKeyShare {
     /// Construct a new `DecryptionKeyShare`.
     pub fn new(
-        party_id: u16,
-        threshold: u16,
-        number_of_parties: u16,
+        party_id: PartyID,
+        threshold: PartyID,
+        number_of_parties: PartyID,
         encryption_key: EncryptionKey,
         base: PaillierModulusSizedNumber,
         decryption_key_share: SecretKeyShareSizedNumber,
@@ -201,9 +201,9 @@ impl DecryptionKeyShare {
     }
 
     pub fn compute_absolute_adjusted_lagrange_coefficient(
-        party_id: u16,
-        number_of_parties: u16,
-        decrypters: Vec<u16>,
+        party_id: PartyID,
+        number_of_parties: PartyID,
+        decrypters: Vec<PartyID>,
         precomputed_values: &PrecomputedValues,
     ) -> AdjustedLagrangeCoefficientSizedNumber {
         // The adjusted lagrange coefficient formula is given by:
@@ -227,8 +227,8 @@ impl DecryptionKeyShare {
                 .resize();
 
         // Finally multiply by $^{\Pi_{j'\in [n] \setminus S} |(j'-j)|}$
-        HashSet::<u16>::from_iter(1..=number_of_parties)
-            .symmetric_difference(&HashSet::<u16>::from_iter(decrypters))
+        HashSet::<PartyID>::from_iter(1..=number_of_parties)
+            .symmetric_difference(&HashSet::<PartyID>::from_iter(decrypters))
             .fold(adjusted_lagrange_coefficient, |acc, j_prime| {
                 acc.wrapping_mul(&AdjustedLagrangeCoefficientSizedNumber::from(
                     j_prime.abs_diff(party_id),
@@ -238,10 +238,10 @@ impl DecryptionKeyShare {
 
     pub fn combine_decryption_shares_semi_honest(
         encryption_key: EncryptionKey,
-        decryption_shares: HashMap<u16, Vec<PaillierModulusSizedNumber>>,
+        decryption_shares: HashMap<PartyID, Vec<PaillierModulusSizedNumber>>,
         precomputed_values: PrecomputedValues,
         absolute_adjusted_lagrange_coefficients: HashMap<
-            u16,
+            PartyID,
             AdjustedLagrangeCoefficientSizedNumber,
         >,
     ) -> Result<Vec<LargeBiPrimeSizedNumber>> {
@@ -272,9 +272,9 @@ impl DecryptionKeyShare {
         let iter = (0..batch_size).into_par_iter();
 
         // The set $S$ of parties participating in the threshold decryption sessions
-        let decrypters: Vec<u16> = decryption_shares.clone().into_keys().collect();
+        let decrypters: Vec<PartyID> = decryption_shares.clone().into_keys().collect();
 
-        let decrypters_requiring_inversion: Vec<u16> =
+        let decrypters_requiring_inversion: Vec<PartyID> =
             decrypters
                 .clone()
                 .into_iter()
@@ -301,7 +301,7 @@ impl DecryptionKeyShare {
         // \setminus S} (j'-j)\Pi_{j' \in S}j'}$.
         let plaintexts = iter.map(|i| {
             let decryption_shares_and_absolute_adjusted_lagrange_coefficients: Vec<(
-                u16,
+                PartyID,
                 PaillierModulusSizedNumber,
                 AdjustedLagrangeCoefficientSizedNumber,
             )> = decryption_shares
@@ -429,18 +429,18 @@ impl DecryptionKeyShare {
     /// Note: `base` is assumed to be raised by `n!` as in `new()`.
     #[allow(clippy::too_many_arguments)]
     pub fn combine_decryption_shares<Rng: CryptoRngCore + Send + Sync + Clone>(
-        threshold: u16,
-        number_of_parties: u16,
+        threshold: PartyID,
+        number_of_parties: PartyID,
         encryption_key: EncryptionKey,
         ciphertexts: Vec<PaillierModulusSizedNumber>,
-        messages: HashMap<u16, Message>,
+        messages: HashMap<PartyID, Message>,
         precomputed_values: PrecomputedValues,
         // The base $g$ for proofs of equality of discrete logs
         base: PaillierModulusSizedNumber,
         // The public verification keys ${{v_i}}_i$ for proofs of equality of discrete logs
-        public_verification_keys: HashMap<u16, PaillierModulusSizedNumber>,
+        public_verification_keys: HashMap<PartyID, PaillierModulusSizedNumber>,
         absolute_adjusted_lagrange_coefficients: HashMap<
-            u16,
+            PartyID,
             AdjustedLagrangeCoefficientSizedNumber,
         >,
         rng: &Rng,
@@ -457,7 +457,7 @@ impl DecryptionKeyShare {
         };
 
         // The set $S$ of parties participating in the threshold decryption sessions
-        let decrypters: Vec<u16> = messages.clone().into_keys().collect();
+        let decrypters: Vec<PartyID> = messages.clone().into_keys().collect();
 
         #[cfg(not(feature = "parallel"))]
         let iter = ciphertexts.into_iter();
@@ -481,7 +481,7 @@ impl DecryptionKeyShare {
         let iter = decrypters.clone().into_iter();
         #[cfg(feature = "parallel")]
         let iter = decrypters.into_par_iter();
-        let malicious_parties: Vec<u16> = iter
+        let malicious_parties: Vec<PartyID> = iter
             .filter(|party_id| {
                 let public_verification_key = *public_verification_keys.get(party_id).unwrap();
                 let message = messages.get(party_id).unwrap();
@@ -700,7 +700,7 @@ mod tests {
     #[case(2, 3, 2)]
     #[case(5, 5, 1)]
     #[case(6, 10, 5)]
-    fn decrypts(#[case] t: u16, #[case] n: u16, #[case] batch_size: usize) {
+    fn decrypts(#[case] t: PartyID, #[case] n: PartyID, #[case] batch_size: usize) {
         let encryption_key = EncryptionKey::new(N);
 
         let precomputed_values = PrecomputedValues::new(n, encryption_key.biprime_modulus);
@@ -737,7 +737,7 @@ mod tests {
         let decrypters = (1..=n).choose_multiple(&mut OsRng, usize::from(t));
 
         let absolute_adjusted_lagrange_coefficients: HashMap<
-            u16,
+            PartyID,
             AdjustedLagrangeCoefficientSizedNumber,
         > = decrypters
             .clone()
@@ -755,7 +755,7 @@ mod tests {
             })
             .collect();
 
-        let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = decrypters
+        let decryption_key_shares: HashMap<PartyID, DecryptionKeyShare> = decrypters
             .clone()
             .into_iter()
             .map(|j| {
@@ -777,7 +777,7 @@ mod tests {
             })
             .collect();
 
-        let public_verification_keys: HashMap<u16, PaillierModulusSizedNumber> =
+        let public_verification_keys: HashMap<PartyID, PaillierModulusSizedNumber> =
             decryption_key_shares
                 .clone()
                 .into_iter()
@@ -798,7 +798,7 @@ mod tests {
             .map(|m| encryption_key.encrypt(m, &mut OsRng))
             .collect();
 
-        let messages: HashMap<u16, Message> = decryption_key_shares
+        let messages: HashMap<PartyID, Message> = decryption_key_shares
             .iter()
             .map(|(j, party)| {
                 (
@@ -946,7 +946,7 @@ mod benches {
                 (1..=number_of_parties).choose_multiple(&mut OsRng, usize::from(threshold));
 
             let absolute_adjusted_lagrange_coefficients: HashMap<
-                u16,
+                PartyID,
                 AdjustedLagrangeCoefficientSizedNumber,
             > = decrypters
                 .clone()
@@ -964,7 +964,7 @@ mod benches {
                 })
                 .collect();
 
-            let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = decrypters
+            let decryption_key_shares: HashMap<PartyID, DecryptionKeyShare> = decrypters
                 .into_par_iter()
                 .map(|j| {
                     let share = polynomial
@@ -985,7 +985,7 @@ mod benches {
                 })
                 .collect();
 
-            let public_verification_keys: HashMap<u16, PaillierModulusSizedNumber> =
+            let public_verification_keys: HashMap<PartyID, PaillierModulusSizedNumber> =
                 decryption_key_shares
                     .clone()
                     .into_iter()
@@ -1014,7 +1014,7 @@ mod benches {
                     )
                     .as_natural_number();
 
-                let messages: HashMap<u16, Message> = decryption_key_shares
+                let messages: HashMap<PartyID, Message> = decryption_key_shares
                     .par_iter()
                     .map(|(j, decryption_key_share)| {
                         // Generating this via `generate_decryption_shares` for all parties is too
