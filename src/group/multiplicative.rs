@@ -15,7 +15,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 /// where `N = PQ` $\mathbb{Z}_N^*$ for the randomness space of the Paillier cryptosystem
 /// or $\mathbb{Z}_N^{2*}$ for the ciphertext space.
 #[derive(PartialEq, Eq, Clone, Debug, Copy)]
-pub struct GroupElement<const LIMBS: usize>(DynResidue<LIMBS>);
+pub struct GroupElement<const LIMBS: usize>(pub(crate) DynResidue<LIMBS>);
 
 impl<const LIMBS: usize> Samplable for GroupElement<LIMBS>
 where

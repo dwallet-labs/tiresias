@@ -7,6 +7,7 @@ use homomorphic_encryption::{
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
     GroupsPublicParametersAccessors,
 };
+use subtle::{Choice, CtOption};
 
 use crate::{
     encryption_key, encryption_key::PublicParameters, AsNaturalNumber, AsRingElement,
@@ -44,7 +45,7 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
         &self,
         ciphertext: &CiphertextSpaceGroupElement,
         public_parameters: &PublicParameters,
-    ) -> PlaintextSpaceGroupElement {
+    ) -> CtOption<PlaintextSpaceGroupElement> {
         let n = NonZero::new(
             public_parameters
                 .plaintext_space_public_parameters()
@@ -60,11 +61,14 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
                 / n)
                 % n;
 
-        PlaintextSpaceGroupElement::new(
-            (&plaintext).into(),
-            public_parameters.plaintext_space_public_parameters(),
+        CtOption::new(
+            PlaintextSpaceGroupElement::new(
+                (&plaintext).into(),
+                public_parameters.plaintext_space_public_parameters(),
+            )
+            .unwrap(),
+            Choice::from(1u8),
         )
-        .unwrap()
     }
 }
 
@@ -112,7 +116,9 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            decryption_key.decrypt(&ciphertext, &public_parameters),
+            decryption_key
+                .decrypt(&ciphertext, &public_parameters)
+                .unwrap(),
             plaintext
         );
 
@@ -128,7 +134,9 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            decryption_key.decrypt(&ciphertext, &public_parameters,),
+            decryption_key
+                .decrypt(&ciphertext, &public_parameters,)
+                .unwrap(),
             plaintext
         );
     }

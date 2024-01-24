@@ -540,6 +540,18 @@ impl ProofOfEqualityOfDiscreteLogs {
     }
 }
 
+// This implementation yields invalid proofs, its just so the proof would be usable within a
+// `CtOption`.
+impl Default for ProofOfEqualityOfDiscreteLogs {
+    fn default() -> Self {
+        ProofOfEqualityOfDiscreteLogs {
+            base_randomizer: PaillierModulusSizedNumber::ZERO,
+            decryption_share_base_randomizer: PaillierModulusSizedNumber::ZERO,
+            response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::ZERO,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand_core::OsRng;

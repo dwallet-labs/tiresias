@@ -9,6 +9,10 @@ pub enum Error {
     SanityCheckError(SanityCheckError),
     #[error("group error")]
     GroupInstantiation(#[from] group::Error),
+    #[error("an internal error that should never have happened and signifies a bug")]
+    InternalError,
+    #[error("homomorphic-encryption error")]
+    Group(#[from] homomorphic_encryption::Error),
 }
 
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]

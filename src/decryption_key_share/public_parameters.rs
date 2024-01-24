@@ -11,8 +11,9 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    encryption_key, AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber,
-    PaillierModulusSizedNumber, SecretKeyShareSizedNumber,
+    encryption_key, factorial_upper_bound, secret_key_share_size_upper_bound, AsNaturalNumber,
+    AsRingElement, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber, SecretKeyShareSizedNumber,
+    MAX_PLAYERS,
 };
 
 /// The Public Parameters used for Threshold Decryption in Tiresias.
@@ -21,8 +22,10 @@ use crate::{
 /// outputs from the DKG process (e.g. `base` and `public_verification_key`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PublicParameters {
-    threshold: PartyID,
-    number_of_parties: PartyID,
+    // The threshold $t$
+    pub threshold: PartyID,
+    // The number of parties $n$
+    pub number_of_parties: PartyID,
     // The base $g$ for proofs of equality of discrete logs
     pub base: PaillierModulusSizedNumber,
     // The public verification keys ${{v_i}}_i$ for proofs of equality of discrete logs
@@ -44,7 +47,13 @@ impl PublicParameters {
         base: PaillierModulusSizedNumber,
         public_verification_keys: HashMap<PartyID, PaillierModulusSizedNumber>,
         encryption_scheme_public_parameters: encryption_key::PublicParameters,
-    ) -> PublicParameters {
+    ) -> crate::Result<PublicParameters> {
+        if usize::from(number_of_parties) > MAX_PLAYERS {
+            return Err(crate::Error::SanityCheckError(
+                crate::SanityCheckError::InvalidParams(),
+            ));
+        }
+
         let paillier_associate_bi_prime = *encryption_scheme_public_parameters
             .plaintext_space_public_parameters()
             .modulus;
@@ -103,7 +112,7 @@ impl PublicParameters {
             .reduce(|a, b| a.wrapping_mul(&b))
             .unwrap();
 
-        PublicParameters {
+        Ok(PublicParameters {
             threshold,
             number_of_parties,
             base,
@@ -112,7 +121,7 @@ impl PublicParameters {
             four_n_factorial_cubed_inverse_mod_n,
             n_factorial,
             encryption_scheme_public_parameters,
-        }
+        })
     }
 
     // Factor the binomial coefficients by reducing the fractions ${n\choose j} = \frac{{n - j +
@@ -155,6 +164,12 @@ impl PublicParameters {
             .map(|x| SecretKeyShareSizedNumber::from(*x))
             .reduce(|a, b| a.wrapping_mul(&b))
             .unwrap()
+    }
+}
+
+impl AsRef<encryption_key::PublicParameters> for PublicParameters {
+    fn as_ref(&self) -> &encryption_key::PublicParameters {
+        &self.encryption_scheme_public_parameters
     }
 }
 
@@ -201,7 +216,8 @@ mod tests {
             BASE,
             HashMap::new(),
             encryption_scheme_public_parameters,
-        );
+        )
+        .unwrap();
 
         assert_eq!(public_parameters.factored_binomial_coefficients, factors);
 

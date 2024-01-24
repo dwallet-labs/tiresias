@@ -4,101 +4,343 @@ use std::{
     collections::{HashMap, HashSet},
     ops::Neg,
 };
-
+use group::GroupElement;
+use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
 #[cfg(feature = "benchmarking")]
 pub(crate) use benches::{benchmark_combine_decryption_shares, benchmark_decryption_share};
 use crypto_bigint::{rand_core::CryptoRngCore, MultiExponentiateBoundedExp, NonZero};
+use group::PartyID;
+use homomorphic_encryption::{AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+use subtle::{Choice, CtOption};
 
 use crate::{
     error::{ProtocolError, SanityCheckError},
     factorial_upper_bound,
-    precomputed_values::PrecomputedValues,
     proofs::ProofOfEqualityOfDiscreteLogs,
     secret_key_share_size_upper_bound, AdjustedLagrangeCoefficientSizedNumber, AsNaturalNumber,
-    AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, Message,
-    PaillierModulusSizedNumber, PaillierRingElement, Result, SecretKeyShareSizedNumber,
+    AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, PLAINTEXT_SPACE_SCALAR_LIMBS
+    , PaillierModulusSizedNumber, PaillierRingElement, Result, SecretKeyShareSizedNumber, CiphertextSpaceGroupElement, PlaintextSpaceGroupElement,
     MAX_PLAYERS,
 };
 
+mod public_parameters;
+pub use public_parameters::PublicParameters;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecryptionKeyShare {
-    pub party_id: PartyID,          // The party's index in the protocol $P_j$
-    pub threshold: PartyID,         // The threshold $t$
-    pub number_of_parties: PartyID, // The number of parties $n$
-    pub encryption_key: EncryptionKey,
-    // The base $g$ for proofs of equality of discrete logs
-    pub base: PaillierModulusSizedNumber,
-    // The public verification key $v_j$ for proofs of equality of discrete logs
-    pub public_verification_key: PaillierModulusSizedNumber,
-    // $ d_j $
+    // The party's index in the protocol $P_j$
+    pub party_id: PartyID,
+    // The corresponding encryption key
+    encryption_key: EncryptionKey,
+    // The decryption key share $ d_j $
     decryption_key_share: SecretKeyShareSizedNumber,
-    pub precomputed_values: PrecomputedValues,
 }
 
-impl DecryptionKeyShare {
-    /// Construct a new `DecryptionKeyShare`.
-    pub fn new(
+impl AsRef<EncryptionKey> for DecryptionKeyShare {
+    fn as_ref(&self) -> &EncryptionKey {
+        &self.encryption_key
+    }
+}
+
+impl
+    AdditivelyHomomorphicDecryptionKeyShare<
+        PLAINTEXT_SPACE_SCALAR_LIMBS,
+        EncryptionKey,
+    > for DecryptionKeyShare
+{
+    type SecretKeyShare = SecretKeyShareSizedNumber;
+    type DecryptionShare = PaillierModulusSizedNumber;
+    type PartialDecryptionProof = ProofOfEqualityOfDiscreteLogs;
+    type LagrangeCoefficient = AdjustedLagrangeCoefficientSizedNumber;
+    type PublicParameters = PublicParameters;
+    type Error = Error;
+
+    fn new(
         party_id: PartyID,
-        threshold: PartyID,
-        number_of_parties: PartyID,
-        encryption_key: EncryptionKey,
-        base: PaillierModulusSizedNumber,
-        decryption_key_share: SecretKeyShareSizedNumber,
-        precomputed_values: PrecomputedValues,
-    ) -> DecryptionKeyShare {
-        assert!(usize::from(number_of_parties) <= MAX_PLAYERS);
+        decryption_key_share: Self::SecretKeyShare,
+        public_parameters: &Self::PublicParameters,
+    ) -> Result<Self> {
+        let encryption_key = EncryptionKey::new(&public_parameters.encryption_scheme_public_parameters)?;
 
-        let base = base
-            .as_ring_element(&encryption_key.ciphertext_modulus)
-            .pow_bounded_exp(
-                &precomputed_values.n_factorial,
-                factorial_upper_bound(usize::from(number_of_parties)),
-            )
-            .as_natural_number();
-
-        let public_verification_key = base
-            .as_ring_element(&encryption_key.ciphertext_modulus)
-            .pow_bounded_exp(
-                &decryption_key_share,
-                secret_key_share_size_upper_bound(
-                    usize::from(number_of_parties),
-                    usize::from(threshold),
-                ),
-            )
-            .as_natural_number();
-
-        DecryptionKeyShare {
+        Ok(DecryptionKeyShare {
             party_id,
-            threshold,
-            number_of_parties,
             encryption_key,
-            base,
-            public_verification_key,
             decryption_key_share,
-            precomputed_values,
+        })
+    }
+
+    fn generate_decryption_share_semi_honest(
+        &self,
+        ciphertext: &CiphertextSpaceGroupElement,
+        public_parameters: &Self::PublicParameters,
+    ) -> CtOption<Self::DecryptionShare> {
+        // Paillier (threshold) decryption cannot fail, the only possible reasons are sanity check that depends not on the secret key share,
+        // but on the validity of passed public parameters,
+        // and so it's OK to early abort the execution of the function,
+        // the time-pattern won't leak sensitive information.
+        if let Ok((_, decryption_shares)) =
+            self.generate_decryption_shares_semi_honest_internal(vec![*ciphertext], public_parameters) {
+            CtOption::new(*decryption_shares
+                .first()
+                .unwrap(),
+                          Choice::from(1u8),
+            )
+        } else {
+            CtOption::new(crate::PaillierModulusSizedNumber::default(),
+                          Choice::from(0u8),
+            )
         }
     }
 
-    pub fn generate_decryption_shares_semi_honest(
+    fn generate_decryption_shares(
         &self,
-        ciphertexts: Vec<PaillierModulusSizedNumber>,
-    ) -> Result<Vec<PaillierModulusSizedNumber>> {
-        let (_, decryption_shares) =
-            self.generate_decryption_shares_semi_honest_internal(ciphertexts)?;
+        ciphertexts: Vec<CiphertextSpaceGroupElement>,
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> CtOption<(Vec<Self::DecryptionShare>, Self::PartialDecryptionProof)> {
+        let n2 = *public_parameters.encryption_scheme_public_parameters.ciphertext_space_public_parameters().params.modulus();
 
-        Ok(decryption_shares)
+        let public_verification_key = public_parameters.public_verification_keys.get(&self.party_id).copied();
+
+        let decryption_shares_and_bases =
+            self.generate_decryption_shares_semi_honest_internal(ciphertexts, public_parameters);
+
+        // Paillier (threshold) decryption cannot fail, the only possible reasons are sanity check that depends not on the secret key share,
+        // but on the validity of passed public parameters,
+        // and so it's OK to early abort the execution of the function,
+        // the time-pattern won't leak sensitive information.
+        if public_verification_key.is_none() || decryption_shares_and_bases.is_err()
+        {
+            return             CtOption::new((vec![], ProofOfEqualityOfDiscreteLogs::default()),
+                                             Choice::from(0u8),
+            );
+        }
+
+        let public_verification_key = public_verification_key.unwrap();
+        let (decryption_share_bases, decryption_shares) =
+            decryption_shares_and_bases.unwrap();
+
+            let decryption_shares_and_bases: Vec<(
+                PaillierModulusSizedNumber,
+                PaillierModulusSizedNumber,
+            )> = decryption_share_bases
+                .into_iter()
+                .zip(decryption_shares.clone())
+                .collect();
+
+            if decryption_shares_and_bases.len() == 1 {
+                let (decryption_share_base, decryption_share) =
+                    decryption_shares_and_bases.first().unwrap();
+
+                let proof = ProofOfEqualityOfDiscreteLogs::prove(
+                    n2,
+                    public_parameters.number_of_parties,
+                    public_parameters.threshold,
+                    self.decryption_key_share,
+                    public_parameters.base,
+                    *decryption_share_base,
+                    public_verification_key,
+                    *decryption_share,
+                    rng,
+                );
+
+                return CtOption::new((decryption_shares,
+                               proof),
+                              Choice::from(1u8),
+                );
+            }
+
+                if let Ok(proof) = ProofOfEqualityOfDiscreteLogs::batch_prove(
+                    n2,
+                    public_parameters.number_of_parties,
+                    public_parameters.threshold,
+                    self.decryption_key_share,
+                    public_parameters.base,
+                    public_verification_key,
+                    decryption_shares_and_bases,
+                    rng,
+                ) {
+                    CtOption::new((decryption_shares,
+                                   proof),
+                                  Choice::from(1u8),
+                    )
+                }
+                else {
+                    CtOption::new((vec![], ProofOfEqualityOfDiscreteLogs::default()),
+                                  Choice::from(0u8),
+                    )
+                }
+
+        }
+
+    fn compute_lagrange_coefficient(
+        party_id: PartyID,
+        number_of_parties: PartyID,
+        decrypters: Vec<PartyID>,
+        public_parameters: &Self::PublicParameters,
+    ) -> Self::LagrangeCoefficient {
+        // The adjusted lagrange coefficient formula is given by:
+        // $ 2n!\lambda_{0,j}^{S} =
+        //   2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n] \setminus S} (j'-j)\Pi_{j' \in S}j'} $
+        // Here, we are only computing a part of that, namely:
+        // $ 2{n\choose j}\Pi_{j'\in [n] \setminus S} |j'-j| $
+        //
+        // For two reasons:
+        //  1. We cannot hold negative numbers in crypto-bigint, so we are computing the absolute
+        // value.  2. The last part $ \Pi_{j' \in S}j'} $ is independent of $ j $,
+        //     so as an optimization we are raising the result of the multi-exponentiation by it
+        // once,     instead of every time.
+
+        // Next multiply by ${n\choose j}$
+        let adjusted_lagrange_coefficient: AdjustedLagrangeCoefficientSizedNumber =
+            public_parameters
+                .factored_binomial_coefficients
+                .get(&party_id)
+                .unwrap()
+                .resize();
+
+        // Finally multiply by $^{\Pi_{j'\in [n] \setminus S} |(j'-j)|}$
+        HashSet::<PartyID>::from_iter(1..=number_of_parties)
+            .symmetric_difference(&HashSet::<PartyID>::from_iter(decrypters))
+            .fold(adjusted_lagrange_coefficient, |acc, j_prime| {
+                acc.wrapping_mul(&AdjustedLagrangeCoefficientSizedNumber::from(
+                    j_prime.abs_diff(party_id),
+                ))
+            })
     }
 
+    fn combine_decryption_shares_semi_honest(
+        decryption_shares: HashMap<PartyID, Self::DecryptionShare>,
+        lagrange_coefficients: HashMap<PartyID, Self::LagrangeCoefficient>,
+        public_parameters: &Self::PublicParameters,
+    ) -> Result<PlaintextSpaceGroupElement> {
+       Self::combine_decryption_shares_semi_honest_internal(
+       decryption_shares.into_iter().map(|(party_id, decryption_share)| (party_id, vec![decryption_share])).collect(),
+        lagrange_coefficients,
+public_parameters).and_then(|plaintexts| plaintexts.first().ok_or(Error::InternalError).copied())
+    }
+
+    fn combine_decryption_shares(
+        ciphertexts: Vec<CiphertextSpaceGroupElement>,
+        decryption_shares_and_proofs: HashMap<
+            PartyID,
+            (Vec<Self::DecryptionShare>, Self::PartialDecryptionProof)        >,        lagrange_coefficients: HashMap<PartyID, Self::LagrangeCoefficient>,
+        public_parameters: &Self::PublicParameters,
+        rng: &mut impl CryptoRngCore,
+    ) -> Result<Vec<PlaintextSpaceGroupElement>> {
+        let n2 = *public_parameters.encryption_scheme_public_parameters.ciphertext_space_public_parameters().params.modulus();
+        let batch_size = ciphertexts.len();
+
+        if decryption_shares_and_proofs.len() != usize::from(public_parameters.threshold)
+            || decryption_shares_and_proofs
+            .values()
+            .any(|(decryption_shares, _)| decryption_shares.len() != batch_size)
+        {
+            return Err(Error::SanityCheckError(SanityCheckError::InvalidParams()));
+        };
+
+        // The set $S$ of parties participating in the threshold decryption sessions
+        let decrypters: Vec<PartyID> = decryption_shares_and_proofs.clone().into_keys().collect();
+
+        #[cfg(not(feature = "parallel"))]
+            let iter = ciphertexts.into_iter();
+        #[cfg(feature = "parallel")]
+            let iter = ciphertexts.into_par_iter();
+
+        let decryption_share_bases: Vec<PaillierModulusSizedNumber> = iter
+            .map(|ciphertext| {
+                ciphertext
+                    .0
+                    .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
+                    .pow_bounded_exp(
+                        &public_parameters.n_factorial,
+                        factorial_upper_bound(usize::from(public_parameters.number_of_parties)),
+                    )
+                    .as_natural_number()
+            })
+            .collect();
+
+        if decrypters.iter().any(|party_id| public_parameters.public_verification_keys.get(party_id).is_none()) {
+            return Err(Error::SanityCheckError(SanityCheckError::InvalidParams()));
+        }
+
+        let malicious_parties: Vec<PartyID> = decrypters.clone().into_iter()
+            .filter(|party_id| {
+                let public_verification_key = *public_parameters.public_verification_keys.get(party_id).unwrap();
+                let (decryption_shares, proof) = decryption_shares_and_proofs.get(party_id).unwrap();
+
+                if batch_size == 1 {
+                    let decryption_share_base = *decryption_share_bases.first().unwrap();
+                    let decryption_share = *decryption_shares.first().unwrap();
+
+                    proof
+                        .verify(
+                            n2,
+                            public_parameters.number_of_parties,
+                            public_parameters.threshold,
+                            public_parameters.base,
+                            decryption_share_base,
+                            public_verification_key,
+                            decryption_share,
+                            rng,
+                        )
+                        .is_err()
+                } else {
+                    let decryption_shares_and_bases: Vec<(
+                        PaillierModulusSizedNumber,
+                        PaillierModulusSizedNumber,
+                    )> = decryption_share_bases
+                        .clone()
+                        .into_iter()
+                        .zip(decryption_shares.clone())
+                        .collect();
+
+                    proof
+                        .batch_verify(
+                            n2,
+                            public_parameters.number_of_parties,
+                            public_parameters.threshold,
+                            public_parameters.base,
+                            public_verification_key,
+                            decryption_shares_and_bases,
+                            rng,
+                        )
+                        .is_err()
+                }
+            })
+            .collect();
+
+        if !malicious_parties.is_empty() {
+            return Err(Error::ProtocolError(
+                ProtocolError::ProofVerificationError { malicious_parties },
+            ));
+        };
+
+        let decryption_shares = decryption_shares_and_proofs
+            .into_iter()
+            .map(|(party_id, (decryption_shares, _))| (party_id, decryption_shares))
+            .collect();
+
+        Self::combine_decryption_shares_semi_honest_internal(
+            decryption_shares,
+            lagrange_coefficients,
+            public_parameters,
+        )
+    }
+}
+
+impl DecryptionKeyShare {
     fn generate_decryption_shares_semi_honest_internal(
         &self,
-        ciphertexts: Vec<PaillierModulusSizedNumber>,
+        ciphertexts: Vec<CiphertextSpaceGroupElement>,
+        public_parameters: &PublicParameters,
     ) -> Result<(
         Vec<PaillierModulusSizedNumber>,
         Vec<PaillierModulusSizedNumber>,
     )> {
-        let n2 = self.encryption_key.ciphertext_modulus;
+        let n2 = *public_parameters.encryption_scheme_public_parameters.ciphertext_space_public_parameters().params.modulus();
 
         #[cfg(not(feature = "parallel"))]
         let iter = ciphertexts.iter();
@@ -108,11 +350,11 @@ impl DecryptionKeyShare {
         let decryption_share_bases: Vec<PaillierModulusSizedNumber> = iter
             .map(|ciphertext| {
                 ciphertext
-                    .as_ring_element(&n2)
+                    .0
                     .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
                     .pow_bounded_exp(
-                        &self.precomputed_values.n_factorial,
-                        factorial_upper_bound(usize::from(self.number_of_parties)),
+                        &public_parameters.n_factorial,
+                        factorial_upper_bound(usize::from(public_parameters.number_of_parties)),
                     )
                     .as_natural_number()
             })
@@ -131,8 +373,8 @@ impl DecryptionKeyShare {
                     .pow_bounded_exp(
                         &self.decryption_key_share,
                         secret_key_share_size_upper_bound(
-                            usize::from(self.number_of_parties),
-                            usize::from(self.threshold),
+                            usize::from(public_parameters.number_of_parties),
+                            usize::from(public_parameters.threshold),
                         ),
                     )
                     .as_natural_number()
@@ -142,109 +384,12 @@ impl DecryptionKeyShare {
         Ok((decryption_share_bases, decryption_shares))
     }
 
-    pub fn generate_decryption_shares(
-        &self,
-        ciphertexts: Vec<PaillierModulusSizedNumber>,
-        rng: &mut impl CryptoRngCore,
-    ) -> Result<Message> {
-        let n2 = self.encryption_key.ciphertext_modulus;
 
-        let (decryption_share_bases, decryption_shares) =
-            self.generate_decryption_shares_semi_honest_internal(ciphertexts)?;
-
-        let decryption_shares_and_bases: Vec<(
-            PaillierModulusSizedNumber,
-            PaillierModulusSizedNumber,
-        )> = decryption_share_bases
-            .into_iter()
-            .zip(decryption_shares.clone())
-            .collect();
-
-        if decryption_shares_and_bases.len() == 1 {
-            let (decryption_share_base, decryption_share) =
-                decryption_shares_and_bases.first().unwrap();
-
-            let proof = ProofOfEqualityOfDiscreteLogs::prove(
-                n2,
-                self.number_of_parties,
-                self.threshold,
-                self.decryption_key_share,
-                self.base,
-                *decryption_share_base,
-                self.public_verification_key,
-                *decryption_share,
-                rng,
-            );
-
-            return Ok(Message {
-                decryption_shares,
-                proof,
-            });
-        }
-
-        let proof = ProofOfEqualityOfDiscreteLogs::batch_prove(
-            n2,
-            self.number_of_parties,
-            self.threshold,
-            self.decryption_key_share,
-            self.base,
-            self.public_verification_key,
-            decryption_shares_and_bases,
-            rng,
-        )
-        .map_err(|_| Error::SanityCheckError(SanityCheckError::InvalidParams()))?;
-
-        Ok(Message {
-            decryption_shares,
-            proof,
-        })
-    }
-
-    pub fn compute_absolute_adjusted_lagrange_coefficient(
-        party_id: PartyID,
-        number_of_parties: PartyID,
-        decrypters: Vec<PartyID>,
-        precomputed_values: &PrecomputedValues,
-    ) -> AdjustedLagrangeCoefficientSizedNumber {
-        // The adjusted lagrange coefficient formula is given by:
-        // $ 2n!\lambda_{0,j}^{S} =
-        //   2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n] \setminus S} (j'-j)\Pi_{j' \in S}j'} $
-        // Here, we are only computing a part of that, namely:
-        // $ 2{n\choose j}\Pi_{j'\in [n] \setminus S} |j'-j| $
-        //
-        // For two reasons:
-        //  1. We cannot hold negative numbers in crypto-bigint, so we are computing the absolute
-        // value.  2. The last part $ \Pi_{j' \in S}j'} $ is independent of $ j $,
-        //     so as an optimization we are raising the result of the multi-exponentiation by it
-        // once,     instead of every time.
-
-        // Next multiply by ${n\choose j}$
-        let adjusted_lagrange_coefficient: AdjustedLagrangeCoefficientSizedNumber =
-            precomputed_values
-                .factored_binomial_coefficients
-                .get(&party_id)
-                .unwrap()
-                .resize();
-
-        // Finally multiply by $^{\Pi_{j'\in [n] \setminus S} |(j'-j)|}$
-        HashSet::<PartyID>::from_iter(1..=number_of_parties)
-            .symmetric_difference(&HashSet::<PartyID>::from_iter(decrypters))
-            .fold(adjusted_lagrange_coefficient, |acc, j_prime| {
-                acc.wrapping_mul(&AdjustedLagrangeCoefficientSizedNumber::from(
-                    j_prime.abs_diff(party_id),
-                ))
-            })
-    }
-
-    pub fn combine_decryption_shares_semi_honest(
-        encryption_key: EncryptionKey,
+    fn combine_decryption_shares_semi_honest_internal(
         decryption_shares: HashMap<PartyID, Vec<PaillierModulusSizedNumber>>,
-        precomputed_values: PrecomputedValues,
-        absolute_adjusted_lagrange_coefficients: HashMap<
-            PartyID,
-            AdjustedLagrangeCoefficientSizedNumber,
-        >,
-    ) -> Result<Vec<LargeBiPrimeSizedNumber>> {
+        lagrange_coefficients: HashMap<PartyID, AdjustedLagrangeCoefficientSizedNumber>,
+        public_parameters: &PublicParameters,
+    ) -> Result<Vec<PlaintextSpaceGroupElement>> {
         // We can't calculate the lagrange coefficients using the standard equations involving
         // division, and division in the exponent in a ring requires knowing its order,
         // which we don't for the Paillier case because it is secret and knowing it implies
@@ -256,8 +401,7 @@ impl DecryptionKeyShare {
         // Or, more compactly:
         //      $2n!\lambda_{0,j}^{S}=2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n] \setminus S}
         // (j'-j)\Pi_{j' \in S}j'$.
-
-        let n2 = encryption_key.ciphertext_modulus;
+        let n2 = *public_parameters.encryption_scheme_public_parameters.ciphertext_space_public_parameters().params.modulus();
 
         let batch_size = decryption_shares
             .iter()
@@ -267,9 +411,9 @@ impl DecryptionKeyShare {
             .len();
 
         #[cfg(not(feature = "parallel"))]
-        let iter = 0..batch_size;
+            let iter = 0..batch_size;
         #[cfg(feature = "parallel")]
-        let iter = (0..batch_size).into_par_iter();
+            let iter = (0..batch_size).into_par_iter();
 
         // The set $S$ of parties participating in the threshold decryption sessions
         let decrypters: Vec<PartyID> = decryption_shares.clone().into_keys().collect();
@@ -300,7 +444,7 @@ impl DecryptionKeyShare {
         // Compute $c_j' = c_{j}^{2n!\lambda_{0,j}^{S}}=c_{j}^{2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n]
         // \setminus S} (j'-j)\Pi_{j' \in S}j'}$.
         let plaintexts = iter.map(|i| {
-            let decryption_shares_and_absolute_adjusted_lagrange_coefficients: Vec<(
+            let decryption_shares_and_lagrange_coefficients: Vec<(
                 PartyID,
                 PaillierModulusSizedNumber,
                 AdjustedLagrangeCoefficientSizedNumber,
@@ -311,7 +455,7 @@ impl DecryptionKeyShare {
                     (
                         party_id,
                         *decryption_shares.get(i).unwrap(),
-                        *absolute_adjusted_lagrange_coefficients
+                        *lagrange_coefficients
                             .get(&party_id)
                             .unwrap(),
                     )
@@ -321,7 +465,7 @@ impl DecryptionKeyShare {
             let decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients: Vec<(
                 PaillierModulusSizedNumber,
                 AdjustedLagrangeCoefficientSizedNumber,
-            )> = decryption_shares_and_absolute_adjusted_lagrange_coefficients
+            )> = decryption_shares_and_lagrange_coefficients
                 .clone()
                 .into_iter()
                 .filter(|(party_id, ..)| decrypters_requiring_inversion.contains(party_id))
@@ -335,7 +479,7 @@ impl DecryptionKeyShare {
             let decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients: Vec<(
                 PaillierModulusSizedNumber,
                 AdjustedLagrangeCoefficientSizedNumber,
-            )> = decryption_shares_and_absolute_adjusted_lagrange_coefficients
+            )> = decryption_shares_and_lagrange_coefficients
                 .into_iter()
                 .filter(|(party_id, ..)| !decrypters_requiring_inversion.contains(party_id))
                 .map(
@@ -350,207 +494,91 @@ impl DecryptionKeyShare {
                 decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
             )
         })
-        .map(
-            |(
-                decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
-                decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
-            )| {
-                #[allow(clippy::tuple_array_conversions)]
-                let [c_prime_part_needing_inversion, c_prime_part_not_needing_inversion] = [
-                    decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
-                    decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
-                ]
-                .map(|bases_and_exponents| {
-                    let exponent_bits = bases_and_exponents
+            .map(
+                |(
+                     decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
+                     decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
+                 )| {
+                    #[allow(clippy::tuple_array_conversions)]
+                        let [c_prime_part_needing_inversion, c_prime_part_not_needing_inversion] = [
+                        decryption_shares_needing_inversion_and_adjusted_lagrange_coefficients,
+                        decryption_shares_not_needing_inversion_and_adjusted_lagrange_coefficients,
+                    ]
+                        .map(|bases_and_exponents| {
+                            let exponent_bits = bases_and_exponents
+                                .iter()
+                                .map(|(_, exp)| exp.bits_vartime())
+                                .max()
+                                .unwrap();
+
+                            let bases_and_exponents: Vec<_> = bases_and_exponents
+                                .into_iter()
+                                .map(|(base, exponent)| (base.as_ring_element(&n2), exponent))
+                                .collect();
+
+                            PaillierRingElement::multi_exponentiate_bounded_exp(
+                                bases_and_exponents.as_slice(),
+                                exponent_bits,
+                            )
+                        });
+
+                    let c_prime =
+                        c_prime_part_needing_inversion.invert().0 * c_prime_part_not_needing_inversion;
+
+                    // $^2{\Pi_{j' \in S}j'}$
+                    // This computation is independent of `j` so it could be done outside the loop
+                    let c_prime = decrypters
                         .iter()
-                        .map(|(_, exp)| exp.bits_vartime())
-                        .max()
+                        .fold(
+                            c_prime.pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2),
+                            |acc, j_prime| {
+                                let exp = PaillierModulusSizedNumber::from(*j_prime);
+                                acc.pow_bounded_exp(&exp, exp.bits_vartime())
+                            },
+                        )
+                        .as_natural_number();
+
+                    let paillier_associate_bi_prime =
+
+                    NonZero::new(
+                        public_parameters.encryption_scheme_public_parameters
+                            .plaintext_space_public_parameters()
+                            .modulus
+                            .resize(),
+                    )
                         .unwrap();
 
-                    let bases_and_exponents: Vec<_> = bases_and_exponents
-                        .into_iter()
-                        .map(|(base, exponent)| (base.as_ring_element(&n2), exponent))
-                        .collect();
+                    // $c` >= 1$ so safe to perform a `.wrapping_sub()` here which will not overflow
+                    // After dividing a number $ x < N^2 $ by $N$2
+                    // we will get a number that is smaller than $N$, so we can safely `.split()`
+                    // and take the low part of the result.
+                    let (_, lo) =
+                        ((c_prime.wrapping_sub(&PaillierModulusSizedNumber::ONE)) / paillier_associate_bi_prime).split();
 
-                    PaillierRingElement::multi_exponentiate_bounded_exp(
-                        bases_and_exponents.as_slice(),
-                        exponent_bits,
+                    let paillier_associate_bi_prime = *public_parameters.encryption_scheme_public_parameters
+                        .plaintext_space_public_parameters()
+                        .modulus;
+
+                    PlaintextSpaceGroupElement::new(
+                        (lo.as_ring_element(&paillier_associate_bi_prime)
+                            * public_parameters
+                            .four_n_factorial_cubed_inverse_mod_n
+                            .as_ring_element(&paillier_associate_bi_prime))
+                            .as_natural_number(),
+                        public_parameters.encryption_scheme_public_parameters.plaintext_space_public_parameters(),
                     )
-                });
-
-                let c_prime =
-                    c_prime_part_needing_inversion.invert().0 * c_prime_part_not_needing_inversion;
-
-                // $^2{\Pi_{j' \in S}j'}$
-                // This computation is independent of `j` so it could be done outside the loop
-                let c_prime = decrypters
-                    .iter()
-                    .fold(
-                        c_prime.pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2),
-                        |acc, j_prime| {
-                            let exp = PaillierModulusSizedNumber::from(*j_prime);
-                            acc.pow_bounded_exp(&exp, exp.bits_vartime())
-                        },
-                    )
-                    .as_natural_number();
-
-                let paillier_n = NonZero::new(encryption_key.biprime_modulus.resize()).unwrap();
-
-                // $c` >= 1$ so safe to perform a `.wrapping_sub()` here which will not overflow
-                // After dividing a number $ x < N^2 $ by $N$2
-                // we will get a number that is smaller than $N$, so we can safely `.split()`
-                // and take the low part of the result.
-                let (_, lo) =
-                    ((c_prime.wrapping_sub(&PaillierModulusSizedNumber::ONE)) / paillier_n).split();
-
-                let paillier_n = encryption_key.biprime_modulus;
-
-                (lo.as_ring_element(&paillier_n)
-                    * precomputed_values
-                        .four_n_factorial_cubed_inverse_mod_n
-                        .as_ring_element(&paillier_n))
-                .as_natural_number()
-            },
-        )
-        .collect();
+                        .unwrap()
+                },
+            )
+            .collect();
 
         Ok(plaintexts)
-    }
-
-    /// finalize the threshold decryption round by combining all decryption shares from the
-    /// threshold-decryption round and decrypting the ciphertext.
-    ///
-    /// `decryption_shares_and_proofs` and `ciphertexts` must be provided in matching order.
-    /// `messages` should hold exactly `t` messages
-    ///
-    /// This is an associated function and not a method for there is a public operation
-    /// which can be performed by non-threshold-decryption parties.
-    ///
-    /// Note: `base` is assumed to be raised by `n!` as in `new()`.
-    #[allow(clippy::too_many_arguments)]
-    pub fn combine_decryption_shares<Rng: CryptoRngCore + Send + Sync + Clone>(
-        threshold: PartyID,
-        number_of_parties: PartyID,
-        encryption_key: EncryptionKey,
-        ciphertexts: Vec<PaillierModulusSizedNumber>,
-        messages: HashMap<PartyID, Message>,
-        precomputed_values: PrecomputedValues,
-        // The base $g$ for proofs of equality of discrete logs
-        base: PaillierModulusSizedNumber,
-        // The public verification keys ${{v_i}}_i$ for proofs of equality of discrete logs
-        public_verification_keys: HashMap<PartyID, PaillierModulusSizedNumber>,
-        absolute_adjusted_lagrange_coefficients: HashMap<
-            PartyID,
-            AdjustedLagrangeCoefficientSizedNumber,
-        >,
-        rng: &Rng,
-    ) -> Result<Vec<LargeBiPrimeSizedNumber>> {
-        let n2 = encryption_key.ciphertext_modulus;
-        let batch_size = ciphertexts.len();
-
-        if messages.len() != usize::from(threshold)
-            || messages
-                .values()
-                .any(|message| message.decryption_shares.len() != batch_size)
-        {
-            return Err(Error::SanityCheckError(SanityCheckError::InvalidParams()));
-        };
-
-        // The set $S$ of parties participating in the threshold decryption sessions
-        let decrypters: Vec<PartyID> = messages.clone().into_keys().collect();
-
-        #[cfg(not(feature = "parallel"))]
-        let iter = ciphertexts.into_iter();
-        #[cfg(feature = "parallel")]
-        let iter = ciphertexts.into_par_iter();
-
-        let decryption_share_bases: Vec<PaillierModulusSizedNumber> = iter
-            .map(|ciphertext| {
-                ciphertext
-                    .as_ring_element(&n2)
-                    .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
-                    .pow_bounded_exp(
-                        &precomputed_values.n_factorial,
-                        factorial_upper_bound(usize::from(number_of_parties)),
-                    )
-                    .as_natural_number()
-            })
-            .collect();
-
-        #[cfg(not(feature = "parallel"))]
-        let iter = decrypters.clone().into_iter();
-        #[cfg(feature = "parallel")]
-        let iter = decrypters.into_par_iter();
-        let malicious_parties: Vec<PartyID> = iter
-            .filter(|party_id| {
-                let public_verification_key = *public_verification_keys.get(party_id).unwrap();
-                let message = messages.get(party_id).unwrap();
-
-                if batch_size == 1 {
-                    let decryption_share_base = *decryption_share_bases.first().unwrap();
-                    let decryption_share = *message.decryption_shares.first().unwrap();
-
-                    message
-                        .proof
-                        .verify(
-                            n2,
-                            number_of_parties,
-                            threshold,
-                            base,
-                            decryption_share_base,
-                            public_verification_key,
-                            decryption_share,
-                            &mut rng.clone(),
-                        )
-                        .is_err()
-                } else {
-                    let decryption_shares_and_bases: Vec<(
-                        PaillierModulusSizedNumber,
-                        PaillierModulusSizedNumber,
-                    )> = decryption_share_bases
-                        .clone()
-                        .into_iter()
-                        .zip(message.decryption_shares.clone())
-                        .collect();
-
-                    message
-                        .proof
-                        .batch_verify(
-                            n2,
-                            number_of_parties,
-                            threshold,
-                            base,
-                            public_verification_key,
-                            decryption_shares_and_bases,
-                            &mut rng.clone(),
-                        )
-                        .is_err()
-                }
-            })
-            .collect();
-
-        if !malicious_parties.is_empty() {
-            return Err(Error::ProtocolError(
-                ProtocolError::ProofVerificationError { malicious_parties },
-            ));
-        };
-
-        let decryption_shares = messages
-            .into_iter()
-            .map(|(party_id, message)| (party_id, message.decryption_shares))
-            .collect();
-
-        Self::combine_decryption_shares_semi_honest(
-            encryption_key,
-            decryption_shares,
-            precomputed_values,
-            absolute_adjusted_lagrange_coefficients,
-        )
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::hash::Hash;
     use std::iter;
 
     use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
@@ -559,151 +587,23 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::{
-        secret_sharing::shamir::Polynomial,
-        secret_sharing_polynomial_coefficient_size_upper_bound,
-        tests::{BASE, CIPHERTEXT, N, N2, SECRET_KEY, WITNESS},
-        LargeBiPrimeSizedNumber,
-    };
+    use crate::{secret_sharing::shamir::Polynomial, secret_sharing_polynomial_coefficient_size_upper_bound, tests::{BASE, CIPHERTEXT, N, N2, SECRET_KEY, WITNESS}, LargeBiPrimeSizedNumber, CiphertextSpaceValue};
+    use crate::tests::PLAINTEXT;
 
-    #[test]
-    fn generates_decryption_share() {
-        let n = 3;
-        let t = 2;
-        let j = 1;
+    fn setup(t: PartyID, n: PartyID) -> (PublicParameters, HashMap<PartyID, DecryptionKeyShare>) {
+        let encryption_scheme_public_parameters =
+            crate::encryption_key::PublicParameters::new(N).unwrap();
 
-        let encryption_key = EncryptionKey::new(N);
+        let encryption_key = EncryptionKey::new(&encryption_scheme_public_parameters).unwrap();
+        let n2 =                 encryption_scheme_public_parameters
+            .ciphertext_space_public_parameters()
+            .params
+            .modulus();
 
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.biprime_modulus);
-
-        let decryption_key_share =
-            DecryptionKeyShare::new(j, t, n, encryption_key, BASE, WITNESS, precomputed_values);
-
-        let message = decryption_key_share
-            .generate_decryption_shares(vec![CIPHERTEXT], &mut OsRng)
+        let n_factorial = (2..=n)
+            .map(SecretKeyShareSizedNumber::from)
+            .reduce(|a, b| a.wrapping_mul(&b))
             .unwrap();
-
-        let decryption_share_base = CIPHERTEXT
-            .as_ring_element(&N2)
-            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
-            .as_natural_number();
-
-        let decryption_share = *message.decryption_shares.first().unwrap();
-
-        let expected_decryption_share = decryption_share_base
-            .as_ring_element(&N2)
-            .pow_bounded_exp(
-                &WITNESS,
-                secret_key_share_size_upper_bound(usize::from(n), usize::from(t)),
-            )
-            .as_natural_number();
-
-        assert_eq!(expected_decryption_share, decryption_share);
-
-        assert!(message
-            .proof
-            .verify(
-                decryption_key_share.encryption_key.ciphertext_modulus,
-                n,
-                t,
-                decryption_key_share.base,
-                decryption_share_base,
-                decryption_key_share.public_verification_key,
-                decryption_share,
-                &mut OsRng
-            )
-            .is_ok());
-    }
-
-    #[test]
-    fn generates_decryption_shares() {
-        let t = 2;
-        let n = 3;
-
-        let encryption_key = &EncryptionKey::new(N);
-
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.biprime_modulus);
-
-        let decryption_key_share = DecryptionKeyShare::new(
-            1,
-            t,
-            n,
-            encryption_key.clone(),
-            BASE,
-            WITNESS,
-            precomputed_values,
-        );
-
-        let batch_size = 3;
-        let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
-            LargeBiPrimeSizedNumber::random_mod(
-                &mut OsRng,
-                &NonZero::new(encryption_key.biprime_modulus).unwrap(),
-            )
-        })
-        .take(batch_size)
-        .collect();
-
-        let ciphertexts: Vec<PaillierModulusSizedNumber> = plaintexts
-            .iter()
-            .map(|m| encryption_key.encrypt(m, &mut OsRng))
-            .collect();
-
-        let message = decryption_key_share
-            .generate_decryption_shares(ciphertexts.clone(), &mut OsRng)
-            .unwrap();
-
-        let decryption_share_bases: Vec<PaillierModulusSizedNumber> = ciphertexts
-            .iter()
-            .map(|ciphertext| {
-                ciphertext
-                    .as_ring_element(&encryption_key.ciphertext_modulus)
-                    .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
-                    .as_natural_number()
-            })
-            .collect();
-
-        let expected_decryption_shares: Vec<PaillierModulusSizedNumber> = decryption_share_bases
-            .iter()
-            .map(|decryption_share_base| {
-                decryption_share_base
-                    .as_ring_element(&N2)
-                    .pow_bounded_exp(
-                        &WITNESS,
-                        secret_key_share_size_upper_bound(usize::from(n), usize::from(t)),
-                    )
-                    .as_natural_number()
-            })
-            .collect();
-
-        assert_eq!(message.decryption_shares, expected_decryption_shares);
-
-        assert!(message
-            .proof
-            .batch_verify(
-                decryption_key_share.encryption_key.ciphertext_modulus,
-                n,
-                t,
-                decryption_key_share.base,
-                decryption_key_share.public_verification_key,
-                decryption_share_bases
-                    .into_iter()
-                    .zip(message.decryption_shares)
-                    .collect(),
-                &mut OsRng
-            )
-            .is_ok());
-    }
-
-    #[rstest]
-    #[case(2, 3, 1)]
-    #[case(2, 3, 2)]
-    #[case(5, 5, 1)]
-    #[case(6, 10, 5)]
-    fn decrypts(#[case] t: PartyID, #[case] n: PartyID, #[case] batch_size: usize) {
-        let encryption_key = EncryptionKey::new(N);
-
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.biprime_modulus);
 
         // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of the
         // DKG.
@@ -716,25 +616,218 @@ mod tests {
                         usize::from(t),
                     ),
                 ))
-                .unwrap(),
+                    .unwrap(),
             ))
         })
-        .take(usize::from(t))
-        .collect();
+            .take(usize::from(t))
+            .collect();
 
         let secret_key: SecretKeyShareSizedNumber = SECRET_KEY.resize();
 
         coefficients[0] = Wrapping(
             secret_key
-                .checked_mul(&precomputed_values.n_factorial)
+                .checked_mul(&n_factorial)
                 .unwrap(),
         );
 
         let polynomial = Polynomial::try_from(coefficients).unwrap();
 
-        let base = BASE;
+        let decryption_key_shares: HashMap<PartyID, _> = (1..=n)
+            .map(|j| {
+                let share = polynomial
+                    .evaluate(&Wrapping(SecretKeyShareSizedNumber::from(j)))
+                    .0;
 
-        let decrypters = (1..=n).choose_multiple(&mut OsRng, usize::from(t));
+                (
+                    j,
+                    share,
+                )
+            })
+            .collect();
+
+        let base = BASE
+            .as_ring_element(
+                n2
+            )
+            .pow_bounded_exp(
+                &n_factorial,
+                factorial_upper_bound(usize::from(n)),
+            )
+            .as_natural_number();
+
+        let public_verification_keys: HashMap<PartyID, PaillierModulusSizedNumber> =
+            decryption_key_shares
+                .clone()
+                .into_iter()
+                .map(|(j, decryption_key_share)| (j,        base
+                    .as_ring_element(n2)
+                    .pow_bounded_exp(
+                        &decryption_key_share,
+                        secret_key_share_size_upper_bound(
+                            usize::from(n),
+                            usize::from(t),
+                        ),
+                    )
+                    .as_natural_number()))
+                .collect();
+
+        let public_parameters = PublicParameters::new(
+            t,
+            n,
+            base,
+            public_verification_keys,
+            encryption_scheme_public_parameters,
+        )
+            .unwrap();
+
+        let decryption_key_shares = decryption_key_shares.into_iter().map(|(party_id, share)| (party_id, DecryptionKeyShare::new(party_id, share, &public_parameters).unwrap())).collect();
+
+        (public_parameters, decryption_key_shares)
+    }
+
+    #[test]
+    fn generates_decryption_share() {
+        let n = 3;
+        let t = 2;
+        let j = 1;
+
+        let (public_parameters, decryption_key_shares) = setup(t, n);
+        let decryption_key_share = decryption_key_shares.get(&j).unwrap().clone();
+        let public_verification_key = public_parameters.public_verification_keys.get(&j).unwrap().clone();
+
+        let ciphertext = CiphertextSpaceGroupElement::new(
+            CiphertextSpaceValue::new(
+                CIPHERTEXT,
+                public_parameters.encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
+            )
+                .unwrap(),
+            public_parameters.encryption_scheme_public_parameters.ciphertext_space_public_parameters(),
+        )
+            .unwrap();
+
+        let (decryption_shares, proof) = decryption_key_share
+            .generate_decryption_shares(vec![ciphertext], &public_parameters, &mut OsRng)
+            .unwrap();
+
+        let decryption_share_base = CIPHERTEXT
+            .as_ring_element(&N2)
+            .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
+            .as_natural_number();
+
+        let decryption_share = *decryption_shares.first().unwrap();
+
+        let expected_decryption_share = decryption_share_base
+            .as_ring_element(&N2)
+            .pow_bounded_exp(
+                &decryption_key_share.decryption_key_share,
+                secret_key_share_size_upper_bound(usize::from(n), usize::from(t)),
+            )
+            .as_natural_number();
+
+        assert_eq!(expected_decryption_share, decryption_share);
+
+        assert!(proof
+            .verify(
+                N2,
+                n,
+                t,
+                public_parameters.base,
+                decryption_share_base,
+                public_verification_key,
+                decryption_share,
+                &mut OsRng
+            )
+            .is_ok());
+    }
+
+    #[test]
+    fn generates_decryption_shares() {
+        let t = 2;
+        let n = 3;
+
+        let (public_parameters, decryption_key_shares) = setup(t, n);
+        let encryption_key = EncryptionKey::new(&public_parameters.encryption_scheme_public_parameters).unwrap();
+
+        let decryption_key_share = decryption_key_shares.get(&1).unwrap().clone();
+        let public_verification_key = public_parameters.public_verification_keys.get(&1).unwrap().clone();
+
+        let batch_size = 3;
+
+        let plaintexts: Vec<_> = iter::repeat_with(|| {
+            PlaintextSpaceGroupElement::new(
+                LargeBiPrimeSizedNumber::random_mod(
+                    &mut OsRng,
+                    &NonZero::new(N).unwrap(),
+                ),
+                public_parameters.encryption_scheme_public_parameters.plaintext_space_public_parameters(),
+            )
+                .unwrap()
+        })
+        .take(batch_size)
+        .collect();
+
+        let ciphertexts: Vec<_> = plaintexts
+            .iter()
+            .map(|m| {let (_, ciphertext) = encryption_key.encrypt(        m, &public_parameters.encryption_scheme_public_parameters, &mut OsRng).unwrap(); ciphertext})
+            .collect();
+
+        let (decryption_shares, proof) = decryption_key_share
+            .generate_decryption_shares(ciphertexts.clone(), &public_parameters, &mut OsRng)
+            .unwrap();
+
+        let decryption_share_bases: Vec<PaillierModulusSizedNumber> = ciphertexts
+            .iter()
+            .map(|ciphertext| {
+                ciphertext
+                    .0
+                    .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u16 * (2 * 3)), 4)
+                    .as_natural_number()
+            })
+            .collect();
+
+        let expected_decryption_shares: Vec<PaillierModulusSizedNumber> = decryption_share_bases
+            .iter()
+            .map(|decryption_share_base| {
+                decryption_share_base
+                    .as_ring_element(&N2)
+                    .pow_bounded_exp(
+                        &decryption_key_share.decryption_key_share,
+                        secret_key_share_size_upper_bound(usize::from(n), usize::from(t)),
+                    )
+                    .as_natural_number()
+            })
+            .collect();
+
+        assert_eq!(decryption_shares, expected_decryption_shares);
+
+        assert!(proof
+            .batch_verify(
+                N2,
+                n,
+                t,
+                public_parameters.base,
+                public_verification_key,
+                decryption_share_bases
+                    .into_iter()
+                    .zip(decryption_shares)
+                    .collect(),
+                &mut OsRng
+            )
+            .is_ok());
+    }
+
+    #[rstest]
+    #[case(2, 3, 1)]
+    #[case(2, 3, 2)]
+    #[case(5, 5, 1)]
+    #[case(6, 10, 5)]
+    fn decrypts(#[case] t: PartyID, #[case] n: PartyID, #[case] batch_size: usize) {
+        let (public_parameters, decryption_key_shares) = setup(t, n);
+        let encryption_key = EncryptionKey::new(&public_parameters.encryption_scheme_public_parameters).unwrap();
+
+        let decryption_key_shares: HashMap<_, _> = decryption_key_shares.into_iter().choose_multiple(&mut OsRng, usize::from(t)).into_iter().collect();
+
+        let decrypters: Vec<_> = decryption_key_shares.clone().into_keys().into_iter().collect();
 
         let absolute_adjusted_lagrange_coefficients: HashMap<
             PartyID,
@@ -745,89 +838,54 @@ mod tests {
             .map(|j| {
                 (
                     j,
-                    DecryptionKeyShare::compute_absolute_adjusted_lagrange_coefficient(
+                    DecryptionKeyShare::compute_lagrange_coefficient(
                         j,
                         n,
                         decrypters.clone(),
-                        &precomputed_values,
+                        &public_parameters,
                     ),
                 )
             })
             .collect();
 
-        let decryption_key_shares: HashMap<PartyID, DecryptionKeyShare> = decrypters
-            .clone()
-            .into_iter()
-            .map(|j| {
-                let share = polynomial
-                    .evaluate(&Wrapping(SecretKeyShareSizedNumber::from(j)))
-                    .0;
-                (
-                    j,
-                    DecryptionKeyShare::new(
-                        j,
-                        t,
-                        n,
-                        encryption_key.clone(),
-                        base,
-                        share,
-                        precomputed_values.clone(),
-                    ),
-                )
-            })
-            .collect();
-
-        let public_verification_keys: HashMap<PartyID, PaillierModulusSizedNumber> =
-            decryption_key_shares
-                .clone()
-                .into_iter()
-                .map(|(j, decryption_key_share)| (j, decryption_key_share.public_verification_key))
-                .collect();
-
-        let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
-            LargeBiPrimeSizedNumber::random_mod(
-                &mut OsRng,
-                &NonZero::new(encryption_key.biprime_modulus).unwrap(),
+        let plaintexts: Vec<_> = iter::repeat_with(|| {
+            PlaintextSpaceGroupElement::new(
+                LargeBiPrimeSizedNumber::random_mod(
+                    &mut OsRng,
+                    &NonZero::new(N).unwrap(),
+                ),
+                public_parameters.encryption_scheme_public_parameters.plaintext_space_public_parameters(),
             )
+                .unwrap()
         })
-        .take(batch_size)
-        .collect();
-
-        let ciphertexts: Vec<PaillierModulusSizedNumber> = plaintexts
-            .iter()
-            .map(|m| encryption_key.encrypt(m, &mut OsRng))
+            .take(batch_size)
             .collect();
 
-        let messages: HashMap<PartyID, Message> = decryption_key_shares
+        let ciphertexts: Vec<_> = plaintexts
+            .iter()
+            .map(|m| {let (_, ciphertext) = encryption_key.encrypt(        m, &public_parameters.encryption_scheme_public_parameters, &mut OsRng).unwrap(); ciphertext})
+            .collect();
+
+        let decryption_shares_and_proofs: HashMap<PartyID, (_, _)> = decryption_key_shares
             .iter()
             .map(|(j, party)| {
                 (
                     *j,
                     party
-                        .generate_decryption_shares(ciphertexts.clone(), &mut OsRng)
+                        .generate_decryption_shares(ciphertexts.clone(), &public_parameters, &mut OsRng)
                         .unwrap(),
                 )
             })
             .collect();
 
-        let base = decryption_key_shares
-            .get(decrypters.first().unwrap())
-            .unwrap()
-            .base;
-
         assert_eq!(
             plaintexts,
             DecryptionKeyShare::combine_decryption_shares(
-                t,
-                n,
-                encryption_key,
                 ciphertexts,
-                messages,
-                precomputed_values,
-                base,
-                public_verification_keys,
+                decryption_shares_and_proofs,
                 absolute_adjusted_lagrange_coefficients,
-                &OsRng
+                &public_parameters,
+                &mut OsRng
             )
             .unwrap(),
         );
@@ -859,7 +917,7 @@ mod benches {
         let encryption_key = &EncryptionKey::new(n);
 
         for number_of_parties in [10, 100, 1000] {
-            let precomputed_values = PrecomputedValues::new(number_of_parties, n);
+            let public_parameters = PrecomputedValues::new(number_of_parties, n);
             for batch_size in [1, 10, 100, 1000] {
                 let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
                     LargeBiPrimeSizedNumber::random_mod(&mut OsRng, &NonZero::new(n).unwrap())
@@ -884,7 +942,7 @@ mod benches {
                     encryption_key.clone(),
                     base,
                     secret_key_share,
-                    precomputed_values.clone(),
+                    public_parameters.clone(),
                 );
 
                 g.bench_function(
@@ -914,7 +972,7 @@ mod benches {
         let encryption_key = &EncryptionKey::new(n);
 
         for (threshold, number_of_parties) in [(6, 10), (67, 100), (667, 1000)] {
-            let precomputed_values = PrecomputedValues::new(number_of_parties, n);
+            let public_parameters = PrecomputedValues::new(number_of_parties, n);
             // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of
             // the DKG.
             let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> =
@@ -936,7 +994,7 @@ mod benches {
             let secret_key: SecretKeyShareSizedNumber = secret_key.resize();
             coefficients[0] = Wrapping(
                 secret_key
-                    .checked_mul(&precomputed_values.n_factorial)
+                    .checked_mul(&public_parameters.n_factorial)
                     .unwrap(),
             );
 
@@ -958,7 +1016,7 @@ mod benches {
                             j,
                             number_of_parties,
                             decrypters.clone(),
-                            &precomputed_values,
+                            &public_parameters,
                         ),
                     )
                 })
@@ -979,7 +1037,7 @@ mod benches {
                             encryption_key.clone(),
                             base,
                             share,
-                            precomputed_values.clone(),
+                            public_parameters.clone(),
                         ),
                     )
                 })
@@ -998,7 +1056,7 @@ mod benches {
                 let base = base
                     .as_ring_element(&encryption_key.ciphertext_modulus)
                     .pow_bounded_exp(
-                        &precomputed_values.n_factorial,
+                        &public_parameters.n_factorial,
                         factorial_upper_bound(usize::from(number_of_parties)),
                     )
                     .as_natural_number();
@@ -1009,7 +1067,7 @@ mod benches {
                     .as_ring_element(&encryption_key.ciphertext_modulus)
                     .pow_bounded_exp(&PaillierModulusSizedNumber::from(2u8), 2)
                     .pow_bounded_exp(
-                        &precomputed_values.n_factorial,
+                        &public_parameters.n_factorial,
                         factorial_upper_bound(usize::from(number_of_parties)),
                     )
                     .as_natural_number();
@@ -1092,7 +1150,7 @@ mod benches {
                                 DecryptionKeyShare::combine_decryption_shares_semi_honest(
                                     encryption_key.clone(),
                                     decryption_shares.clone(),
-                                    precomputed_values.clone(),
+                                    public_parameters.clone(),
                                     absolute_adjusted_lagrange_coefficients.clone(),
                                 ).unwrap();
 
@@ -1114,7 +1172,7 @@ mod benches {
                                     encryption_key.clone(),
                                     ciphertexts.clone(),
                                     messages.clone(),
-                                    precomputed_values.clone(),
+                                    public_parameters.clone(),
                                     base,
                                     public_verification_keys.clone(),
                                     absolute_adjusted_lagrange_coefficients.clone(),

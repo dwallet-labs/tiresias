@@ -165,11 +165,13 @@ mod tests {
     fn encrypts() {
         let public_parameters = PublicParameters::new(N).unwrap();
         let encryption_key = EncryptionKey::new(&public_parameters).unwrap();
+
         let plaintext = PlaintextSpaceGroupElement::new(
             PLAINTEXT,
             public_parameters.plaintext_space_public_parameters(),
         )
         .unwrap();
+
         let randomness = RandomnessSpaceGroupElement::new(
             RandomnessSpaceValue::new(
                 RANDOMNESS,
