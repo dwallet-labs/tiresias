@@ -80,7 +80,7 @@ impl AsRef<EncryptionKey> for DecryptionKey {
 
 #[cfg(test)]
 mod tests {
-    use group::GroupElement;
+    use group::{secp256k1, GroupElement};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
     };
@@ -148,7 +148,7 @@ mod tests {
 
         homomorphic_encryption::tests::encrypt_decrypts(
             decryption_key,
-            public_parameters,
+            &public_parameters,
             &mut OsRng,
         );
     }
@@ -158,9 +158,16 @@ mod tests {
         let public_parameters = PublicParameters::new(N).unwrap();
         let decryption_key = DecryptionKey::new(SECRET_KEY, &public_parameters).unwrap();
 
-        homomorphic_encryption::tests::encrypt_decrypts(
+        homomorphic_encryption::tests::evaluates::<
+            { secp256k1::SCALAR_LIMBS },
+            PLAINTEXT_SPACE_SCALAR_LIMBS,
+            secp256k1::Scalar,
+            EncryptionKey,
+            DecryptionKey,
+        >(
             decryption_key,
-            public_parameters,
+            &secp256k1::scalar::PublicParameters::default(),
+            &public_parameters,
             &mut OsRng,
         );
     }
