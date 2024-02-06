@@ -26,7 +26,8 @@ rand = "0.8.5"
 [features]
 parallel = ["dep:rayon"]
 
-# These features are for internal-use only (for benchmarking & tests) and exists due to limitations of benchmarking non-public functions, and exposing test functions in Rust.
+# These features are for internal-use only (for benchmarking & tests) and exists due to
+# limitations of benchmarking non-public functions, and exposing test functions in Rust.
 # There will be no SemVer support for these features.
 benchmarking = ["dep:criterion", "dep:rand_core", "dep:rand", "parallel"]
 test_exports = ["dep:rand_core", "dep:rand"]
