@@ -1,5 +1,5 @@
 // Author: dWallet Labs, Ltd.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: BSD-3-Clause-Clear
 
 use criterion::criterion_main;
 
