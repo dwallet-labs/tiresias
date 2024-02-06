@@ -24,15 +24,18 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecryptionKeyShare {
-    pub party_id: u16,          // The party's index in the protocol $P_j$
-    pub threshold: u16,         // The threshold $t$
-    pub number_of_parties: u16, // The number of parties $n$
+    /// The party's index in the protocol $P_j$
+    pub party_id: u16,
+    /// The threshold $t$
+    pub threshold: u16,
+    /// The number of parties $n$
+    pub number_of_parties: u16,
     pub encryption_key: EncryptionKey,
-    // The base $g$ for proofs of equality of discrete logs
+    /// The base $g$ for proofs of equality for discrete logs
     pub base: PaillierModulusSizedNumber,
-    // The public verification key $v_j$ for proofs of equality of discrete logs
+    /// The public verification key $v_j$ for proofs of equality for discrete logs
     pub public_verification_key: PaillierModulusSizedNumber,
-    // $ d_j $
+    /// $ d_j $
     decryption_key_share: SecretKeyShareSizedNumber,
     pub precomputed_values: PrecomputedValues,
 }
@@ -213,10 +216,11 @@ impl DecryptionKeyShare {
         // $ 2{n\choose j}\Pi_{j'\in [n] \setminus S} |j'-j| $
         //
         // For two reasons:
-        //  1. We cannot hold negative numbers in crypto-bigint, so we are computing the absolute
-        // value.  2. The last part $ \Pi_{j' \in S}j'} $ is independent of $ j $,
-        //     so as an optimization we are raising the result of the multi-exponentiation by it
-        // once,     instead of every time.
+        // 1. We cannot hold negative numbers in crypto-bigint, so we are computing the absolute
+        // value.
+        // 2. The last part of $ \Pi_{j' \in S}j'} $ is independent of $ j $,
+        // so as an optimization, we are raising the result of the multi-exponentiation by it
+        // once, instead of every time.
 
         // Next multiply by ${n\choose j}$
         let adjusted_lagrange_coefficient: AdjustedLagrangeCoefficientSizedNumber =
@@ -226,7 +230,7 @@ impl DecryptionKeyShare {
                 .unwrap()
                 .resize();
 
-        // Finally multiply by $^{\Pi_{j'\in [n] \setminus S} |(j'-j)|}$
+        // Finally, multiply by $^{\Pi_{j'\in [n] \setminus S} |(j'-j)|}$
         HashSet::<u16>::from_iter(1..=number_of_parties)
             .symmetric_difference(&HashSet::<u16>::from_iter(decrypters))
             .fold(adjusted_lagrange_coefficient, |acc, j_prime| {
@@ -247,7 +251,7 @@ impl DecryptionKeyShare {
     ) -> Result<Vec<LargeBiPrimeSizedNumber>> {
         // We can't calculate the lagrange coefficients using the standard equations involving
         // division, and division in the exponent in a ring requires knowing its order,
-        // which we don't for the Paillier case because it is secret and knowing it implies
+        // which we don't have for the Paillier case because it is secret and knowing it implies
         // factorization. So instead, we are not calculating the lagrange coefficients
         // directly but the lagrange coefficients multiplied by $2n!$, which is guaranteed to be an
         // integer:
@@ -256,7 +260,6 @@ impl DecryptionKeyShare {
         // Or, more compactly:
         //      $2n!\lambda_{0,j}^{S}=2{n\choose j}(-1)^{j-1}\Pi_{j'\in [n] \setminus S}
         // (j'-j)\Pi_{j' \in S}j'$.
-
         let n2 = encryption_key.n2;
 
         let batch_size = decryption_shares
@@ -271,7 +274,7 @@ impl DecryptionKeyShare {
         #[cfg(feature = "parallel")]
         let iter = (0..batch_size).into_par_iter();
 
-        // The set $S$ of parties participating in the threshold decryption sessions
+        // The set $S$ of parties participating in the threshold decryption sessions.
         let decrypters: Vec<u16> = decryption_shares.clone().into_keys().collect();
 
         let decrypters_requiring_inversion: Vec<u16> =
@@ -382,7 +385,7 @@ impl DecryptionKeyShare {
                     c_prime_part_needing_inversion.invert().0 * c_prime_part_not_needing_inversion;
 
                 // $^2{\Pi_{j' \in S}j'}$
-                // This computation is independent of `j` so it could be done outside the loop
+                // This computation is independent of `j` so it could be done outside the loop.
                 let c_prime = decrypters
                     .iter()
                     .fold(
@@ -417,11 +420,11 @@ impl DecryptionKeyShare {
         Ok(plaintexts)
     }
 
-    /// finalize the threshold decryption round by combining all decryption shares from the
+    /// Finalize the threshold decryption round by combining all decryption shares from the
     /// threshold-decryption round and decrypting the ciphertext.
     ///
-    /// `decryption_shares_and_proofs` and `ciphertexts` must be provided in matching order.
-    /// `messages` should hold exactly `t` messages
+    /// `Decryption_shares_and_proofs` and `ciphertexts` must be provided in matching order.
+    /// `Messages` should hold exactly `t` messages
     ///
     /// This is an associated function and not a method for there is a public operation
     /// which can be performed by non-threshold-decryption parties.
@@ -435,9 +438,9 @@ impl DecryptionKeyShare {
         ciphertexts: Vec<PaillierModulusSizedNumber>,
         messages: HashMap<u16, Message>,
         precomputed_values: PrecomputedValues,
-        // The base $g$ for proofs of equality of discrete logs
+        // The base $g$ for proofs of equality for discrete logs.
         base: PaillierModulusSizedNumber,
-        // The public verification keys ${{v_i}}_i$ for proofs of equality of discrete logs
+        // The public verification keys ${{v_i}}_i$ for proofs of equality for discrete logs.
         public_verification_keys: HashMap<u16, PaillierModulusSizedNumber>,
         absolute_adjusted_lagrange_coefficients: HashMap<
             u16,
@@ -456,7 +459,7 @@ impl DecryptionKeyShare {
             return Err(Error::SanityCheckError(SanityCheckError::InvalidParams()));
         };
 
-        // The set $S$ of parties participating in the threshold decryption sessions
+        // The set $S$ of parties participating in the threshold decryption sessions.
         let decrypters: Vec<u16> = messages.clone().into_keys().collect();
 
         #[cfg(not(feature = "parallel"))]
@@ -549,20 +552,146 @@ impl DecryptionKeyShare {
     }
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(any(test, feature = "test_exports"))]
+pub mod test_exports {
     use std::iter;
 
     use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
     use rand::seq::IteratorRandom;
     use rand_core::OsRng;
+
+    use super::*;
+    use crate::{
+        secret_sharing::shamir::Polynomial, secret_sharing_polynomial_coefficient_size_upper_bound,
+        LargeBiPrimeSizedNumber,
+    };
+
+    pub const N: LargeBiPrimeSizedNumber = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
+    pub const SECRET_KEY: PaillierModulusSizedNumber = PaillierModulusSizedNumber::from_be_hex("19d698592b9ccb2890fb84be46cd2b18c360153b740aeccb606cf4168ee2de399f05273182bf468978508a5f4869cb867b340e144838dfaf4ca9bfd38cd55dc2837688aed2dbd76d95091640c47b2037d3d0ca854ffb4c84970b86f905cef24e876ddc8ab9e04f2a5f171b9c7146776c469f0d90908aa436b710cf4489afc73cd3ee38bb81e80a22d5d9228b843f435c48c5eb40088623a14a12b44e2721b56625da5d56d257bb27662c6975630d51e8f5b930d05fc5ba461a0e158cbda0f3266408c9bf60ff617e39ae49e707cbb40958adc512f3b4b69a5c3dc8b6d34cf45bc9597840057438598623fb65254869a165a6030ec6bec12fd59e192b3c1eefd33ef5d9336e0666aa8f36c6bd2749f86ea82290488ee31bf7498c2c77a8900bae00efcff418b62d41eb93502a245236b89c241ad6272724858122a2ebe1ae7ec4684b29048ba25b3a516c281a93043d58844cf3fa0c6f1f73db5db7ecba179652349dea8df5454e0205e910e0206736051ac4b7c707c3013e190423532e907af2e85e5bb6f6f0b9b58257ca1ec8b0318dd197f30352a96472a5307333f0e6b83f4f775fb302c1e10f21e1fcbfff17e3a4aa8bb6f553d9c6ebc2c884ae9b140dd66f21afc8610418e9f0ba2d14ecfa51ff08744a3470ebe4bb21bd6d65b58ac154630b8331ea620673ffbabb179a971a6577c407a076654a629c7733836c250000");
+    pub const BASE: PaillierModulusSizedNumber = PaillierModulusSizedNumber::from_be_hex("03B4EFB895D3A85104F1F93744F9DB8924911747DE87ACEC55F1BF37C4531FD7F0A5B498A943473FFA65B89A04FAC2BBDF76FF14D81EB0A0DAD7414CF697E554A93C8495658A329A1907339F9438C1048A6E14476F9569A14BD092BCB2730DCE627566808FD686008F46A47964732DC7DCD2E6ECCE83F7BCCAB2AFDF37144ED153A118B683FF6A3C6971B08DE53DA5D2FEEF83294C21998FC0D1E219A100B6F57F2A2458EA9ABCFA8C5D4DF14B286B71BF5D7AD4FFEEEF069B64E0FC4F1AB684D6B2F20EAA235892F360AA2ECBF361357405D77E5023DF7BEDC12F10F6C35F3BE1163BC37B6C97D62616260A2862F659EB1811B1DDA727847E810D0C2FA120B18E99C9008AA4625CF1862460F8AB3A41E3FDB552187E0408E60885391A52EE2A89DD2471ECBA0AD922DEA0B08474F0BED312993ECB90C90C0F44EF267124A6217BC372D36F8231EB76B0D31DDEB183283A46FAAB74052A01F246D1C638BC00A47D25978D7DF9513A99744D8B65F2B32E4D945B0BA3B7E7A797604173F218D116A1457D20A855A52BBD8AC15679692C5F6AC4A8AF425370EF1D4184322F317203BE9678F92BFD25C7E6820D70EE08809424720249B4C58B81918DA02CFD2CAB3C42A02B43546E64430F529663FCEFA51E87E63F0813DA52F3473506E9E98DCD3142D830F1C1CDF6970726C190EAE1B5D5A26BC30857B4DF639797895E5D61A5EE");
+
+    #[allow(clippy::type_complexity)]
+    pub fn deal_trusted_decryption_key_shares(
+        t: u16,
+        n: u16,
+    ) -> (
+        EncryptionKey,
+        HashMap<u16, DecryptionKeyShare>,
+        PrecomputedValues,
+        PaillierModulusSizedNumber,
+        HashMap<u16, PaillierModulusSizedNumber>,
+        HashMap<u16, AdjustedLagrangeCoefficientSizedNumber>,
+    ) {
+        let encryption_key = EncryptionKey::new(N);
+
+        let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
+
+        // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of the
+        // DKG.
+        let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> = iter::repeat_with(|| {
+            Wrapping(SecretKeyShareSizedNumber::random_mod(
+                &mut OsRng,
+                &NonZero::new(SecretKeyShareSizedNumber::ONE.shl_vartime(
+                    secret_sharing_polynomial_coefficient_size_upper_bound(
+                        usize::from(n),
+                        usize::from(t),
+                    ),
+                ))
+                .unwrap(),
+            ))
+        })
+        .take(usize::from(t))
+        .collect();
+
+        let secret_key: SecretKeyShareSizedNumber = SECRET_KEY.resize();
+
+        coefficients[0] = Wrapping(
+            secret_key
+                .checked_mul(&precomputed_values.n_factorial)
+                .unwrap(),
+        );
+
+        let polynomial = Polynomial::try_from(coefficients).unwrap();
+
+        let base = BASE;
+
+        let decrypters = (1..=n).choose_multiple(&mut OsRng, usize::from(t));
+
+        let absolute_adjusted_lagrange_coefficients: HashMap<
+            u16,
+            AdjustedLagrangeCoefficientSizedNumber,
+        > = decrypters
+            .clone()
+            .into_iter()
+            .map(|j| {
+                (
+                    j,
+                    DecryptionKeyShare::compute_absolute_adjusted_lagrange_coefficient(
+                        j,
+                        n,
+                        decrypters.clone(),
+                        &precomputed_values,
+                    ),
+                )
+            })
+            .collect();
+
+        let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = decrypters
+            .clone()
+            .into_iter()
+            .map(|j| {
+                let share = polynomial
+                    .evaluate(&Wrapping(SecretKeyShareSizedNumber::from(j)))
+                    .0;
+                (
+                    j,
+                    DecryptionKeyShare::new(
+                        j,
+                        t,
+                        n,
+                        encryption_key.clone(),
+                        base,
+                        share,
+                        precomputed_values.clone(),
+                    ),
+                )
+            })
+            .collect();
+
+        let public_verification_keys: HashMap<u16, PaillierModulusSizedNumber> =
+            decryption_key_shares
+                .clone()
+                .into_iter()
+                .map(|(j, decryption_key_share)| (j, decryption_key_share.public_verification_key))
+                .collect();
+
+        let base = decryption_key_shares
+            .get(decrypters.first().unwrap())
+            .unwrap()
+            .base;
+
+        (
+            encryption_key,
+            decryption_key_shares,
+            precomputed_values,
+            base,
+            public_verification_keys,
+            absolute_adjusted_lagrange_coefficients,
+        )
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use std::iter;
+
+    use crypto_bigint::{NonZero, RandomMod};
+    use rand_core::OsRng;
     use rstest::rstest;
 
     use super::*;
     use crate::{
-        secret_sharing::shamir::Polynomial,
-        secret_sharing_polynomial_coefficient_size_upper_bound,
-        tests::{BASE, CIPHERTEXT, N, N2, SECRET_KEY, WITNESS},
+        tests::{deal_trusted_decryption_key_shares, BASE, CIPHERTEXT, N, N2, WITNESS},
         LargeBiPrimeSizedNumber,
     };
 
@@ -701,88 +830,14 @@ mod tests {
     #[case(5, 5, 1)]
     #[case(6, 10, 5)]
     fn decrypts(#[case] t: u16, #[case] n: u16, #[case] batch_size: usize) {
-        let encryption_key = EncryptionKey::new(N);
-
-        let precomputed_values = PrecomputedValues::new(n, encryption_key.n);
-
-        // Do a "trusted dealer" setup, in real life we'd have the secret shares as an output of the
-        // DKG.
-        let mut coefficients: Vec<Wrapping<SecretKeyShareSizedNumber>> = iter::repeat_with(|| {
-            Wrapping(SecretKeyShareSizedNumber::random_mod(
-                &mut OsRng,
-                &NonZero::new(SecretKeyShareSizedNumber::ONE.shl_vartime(
-                    secret_sharing_polynomial_coefficient_size_upper_bound(
-                        usize::from(n),
-                        usize::from(t),
-                    ),
-                ))
-                .unwrap(),
-            ))
-        })
-        .take(usize::from(t))
-        .collect();
-
-        let secret_key: SecretKeyShareSizedNumber = SECRET_KEY.resize();
-
-        coefficients[0] = Wrapping(
-            secret_key
-                .checked_mul(&precomputed_values.n_factorial)
-                .unwrap(),
-        );
-
-        let polynomial = Polynomial::try_from(coefficients).unwrap();
-
-        let base = BASE;
-
-        let decrypters = (1..=n).choose_multiple(&mut OsRng, usize::from(t));
-
-        let absolute_adjusted_lagrange_coefficients: HashMap<
-            u16,
-            AdjustedLagrangeCoefficientSizedNumber,
-        > = decrypters
-            .clone()
-            .into_iter()
-            .map(|j| {
-                (
-                    j,
-                    DecryptionKeyShare::compute_absolute_adjusted_lagrange_coefficient(
-                        j,
-                        n,
-                        decrypters.clone(),
-                        &precomputed_values,
-                    ),
-                )
-            })
-            .collect();
-
-        let decryption_key_shares: HashMap<u16, DecryptionKeyShare> = decrypters
-            .clone()
-            .into_iter()
-            .map(|j| {
-                let share = polynomial
-                    .evaluate(&Wrapping(SecretKeyShareSizedNumber::from(j)))
-                    .0;
-                (
-                    j,
-                    DecryptionKeyShare::new(
-                        j,
-                        t,
-                        n,
-                        encryption_key.clone(),
-                        base,
-                        share,
-                        precomputed_values.clone(),
-                    ),
-                )
-            })
-            .collect();
-
-        let public_verification_keys: HashMap<u16, PaillierModulusSizedNumber> =
-            decryption_key_shares
-                .clone()
-                .into_iter()
-                .map(|(j, decryption_key_share)| (j, decryption_key_share.public_verification_key))
-                .collect();
+        let (
+            encryption_key,
+            decryption_key_shares,
+            precomputed_values,
+            base,
+            public_verification_keys,
+            absolute_adjusted_lagrange_coefficients,
+        ) = deal_trusted_decryption_key_shares(t, n);
 
         let plaintexts: Vec<LargeBiPrimeSizedNumber> = iter::repeat_with(|| {
             LargeBiPrimeSizedNumber::random_mod(
@@ -809,11 +864,6 @@ mod tests {
                 )
             })
             .collect();
-
-        let base = decryption_key_shares
-            .get(decrypters.first().unwrap())
-            .unwrap()
-            .base;
 
         assert_eq!(
             plaintexts,
