@@ -6,7 +6,7 @@ license = "BSD-3-Clause-Clear"
 
 [dependencies]
 group = { git = "https://github.com/dwallet-labs/group.git" }
-homomorphic-encryption = { git = "https://github.com/dwallet-labs/homomorphic-encryption.git", branch = "decryption_key_share" }
+homomorphic_encryption = { git = "https://github.com/dwallet-labs/homomorphic-encryption.git" }
 crypto-bigint = { version = "0.5.5", features = ["rand_core", "serde", "alloc"], default-features = false }
 merlin = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.163", features = ["derive"] }

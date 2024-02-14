@@ -126,6 +126,7 @@ where
     Uint<LIMBS>: Encoding,
 {
     pub fn new(modulus: Uint<LIMBS>) -> group::Result<Self> {
+        #[allow(deprecated)]
         let params = DynResidueParams::<LIMBS>::new_checked(&modulus);
 
         if params.is_none().into() {
@@ -449,7 +450,11 @@ where
     }
 }
 
-impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS> where
-    Uint<LIMBS>: Encoding
+impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS>
+where
+    Uint<LIMBS>: Encoding,
 {
+    fn lower_bound(_public_parameters: &Self::PublicParameters) -> Uint<LIMBS> {
+        todo!()
+    }
 }

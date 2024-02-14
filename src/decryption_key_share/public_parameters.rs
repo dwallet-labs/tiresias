@@ -11,9 +11,8 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    encryption_key, factorial_upper_bound, secret_key_share_size_upper_bound, AsNaturalNumber,
-    AsRingElement, LargeBiPrimeSizedNumber, PaillierModulusSizedNumber, SecretKeyShareSizedNumber,
-    MAX_PLAYERS,
+    encryption_key, AsNaturalNumber, AsRingElement, LargeBiPrimeSizedNumber,
+    PaillierModulusSizedNumber, SecretKeyShareSizedNumber, MAX_PLAYERS,
 };
 
 /// The Public Parameters used for Threshold Decryption in Tiresias.

@@ -20,9 +20,8 @@ use crate::{
     factorial_upper_bound,
     proofs::ProofOfEqualityOfDiscreteLogs,
     secret_key_share_size_upper_bound, AdjustedLagrangeCoefficientSizedNumber, AsNaturalNumber,
-    AsRingElement, EncryptionKey, Error, LargeBiPrimeSizedNumber, PLAINTEXT_SPACE_SCALAR_LIMBS
+    AsRingElement, EncryptionKey, Error, PLAINTEXT_SPACE_SCALAR_LIMBS
     , PaillierModulusSizedNumber, PaillierRingElement, Result, SecretKeyShareSizedNumber, CiphertextSpaceGroupElement, PlaintextSpaceGroupElement,
-    MAX_PLAYERS,
 };
 
 mod public_parameters;
@@ -578,7 +577,6 @@ impl DecryptionKeyShare {
 
 #[cfg(test)]
 mod tests {
-    use std::hash::Hash;
     use std::iter;
 
     use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
@@ -587,14 +585,12 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::{secret_sharing::shamir::Polynomial, secret_sharing_polynomial_coefficient_size_upper_bound, tests::{BASE, CIPHERTEXT, N, N2, SECRET_KEY, WITNESS}, LargeBiPrimeSizedNumber, CiphertextSpaceValue};
-    use crate::tests::PLAINTEXT;
+    use crate::{secret_sharing::shamir::Polynomial, secret_sharing_polynomial_coefficient_size_upper_bound, tests::{BASE, CIPHERTEXT, N, N2, SECRET_KEY}, LargeBiPrimeSizedNumber, CiphertextSpaceValue};
 
     fn setup(t: PartyID, n: PartyID) -> (PublicParameters, HashMap<PartyID, DecryptionKeyShare>) {
         let encryption_scheme_public_parameters =
             crate::encryption_key::PublicParameters::new(N).unwrap();
 
-        let encryption_key = EncryptionKey::new(&encryption_scheme_public_parameters).unwrap();
         let n2 =                 encryption_scheme_public_parameters
             .ciphertext_space_public_parameters()
             .params

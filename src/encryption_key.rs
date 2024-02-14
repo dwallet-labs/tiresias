@@ -1,7 +1,7 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use crypto_bigint::{rand_core::CryptoRngCore, NonZero, Random, Uint, Zero};
+use crypto_bigint::NonZero;
 use group::GroupElement;
 use homomorphic_encryption::{AdditivelyHomomorphicEncryptionKey, GroupsPublicParametersAccessors};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -9,9 +9,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::{
     error::SanityCheckError,
     group::{CiphertextSpaceGroupElement, PlaintextSpaceGroupElement, RandomnessSpaceGroupElement},
-    AsNaturalNumber, AsRingElement, CiphertextSpacePublicParameters, CiphertextSpaceValue,
-    LargeBiPrimeSizedNumber, PaillierModulusSizedNumber, PaillierRingElement,
-    PlaintextSpacePublicParameters, RandomnessSpacePublicParameters, PLAINTEXT_SPACE_SCALAR_LIMBS,
+    CiphertextSpacePublicParameters, CiphertextSpaceValue, LargeBiPrimeSizedNumber,
+    PaillierModulusSizedNumber, PlaintextSpacePublicParameters, RandomnessSpacePublicParameters,
+    PLAINTEXT_SPACE_SCALAR_LIMBS,
 };
 
 /// A Paillier public encryption key.
@@ -24,7 +24,7 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     type CiphertextSpaceGroupElement = CiphertextSpaceGroupElement;
     type PublicParameters = PublicParameters;
 
-    fn new(public_parameters: &Self::PublicParameters) -> homomorphic_encryption::Result<Self> {
+    fn new(_public_parameters: &Self::PublicParameters) -> homomorphic_encryption::Result<Self> {
         // Validity checks are performed in `Self::PublicParameters::new`, so if we receive proper
         // public parameters we're good.
         Ok(EncryptionKey {})

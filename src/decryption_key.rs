@@ -10,10 +10,8 @@ use homomorphic_encryption::{
 use subtle::{Choice, CtOption};
 
 use crate::{
-    encryption_key, encryption_key::PublicParameters, AsNaturalNumber, AsRingElement,
-    CiphertextSpaceGroupElement, CiphertextSpaceValue, EncryptionKey, LargeBiPrimeSizedNumber,
-    PaillierModulusSizedNumber, PaillierRingElement, PlaintextSpaceGroupElement,
-    RandomnessSpaceGroupElement, RandomnessSpaceValue, PLAINTEXT_SPACE_SCALAR_LIMBS,
+    encryption_key, encryption_key::PublicParameters, CiphertextSpaceGroupElement, EncryptionKey,
+    PaillierModulusSizedNumber, PlaintextSpaceGroupElement, PLAINTEXT_SPACE_SCALAR_LIMBS,
 };
 
 /// A paillier decryption key.
@@ -89,9 +87,9 @@ mod tests {
     use super::*;
     use crate::{
         encryption_key::PublicParameters,
-        tests::{CIPHERTEXT, N, PLAINTEXT, RANDOMNESS, SECRET_KEY},
+        tests::{CIPHERTEXT, N, PLAINTEXT, SECRET_KEY},
         CiphertextSpaceGroupElement, CiphertextSpaceValue, LargeBiPrimeSizedNumber,
-        PlaintextSpaceGroupElement, RandomnessSpaceValue,
+        PlaintextSpaceGroupElement,
     };
 
     #[test]
