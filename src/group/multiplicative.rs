@@ -455,6 +455,7 @@ where
     Uint<LIMBS>: Encoding,
 {
     fn lower_bound(_public_parameters: &Self::PublicParameters) -> Uint<LIMBS> {
+        //
         todo!()
     }
 }

@@ -557,7 +557,7 @@ mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::tests::{BASE, CIPHERTEXT, N, WITNESS};
+    use crate::test_exports::{BASE, CIPHERTEXT, N, WITNESS};
 
     #[test]
     fn valid_proof_verifies() {

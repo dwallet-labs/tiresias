@@ -177,7 +177,7 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
-    use crate::tests::{BASE, N};
+    use crate::test_exports::{BASE, N};
 
     fn factorial(num: u16) -> u64 {
         (1u64..=u64::from(num)).product()

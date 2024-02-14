@@ -87,7 +87,7 @@ mod tests {
     use super::*;
     use crate::{
         encryption_key::PublicParameters,
-        tests::{CIPHERTEXT, N, PLAINTEXT, SECRET_KEY},
+        test_exports::{CIPHERTEXT, N, PLAINTEXT, SECRET_KEY},
         CiphertextSpaceGroupElement, CiphertextSpaceValue, LargeBiPrimeSizedNumber,
         PlaintextSpaceGroupElement,
     };

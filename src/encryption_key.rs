@@ -157,7 +157,7 @@ impl
 mod tests {
     use super::*;
     use crate::{
-        tests::{CIPHERTEXT, N, PLAINTEXT, RANDOMNESS},
+        test_exports::{CIPHERTEXT, N, PLAINTEXT, RANDOMNESS},
         RandomnessSpaceValue,
     };
 
