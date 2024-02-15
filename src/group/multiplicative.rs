@@ -454,8 +454,7 @@ impl<const LIMBS: usize> BoundedGroupElement<LIMBS> for GroupElement<LIMBS>
 where
     Uint<LIMBS>: Encoding,
 {
-    fn lower_bound(_public_parameters: &Self::PublicParameters) -> Uint<LIMBS> {
-        //
-        todo!()
+    fn lower_bound(public_parameters: &Self::PublicParameters) -> Uint<LIMBS> {
+        (*public_parameters.params.modulus()) / NonZero::new(Uint::<LIMBS>::from(2u8)).unwrap()
     }
 }
