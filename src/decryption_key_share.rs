@@ -556,14 +556,13 @@ impl DecryptionKeyShare {
 pub mod test_exports {
     use std::iter;
 
-    use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
+    use crypto_bigint::{CheckedMul, RandomMod, Wrapping};
     use rand::seq::IteratorRandom;
     use rand_core::OsRng;
 
     use super::*;
     use crate::{
         secret_sharing::shamir::Polynomial, secret_sharing_polynomial_coefficient_size_upper_bound,
-        LargeBiPrimeSizedNumber,
     };
 
     pub const N: LargeBiPrimeSizedNumber = LargeBiPrimeSizedNumber::from_be_hex("97431848911c007fa3a15b718ae97da192e68a4928c0259f2d19ab58ed01f1aa930e6aeb81f0d4429ac2f037def9508b91b45875c11668cea5dc3d4941abd8fbb2d6c8750e88a69727f982e633051f60252ad96ba2e9c9204f4c766c1c97bc096bb526e4b7621ec18766738010375829657c77a23faf50e3a31cb471f72c7abecdec61bdf45b2c73c666aa3729add2d01d7d96172353380c10011e1db3c47199b72da6ae769690c883e9799563d6605e0670a911a57ab5efc69a8c5611f158f1ae6e0b1b6434bafc21238921dc0b98a294195e4e88c173c8dab6334b207636774daad6f35138b9802c1784f334a82cbff480bb78976b22bb0fb41e78fdcb8095");
@@ -685,15 +684,12 @@ pub mod test_exports {
 pub mod tests {
     use std::iter;
 
-    use crypto_bigint::{NonZero, RandomMod};
+    use crypto_bigint::RandomMod;
     use rand_core::OsRng;
     use rstest::rstest;
 
     use super::*;
-    use crate::{
-        tests::{deal_trusted_decryption_key_shares, BASE, CIPHERTEXT, N, N2, WITNESS},
-        LargeBiPrimeSizedNumber,
-    };
+    use crate::tests::{deal_trusted_decryption_key_shares, BASE, CIPHERTEXT, N, N2, WITNESS};
 
     #[test]
     fn generates_decryption_share() {
@@ -889,15 +885,13 @@ mod benches {
     use std::iter;
 
     use criterion::Criterion;
-    use crypto_bigint::{CheckedMul, NonZero, RandomMod, Wrapping};
+    use crypto_bigint::{CheckedMul, RandomMod, Wrapping};
     use rand::seq::IteratorRandom;
     use rand_core::OsRng;
-    use rayon::iter::IntoParallelIterator;
 
     use super::*;
     use crate::{
         secret_sharing::shamir::Polynomial, secret_sharing_polynomial_coefficient_size_upper_bound,
-        LargeBiPrimeSizedNumber,
     };
 
     pub(crate) fn benchmark_decryption_share(c: &mut Criterion) {
