@@ -1174,7 +1174,6 @@ mod benches {
     use std::iter;
 
     use criterion::Criterion;
-    use crypto_bigint::{NonZero, RandomMod};
     use rand_core::OsRng;
 
     use super::*;
