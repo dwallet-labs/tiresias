@@ -684,14 +684,13 @@ pub mod test_exports {
 pub mod tests {
     use std::iter;
 
-    use crypto_bigint::{NonZero, RandomMod};
+    use crypto_bigint::{RandomMod};
     use rand_core::OsRng;
     use rstest::rstest;
 
     use super::*;
     use crate::{
         tests::{deal_trusted_decryption_key_shares, BASE, CIPHERTEXT, N, N2, WITNESS},
-        LargeBiPrimeSizedNumber,
     };
 
     #[test]
