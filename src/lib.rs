@@ -5,7 +5,7 @@
 use criterion::criterion_group;
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Concat, Limb, Uint, U1024,
+    Concat, Limb, Uint, U1024, U2048,
 };
 pub use decryption_key::DecryptionKey;
 pub use decryption_key_share::DecryptionKeyShare;

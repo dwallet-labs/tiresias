@@ -12,7 +12,7 @@ pub enum Error {
     #[error("an internal error that should never have happened and signifies a bug")]
     InternalError,
     #[error("homomorphic-encryption error")]
-    Group(#[from] homomorphic_encryption::Error),
+    HomomorphicEncryption(#[from] homomorphic_encryption::Error),
 }
 
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
