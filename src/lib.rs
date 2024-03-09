@@ -10,7 +10,7 @@ use crypto_bigint::{
 pub use decryption_key::DecryptionKey;
 pub use decryption_key_share::DecryptionKeyShare;
 pub use encryption_key::EncryptionKey;
-pub use error::{Error, Result, SanityCheckError};
+pub use error::{Error, ProtocolError, Result, SanityCheckError};
 
 mod batch_verification;
 mod decryption_key;
