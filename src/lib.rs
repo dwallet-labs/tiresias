@@ -5,7 +5,7 @@
 use criterion::criterion_group;
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Concat, Limb, Uint, U1024, U2048,
+    Concat, Limb, Uint, U1024,
 };
 pub use decryption_key::DecryptionKey;
 pub use decryption_key_share::DecryptionKeyShare;
@@ -21,13 +21,16 @@ mod group;
 pub mod proofs;
 pub mod secret_sharing;
 
-pub use ::group::{ComputationalSecuritySizedNumber, StatisticalSecuritySizedNumber};
+pub use ::group::ComputationalSecuritySizedNumber;
 pub use group::{
     CiphertextSpaceGroupElement, CiphertextSpacePublicParameters, CiphertextSpaceValue,
     PlaintextSpaceGroupElement, PlaintextSpacePublicParameters, PlaintextSpaceValue,
     RandomnessSpaceGroupElement, RandomnessSpacePublicParameters, RandomnessSpaceValue,
     CIPHERTEXT_SPACE_SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS,
 };
+
+// Being overly-conservative here
+pub type StatisticalSecuritySizedNumber = ComputationalSecuritySizedNumber;
 
 /// A type alias for an unsigned integer of the size of the Paillier large prime factors.
 /// Set to a U1024 for 112-bit security.
@@ -154,6 +157,8 @@ impl AsRingElement<PaillierPlaintextRingElement> for LargeBiPrimeSizedNumber {
 }
 
 #[cfg(any(test, feature = "test_exports"))]
+#[allow(dead_code)]
+#[allow(unused_imports)]
 pub mod test_exports {
     use crypto_bigint::NonZero;
     pub use decryption_key_share::test_exports::*;
@@ -204,10 +209,10 @@ pub mod test_exports {
     }
 }
 
-// #[cfg(feature = "benchmarking")]
-// criterion_group!(
-//     benches,
-//     proofs::benchmark_proof_of_equality_of_discrete_logs,
-//     decryption_key_share::benchmark_decryption_share,
-//     decryption_key_share::benchmark_combine_decryption_shares,
-// );
+#[cfg(feature = "benchmarking")]
+criterion_group!(
+    benches,
+    proofs::benchmark_proof_of_equality_of_discrete_logs,
+    decryption_key_share::benchmark_decryption_share,
+    decryption_key_share::benchmark_combine_decryption_shares,
+);

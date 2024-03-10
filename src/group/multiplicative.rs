@@ -117,7 +117,7 @@ where
     {
         let modulus = Uint::<LIMBS>::deserialize(deserializer)?;
 
-        Ok(PublicParameters::new(modulus).map_err(|e| Error::custom(e))?)
+        PublicParameters::new(modulus).map_err(Error::custom)
     }
 }
 
