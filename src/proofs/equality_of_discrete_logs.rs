@@ -104,7 +104,6 @@ impl ProofOfEqualityOfDiscreteLogs {
             usize::from(threshold),
         );
 
-        // TODO: can we do better? perhaps introduce a rand_bits() to crypto_bigint
         let randomizer = ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::random_mod(
             rng,
             &NonZero::new(
