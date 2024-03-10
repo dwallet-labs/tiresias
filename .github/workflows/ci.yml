@@ -46,11 +46,17 @@ jobs:
           args: --all-features --release
 
   rustfmt:
-    name: Rustfmt
+    name: fmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Verify repo license
+        run: |
+          chmod +x ./scripts/verify-license-rust.sh
+          chmod +x ./scripts/verify-license-presence.sh
+          ./scripts/verify-license-rust.sh
+          ./scripts/verify-license-presence.sh
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
