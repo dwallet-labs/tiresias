@@ -1,20 +1,20 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
-#[cfg(feature = "benchmarking")]
-pub(crate) use benches::{benchmark_combine_decryption_shares, benchmark_decryption_share};
-use crypto_bigint::{rand_core::CryptoRngCore, MultiExponentiateBoundedExp, NonZero};
-use group::GroupElement;
-use group::PartyID;
-use homomorphic_encryption::AdditivelyHomomorphicEncryptionKey;
-use homomorphic_encryption::{
-    AdditivelyHomomorphicDecryptionKeyShare, GroupsPublicParametersAccessors,
-};
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     ops::Neg,
 };
+
+#[cfg(feature = "benchmarking")]
+pub(crate) use benches::{benchmark_combine_decryption_shares, benchmark_decryption_share};
+use crypto_bigint::{rand_core::CryptoRngCore, MultiExponentiateBoundedExp, NonZero};
+use group::{GroupElement, PartyID};
+use homomorphic_encryption::{
+    AdditivelyHomomorphicDecryptionKeyShare, AdditivelyHomomorphicEncryptionKey,
+    GroupsPublicParametersAccessors,
+};
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 use subtle::{Choice, CtOption};
 
 use crate::{
@@ -76,9 +76,9 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
         ciphertext: &CiphertextSpaceGroupElement,
         public_parameters: &Self::PublicParameters,
     ) -> CtOption<Self::DecryptionShare> {
-        // Paillier (threshold) decryption cannot fail, the only possible reasons are sanity check that depends not on the secret key share,
-        // but on the validity of passed public parameters,
-        // and so it's OK to early abort the execution of the function,
+        // Paillier (threshold) decryption cannot fail, the only possible reasons are sanity check
+        // that depends not on the secret key share, but on the validity of passed public
+        // parameters, and so it's OK to early abort the execution of the function,
         // the time-pattern won't leak sensitive information.
         if let Ok((_, decryption_shares)) = self
             .generate_decryption_shares_semi_honest_internal(vec![*ciphertext], public_parameters)
@@ -112,9 +112,9 @@ impl AdditivelyHomomorphicDecryptionKeyShare<PLAINTEXT_SPACE_SCALAR_LIMBS, Encry
         let decryption_shares_and_bases =
             self.generate_decryption_shares_semi_honest_internal(ciphertexts, public_parameters);
 
-        // Paillier (threshold) decryption cannot fail, the only possible reasons are sanity check that depends not on the secret key share,
-        // but on the validity of passed public parameters,
-        // and so it's OK to early abort the execution of the function,
+        // Paillier (threshold) decryption cannot fail, the only possible reasons are sanity check
+        // that depends not on the secret key share, but on the validity of passed public
+        // parameters, and so it's OK to early abort the execution of the function,
         // the time-pattern won't leak sensitive information.
         if public_verification_key.is_none() || decryption_shares_and_bases.is_err() {
             return CtOption::new(
@@ -548,8 +548,8 @@ impl DecryptionKeyShare {
                             )
                         });
 
-                    let c_prime =
-                        c_prime_part_needing_inversion.invert().0 * c_prime_part_not_needing_inversion;
+                    let c_prime = c_prime_part_needing_inversion.invert().0 *
+                        c_prime_part_not_needing_inversion;
 
                     // $^2{\Pi_{j' \in S}j'}$
                     // This computation is independent of `j` so it could be done outside the loop
@@ -578,10 +578,11 @@ impl DecryptionKeyShare {
                     // After dividing a number $ x < N^2 $ by $N$2
                     // we will get a number that is smaller than $N$, so we can safely `.split()`
                     // and take the low part of the result.
-                    let (_, lo) =
-                        ((c_prime.wrapping_sub(&PaillierModulusSizedNumber::ONE)) / paillier_associate_bi_prime).split();
+                    let (_, lo) = ((c_prime.wrapping_sub(&PaillierModulusSizedNumber::ONE)) /
+                            paillier_associate_bi_prime).split();
 
-                    let paillier_associate_bi_prime = *public_parameters.encryption_scheme_public_parameters
+                    let paillier_associate_bi_prime =
+                        *public_parameters.encryption_scheme_public_parameters
                         .plaintext_space_public_parameters()
                         .modulus;
 
@@ -591,7 +592,8 @@ impl DecryptionKeyShare {
                             .four_n_factorial_cubed_inverse_mod_n
                             .as_ring_element(&paillier_associate_bi_prime))
                             .as_natural_number(),
-                        public_parameters.encryption_scheme_public_parameters.plaintext_space_public_parameters(),
+                        public_parameters.encryption_scheme_public_parameters.
+                            plaintext_space_public_parameters(),
                     )
                         .unwrap()
                 },
@@ -991,8 +993,7 @@ mod benches {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::test_exports::deal_trusted_shares;
-    use crate::{CiphertextSpaceValue, LargeBiPrimeSizedNumber};
+    use crate::{test_exports::deal_trusted_shares, CiphertextSpaceValue, LargeBiPrimeSizedNumber};
 
     pub(crate) fn benchmark_decryption_share(c: &mut Criterion) {
         let mut g = c.benchmark_group("decryption_share()");
