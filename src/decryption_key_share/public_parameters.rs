@@ -30,7 +30,7 @@ pub struct PublicParameters {
     // The public verification keys ${{v_i}}_i$ for proofs of equality of discrete logs
     pub public_verification_keys: HashMap<PartyID, PaillierModulusSizedNumber>,
     // A precomputed mapping of the party-id $j$ to the binomial coefficient ${n\choose j}$,
-    pub(crate) factored_binomial_coefficients: HashMap<u16, SecretKeyShareSizedNumber>,
+    pub(crate) factored_binomial_coefficients: HashMap<PartyID, SecretKeyShareSizedNumber>,
     // The precomputed value $(4n!^3)^{-1} mod(N)$ used for threshold_decryption (saved for
     // optimization reasons)
     pub(crate) four_n_factorial_cubed_inverse_mod_n: LargeBiPrimeSizedNumber,
