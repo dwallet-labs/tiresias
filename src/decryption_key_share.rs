@@ -1110,16 +1110,13 @@ mod benches {
                 })
                 .collect();
 
-            let decrypters: Vec<_> = decryption_key_shares.clone().into_keys().collect();
-
-            let j = *decrypters.first().unwrap();
-            let public_verification_key =
-                *public_parameters.public_verification_keys.get(&j).unwrap();
             let decryption_key_shares: HashMap<_, _> = decryption_key_shares
                 .into_iter()
                 .choose_multiple(&mut OsRng, usize::from(threshold))
                 .into_iter()
                 .collect();
+
+            let decrypters: Vec<_> = decryption_key_shares.clone().into_keys().collect();
 
             let absolute_adjusted_lagrange_coefficients: HashMap<
                 PartyID,
@@ -1161,6 +1158,9 @@ mod benches {
                 let decryption_shares_and_proofs: HashMap<PartyID, _> = decryption_key_shares
                     .par_iter()
                     .map(|(j, decryption_key_share)| {
+                        let public_verification_key =
+                            *public_parameters.public_verification_keys.get(j).unwrap();
+
                         // Generating this via `generate_decryption_shares` for all parties is too
                         // slow, so we're optimizing by doing `batch_size` decryptions over the same
                         // ciphertexts `combine_decryption_shares` has no
