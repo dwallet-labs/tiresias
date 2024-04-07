@@ -1,10 +1,10 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use crypto_bigint::NonZero;
+use crypto_bigint::{rand_core::CryptoRngCore, NonZero};
 
 use crate::{
-    AsNaturalNumber, AsRingElement, EncryptionKey, LargeBiPrimeSizedNumber,
+    AsNaturalNumber, AsRingElement, EncryptionKey, LargeBiPrimeSizedNumber, LargePrimeSizedNumber,
     PaillierModulusSizedNumber, PaillierRingElement,
 };
 
@@ -27,6 +27,22 @@ impl DecryptionKey {
             encryption_key,
             secret_key,
         }
+    }
+
+    /// Generates a new Paillier decryption key.
+    pub fn generate(rng: &mut impl CryptoRngCore) -> Self {
+        let p: LargePrimeSizedNumber = crypto_primes::generate_safe_prime_with_rng(rng, Some(1024));
+        let q: LargePrimeSizedNumber = crypto_primes::generate_safe_prime_with_rng(rng, Some(1024));
+
+        let n: LargeBiPrimeSizedNumber = p * q;
+        let phi: LargeBiPrimeSizedNumber = (p.wrapping_sub(&LargePrimeSizedNumber::ONE))
+            * (q.wrapping_sub(&LargePrimeSizedNumber::ONE));
+        let (phi_inv, _) = phi.inv_odd_mod(&n); // TODO: this inversion must succeed right?
+        let secret_key = phi * phi_inv;
+
+        let encryption_key = EncryptionKey::new(n);
+
+        Self::new(encryption_key, secret_key)
     }
 
     /// Decrypts `ciphertext`
@@ -75,6 +91,18 @@ mod tests {
         let ciphertext = decryption_key
             .encryption_key
             .encrypt(&plaintext, &mut OsRng);
+        assert_eq!(decryption_key.decrypt(&ciphertext), plaintext);
+    }
+
+    #[test]
+    fn generated_key_encrypts_decrypts() {
+        let decryption_key = DecryptionKey::generate(&mut OsRng);
+
+        let plaintext = LargeBiPrimeSizedNumber::from(42u8);
+        let ciphertext = decryption_key
+            .encryption_key
+            .encrypt(&plaintext, &mut OsRng);
+
         assert_eq!(decryption_key.decrypt(&ciphertext), plaintext);
     }
 }
