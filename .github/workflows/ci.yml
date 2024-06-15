@@ -45,18 +45,25 @@ jobs:
           command: test
           args: --all-features --release
 
-  rustfmt:
-    name: fmt
+  verify-license:
+    name: License Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Verify repo license
         run: |
-          chmod +x ./scripts/verify-license-rust.sh
-          chmod +x ./scripts/verify-license-presence.sh
-          ./scripts/verify-license-rust.sh
-          ./scripts/verify-license-presence.sh
+          chmod +x "${{ github.workspace }}/.github/scripts/verify-license-rust.sh"
+          chmod +x "${{ github.workspace }}/.github/scripts/verify-license-presence.sh"
+          "${{ github.workspace }}/.github/scripts/verify-license-rust.sh"
+          "${{ github.workspace }}/.github/scripts/verify-license-presence.sh"
+
+  rustfmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
