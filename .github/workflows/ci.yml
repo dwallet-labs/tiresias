@@ -58,6 +58,7 @@ jobs:
           "${{ github.workspace }}/.github/scripts/verify-license-rust.sh"
           "${{ github.workspace }}/.github/scripts/verify-license-presence.sh"
 
+
   rustfmt:
     name: Format
     runs-on: ubuntu-latest
