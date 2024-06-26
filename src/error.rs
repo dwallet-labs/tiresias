@@ -7,6 +7,12 @@ pub enum Error {
     ProtocolError(ProtocolError),
     #[error("The following sanity-check error occurred: {0}")]
     SanityCheckError(SanityCheckError),
+    #[error("group error")]
+    GroupInstantiation(#[from] group::Error),
+    #[error("an internal error that should never have happened and signifies a bug")]
+    InternalError,
+    #[error("homomorphic-encryption error")]
+    HomomorphicEncryption(#[from] homomorphic_encryption::Error),
 }
 
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
