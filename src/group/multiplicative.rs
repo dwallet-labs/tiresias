@@ -254,7 +254,7 @@ impl<const LIMBS: usize> Sub<Self> for GroupElement<LIMBS> {
 
     #[allow(clippy::suspicious_arithmetic_impl)]
     fn sub(self, rhs: Self) -> Self::Output {
-        // Substitution is actually division in the multiplicative group,
+        // Subtraction is actually division in the multiplicative group,
         // which is defined as multiplication by the inverse of `rhs` - which we get from `neg()`
         Self(self.0 * rhs.neg().0)
     }
