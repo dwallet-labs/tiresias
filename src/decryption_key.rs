@@ -37,8 +37,8 @@ impl DecryptionKey {
         let n: LargeBiPrimeSizedNumber = p * q;
         let phi: LargeBiPrimeSizedNumber = (p.wrapping_sub(&LargePrimeSizedNumber::ONE))
             * (q.wrapping_sub(&LargePrimeSizedNumber::ONE));
-        // with safe primes this can never fail since we have gcd(pq,4p'q') where p,q,p',q' are all odd primes. 
-        // So the only option is that p'=q or q'=p. 2p+1 has 1025 bits. 
+        // with safe primes this can never fail since we have gcd(pq,4p'q') where p,q,p',q' are all odd primes.
+        // So the only option is that p'=q or q'=p. 2p+1 has 1025 bits.
         let (phi_inv, _) = phi.inv_odd_mod(&n);
         let secret_key = phi * phi_inv;
 
