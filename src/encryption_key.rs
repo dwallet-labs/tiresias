@@ -24,9 +24,10 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
     type CiphertextSpaceGroupElement = CiphertextSpaceGroupElement;
     type PublicParameters = PublicParameters;
 
+    /// Create a new `EncryptionKey` Object.
+    /// Parameter `public_parameters` is here for legacy reasons.
     fn new(_public_parameters: &Self::PublicParameters) -> homomorphic_encryption::Result<Self> {
-        // Validity checks are performed in `Self::PublicParameters::new`, so if we receive proper
-        // public parameters, we're good.
+        // Public Parameters are passed during each encryption operation.
         Ok(EncryptionKey {})
     }
 
