@@ -13,6 +13,7 @@ serde = { version = "1.0.163", features = ["derive"] }
 thiserror = "1.0.40"
 gcd = "2.3.0"
 subtle = { version = "2.5", features = ["const-generics"] }
+crypto-primes = { version = "0.5.0", default-features = false }
 
 rayon = { version = "1.7.0", optional = true }
 

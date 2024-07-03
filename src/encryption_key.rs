@@ -26,7 +26,7 @@ impl AdditivelyHomomorphicEncryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS> for Encryp
 
     fn new(_public_parameters: &Self::PublicParameters) -> homomorphic_encryption::Result<Self> {
         // Validity checks are performed in `Self::PublicParameters::new`, so if we receive proper
-        // public parameters we're good.
+        // public parameters, we're good.
         Ok(EncryptionKey {})
     }
 
