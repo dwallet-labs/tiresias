@@ -17,8 +17,8 @@ pub struct DecryptionKey {
 }
 
 impl DecryptionKey {
-    /// Create a `DecryptionKey` from a previously-generated `secret_key` and its corresponding
-    /// `encryption_key`. Performs no validations
+    /// Create a `DecryptionKey` from a previously generated `secret_key` and its corresponding
+    /// `encryption_key`. Performs no validations.
     pub fn new(
         encryption_key: EncryptionKey,
         secret_key: PaillierModulusSizedNumber,
@@ -37,8 +37,8 @@ impl DecryptionKey {
         let n: LargeBiPrimeSizedNumber = p * q;
         let phi: LargeBiPrimeSizedNumber = (p.wrapping_sub(&LargePrimeSizedNumber::ONE))
             * (q.wrapping_sub(&LargePrimeSizedNumber::ONE));
-        // with safe primes this can never fail since we have gcd(pq,4p'q') where p,q,p',q' are all odd primes.
-        // So the only option is that p'=q or q'=p. 2p+1 has 1025 bits.
+        // With safe primes this can never fail since we have gcd(pq,4p'q') where p,q,p',q' are all
+        // odd primes. So the only option is that p'=q or q'=p. 2p+1 has 1025 bits.
         let (phi_inv, _) = phi.inv_odd_mod(&n);
         let secret_key = phi * phi_inv;
 
@@ -49,7 +49,7 @@ impl DecryptionKey {
 
     /// Decrypts `ciphertext`
     /// Performs no validation (that the `ciphertext` is a valid Paillier ciphertext encrypted for
-    /// `self.encryption_key.n`) - supplying a wrong ciphertext will return an undefined result.
+    /// `self.encryption_key.n`) – supplying a wrong ciphertext will return an undefined result.
     pub fn decrypt(&self, ciphertext: &PaillierModulusSizedNumber) -> LargeBiPrimeSizedNumber {
         self.decrypt_inner(ciphertext.as_ring_element(&self.encryption_key.n2))
     }
@@ -80,8 +80,9 @@ impl AsRef<EncryptionKey> for DecryptionKey {
 mod tests {
     use rand_core::OsRng;
 
-    use super::*;
     use crate::tests::{CIPHERTEXT, N, PLAINTEXT, SECRET_KEY};
+
+    use super::*;
 
     #[test]
     fn decrypts() {
