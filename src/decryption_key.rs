@@ -25,7 +25,9 @@ pub struct DecryptionKey {
 
 impl DecryptionKey {
     /// Generates a new Paillier decryption key.
-    pub fn generate(rng: &mut impl CryptoRngCore) -> crate::Result<DecryptionKey> {
+    pub fn generate(
+        rng: &mut impl CryptoRngCore,
+    ) -> crate::Result<(PublicParameters, DecryptionKey)> {
         let p: LargePrimeSizedNumber = crypto_primes::generate_safe_prime_with_rng(rng, Some(1024));
         let q: LargePrimeSizedNumber = crypto_primes::generate_safe_prime_with_rng(rng, Some(1024));
 
@@ -40,7 +42,9 @@ impl DecryptionKey {
         let public_parameters = PublicParameters::new(n)?;
         let encryption_key = PaillierModulusSizedNumber::from(secret_key);
 
-        Ok(Self::new(encryption_key, &public_parameters)?)
+        let decryption_key = Self::new(encryption_key, &public_parameters)?;
+
+        Ok((public_parameters, decryption_key))
     }
 }
 
@@ -197,9 +201,7 @@ mod tests {
     #[test]
     fn generated_key_encrypts_decrypts() {
         let rng = &mut OsRng;
-        let decryption_key = DecryptionKey::generate(rng).unwrap();
-
-        let public_parameters = PublicParameters::new(N).unwrap();
+        let (public_parameters, decryption_key) = DecryptionKey::generate(rng).unwrap();
 
         let plaintext = PlaintextSpaceGroupElement::new(
             LargeBiPrimeSizedNumber::from(42u8),
