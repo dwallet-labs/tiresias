@@ -17,24 +17,24 @@ use crate::{
 
 /// The Public Parameters used for Threshold Decryption in Tiresias.
 /// This struct holds precomputed values that are computationally expensive to compute, but do not
-/// change with the decrypter set (unlike the adjusted lagrange coefficients), in addition to public
-/// outputs from the DKG process (e.g. `base` and `public_verification_key`).
+/// change with the decrypter set (unlike the adjusted lagrange coefficients), besides public
+/// outputs from the DKG process (e.g., `base` and `public_verification_key`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PublicParameters {
-    // The threshold $t$
+    // The threshold $t$.
     pub threshold: PartyID,
-    // The number of parties $n$
+    // The number of parties $n$.
     pub number_of_parties: PartyID,
-    // The base $g$ for proofs of equality of discrete logs
+    // The base $g$ for proofs of equality of discrete logs.
     pub base: PaillierModulusSizedNumber,
-    // The public verification keys ${{v_i}}_i$ for proofs of equality of discrete logs
+    // The public verification keys ${{v_i}}_i$ for proofs of equality of discrete logs.
     pub public_verification_keys: HashMap<PartyID, PaillierModulusSizedNumber>,
-    // A precomputed mapping of the party-id $j$ to the binomial coefficient ${n\choose j}$,
+    // A precomputed mapping of the party-id $j$ to the binomial coefficient ${n\choose j}$.
     pub(crate) factored_binomial_coefficients: HashMap<PartyID, SecretKeyShareSizedNumber>,
     // The precomputed value $(4n!^3)^{-1} mod(N)$ used for threshold_decryption (saved for
-    // optimization reasons)
+    // optimization reasons).
     pub(crate) four_n_factorial_cubed_inverse_mod_n: LargeBiPrimeSizedNumber,
-    // The precomputed value $n!$
+    // The precomputed value $n!$.
     pub(crate) n_factorial: SecretKeyShareSizedNumber,
     pub encryption_scheme_public_parameters: encryption_key::PublicParameters,
 }
@@ -74,8 +74,8 @@ impl PublicParameters {
             .flat_map(|j| {
                 let factored_coefficient = Self::factor_binomial_coefficient(j, number_of_parties);
 
-                // Account for the coefficient's symmetric nature for the above mentioned
-                // optimization
+                // Account for the coefficient's symmetric nature for the above-mentioned
+                // optimization.
                 if j == (number_of_parties - j) {
                     vec![(j, factored_coefficient)]
                 } else {
