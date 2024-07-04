@@ -9,9 +9,9 @@ use crypto_bigint::{
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("Invalid Params")]
+    #[error("invalid Params")]
     InvalidParams(),
-    #[error("At least one equation is wrong")]
+    #[error("at least one equation is wrong")]
     EquationsVerificationError(),
 }
 
@@ -37,7 +37,7 @@ pub fn batch_verification<
     const EXP_LIMBS: usize,
     const COMPUTATIONAL_SECURITY_LIMBS: usize,
 >(
-    // the bases of the left and right sides of the equations
+    // the bases of the left and right sides of the equations.
     bases_lhs: Vec<Vec<Uint<LIMBS>>>,
     bases_rhs: Vec<Vec<Uint<LIMBS>>>,
     // vectors of the exponents of the left and right sides of the equations as the largest type,

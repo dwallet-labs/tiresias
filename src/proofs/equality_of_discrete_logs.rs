@@ -104,7 +104,6 @@ impl ProofOfEqualityOfDiscreteLogs {
             usize::from(threshold),
         );
 
-        // TODO: can we do better? perhaps introduce a rand_bits() to crypto_bigint
         let randomizer = ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::random_mod(
             rng,
             &NonZero::new(
@@ -540,12 +539,24 @@ impl ProofOfEqualityOfDiscreteLogs {
     }
 }
 
+// This implementation yields invalid proofs, its just so the proof would be usable within a
+// `CtOption`.
+impl Default for ProofOfEqualityOfDiscreteLogs {
+    fn default() -> Self {
+        ProofOfEqualityOfDiscreteLogs {
+            base_randomizer: PaillierModulusSizedNumber::ZERO,
+            decryption_share_base_randomizer: PaillierModulusSizedNumber::ZERO,
+            response: ProofOfEqualityOfDiscreteLogsRandomnessSizedNumber::ZERO,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand_core::OsRng;
 
     use super::*;
-    use crate::tests::{BASE, CIPHERTEXT, N, WITNESS};
+    use crate::test_exports::{BASE, CIPHERTEXT, N, WITNESS};
 
     #[test]
     fn valid_proof_verifies() {

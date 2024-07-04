@@ -1,36 +1,35 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
+pub use ::group::ComputationalSecuritySizedNumber;
 #[cfg(feature = "benchmarking")]
 use criterion::criterion_group;
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Concat, Limb, Uint, U1024, U128,
+    Concat, Limb, Uint, U1024,
 };
 pub use decryption_key::DecryptionKey;
 pub use decryption_key_share::DecryptionKeyShare;
 pub use encryption_key::EncryptionKey;
-pub use error::{Error, Result};
-pub use message::Message;
-pub use precomputed_values::PrecomputedValues;
-
-mod decryption_key;
-mod decryption_key_share;
-mod encryption_key;
-mod error;
-mod message;
-mod precomputed_values;
+pub use error::{Error, ProtocolError, Result, SanityCheckError};
+pub use group::{
+    CiphertextSpaceGroupElement, CiphertextSpacePublicParameters, CiphertextSpaceValue,
+    PlaintextSpaceGroupElement, PlaintextSpacePublicParameters, PlaintextSpaceValue,
+    RandomnessSpaceGroupElement, RandomnessSpacePublicParameters, RandomnessSpaceValue,
+    CIPHERTEXT_SPACE_SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS,
+};
 
 mod batch_verification;
+mod decryption_key;
+pub mod decryption_key_share;
+pub mod encryption_key;
+mod error;
+mod group;
 pub mod proofs;
 pub mod secret_sharing;
 
-/// A type alias for an unsigned integer of the size of the computation security parameter $\kappa$.
-/// Set to a U128 for 128-bit security.
-pub type ComputationalSecuritySizedNumber = U128;
-
 // Being overly-conservative here
-type StatisticalSecuritySizedNumber = ComputationalSecuritySizedNumber;
+pub type StatisticalSecuritySizedNumber = ComputationalSecuritySizedNumber;
 
 /// A type alias for an unsigned integer of the size of the Paillier large prime factors.
 /// Set to a U1024 for 112-bit security.
@@ -124,8 +123,8 @@ pub(crate) trait AsNaturalNumber<T> {
     fn as_natural_number(&self) -> T;
 }
 
-/// Represent this natural number as the minimal member of the congruence class. i.e. as a member of
-/// the ring $\mathbb{Z}_{n}$
+/// Represent this natural number as the minimal member of the congruence class.
+/// I.e., as a member of the ring $\mathbb{Z}_{n}$
 pub(crate) trait AsRingElement<T> {
     fn as_ring_element(&self, n: &Self) -> T;
 }
@@ -157,10 +156,9 @@ impl AsRingElement<PaillierPlaintextRingElement> for LargeBiPrimeSizedNumber {
 }
 
 #[cfg(any(test, feature = "test_exports"))]
-pub use decryption_key_share::test_exports::*;
-
-#[cfg(test)]
-pub mod tests {
+#[allow(dead_code)]
+#[allow(unused_imports)]
+pub mod test_exports {
     use crypto_bigint::NonZero;
     pub use decryption_key_share::test_exports::*;
     use rstest::rstest;

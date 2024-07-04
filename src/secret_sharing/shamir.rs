@@ -23,7 +23,7 @@ where
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("Invalid Params")]
+    #[error("invalid Params")]
     InvalidParams(),
 }
 
@@ -39,7 +39,7 @@ where
     ///
     /// Note that it's not guaranteed that constructed polynomial degree equals to
     /// `degree` as it's allowed to end with zero coefficients. Actual polynomial
-    /// degree equals to index of last non-zero coefficient or zero if all the coefficients are
+    /// degree equals to index of the last non-zero coefficient or zero if all the coefficients are
     /// zero.
     pub fn sample(degree: u16, rng: &mut impl CryptoRngCore) -> Result<Self>
     where
@@ -60,7 +60,7 @@ where
     ///
     /// Note that it's not guaranteed that constructed polynomial degree equals to
     /// `degree` as it's allowed to end with zero coefficients. Actual polynomial
-    /// degree equals to index of last non-zero coefficient or zero if all the coefficients are
+    /// degree equals to index of the last non-zero coefficient or zero if all the coefficients are
     /// zero.
     pub fn sample_with_constant_term(
         degree: u16,

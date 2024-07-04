@@ -5,11 +5,14 @@ edition = "2021"
 license = "BSD-3-Clause-Clear"
 
 [dependencies]
+group = { git = "https://github.com/dwallet-labs/group.git" }
+homomorphic_encryption = { git = "https://github.com/dwallet-labs/homomorphic-encryption.git" }
 crypto-bigint = { version = "0.5.5", features = ["rand_core", "serde", "alloc"], default-features = false }
 merlin = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.163", features = ["derive"] }
 thiserror = "1.0.40"
 gcd = "2.3.0"
+subtle = { version = "2.5", features = ["const-generics"] }
 crypto-primes = { version = "0.5.0", default-features = false }
 
 rayon = { version = "1.7.0", optional = true }
@@ -18,10 +21,11 @@ rayon = { version = "1.7.0", optional = true }
 criterion = { version = "0.5", features = ["html_reports"], optional = true }
 rand_core = { version = "0.6.4", features = ["std"], optional = true }
 rand = { version = "0.8.5", optional = true }
+rstest = { version = "0.21.0", optional = true }
 
 [dev-dependencies]
 rand_core = { version = "0.6.4", features = ["std"] }
-rstest = "0.18.1"
+rstest = "0.21.0"
 rand = "0.8.5"
 
 [features]
@@ -30,8 +34,8 @@ parallel = ["dep:rayon"]
 # These features are for internal-use only (for benchmarking & tests) and exists due to
 # limitations of benchmarking non-public functions, and exposing test functions in Rust.
 # There will be no SemVer support for these features.
-benchmarking = ["dep:criterion", "dep:rand_core", "dep:rand", "parallel"]
-test_exports = ["dep:rand_core", "dep:rand"]
+benchmarking = ["dep:criterion", "dep:rand_core", "dep:rand", "parallel", "test_exports"]
+test_exports = ["dep:rand_core", "dep:rand", "dep:rstest"]
 
 [[bench]]
 name = "benches"
