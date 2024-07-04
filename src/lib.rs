@@ -5,19 +5,18 @@ pub use ::group::ComputationalSecuritySizedNumber;
 #[cfg(feature = "benchmarking")]
 use criterion::criterion_group;
 use crypto_bigint::{
-    Concat,
-    Limb, modular::runtime_mod::{DynResidue, DynResidueParams}, U1024, Uint,
+    modular::runtime_mod::{DynResidue, DynResidueParams},
+    Concat, Limb, Uint, U1024,
 };
-
 pub use decryption_key::DecryptionKey;
 pub use decryption_key_share::DecryptionKeyShare;
 pub use encryption_key::EncryptionKey;
 pub use error::{Error, ProtocolError, Result, SanityCheckError};
 pub use group::{
-    CIPHERTEXT_SPACE_SCALAR_LIMBS, CiphertextSpaceGroupElement, CiphertextSpacePublicParameters,
-    CiphertextSpaceValue, PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement,
-    PlaintextSpacePublicParameters, PlaintextSpaceValue, RANDOMNESS_SPACE_SCALAR_LIMBS,
+    CiphertextSpaceGroupElement, CiphertextSpacePublicParameters, CiphertextSpaceValue,
+    PlaintextSpaceGroupElement, PlaintextSpacePublicParameters, PlaintextSpaceValue,
     RandomnessSpaceGroupElement, RandomnessSpacePublicParameters, RandomnessSpaceValue,
+    CIPHERTEXT_SPACE_SCALAR_LIMBS, PLAINTEXT_SPACE_SCALAR_LIMBS, RANDOMNESS_SPACE_SCALAR_LIMBS,
 };
 
 mod batch_verification;
@@ -161,9 +160,8 @@ impl AsRingElement<PaillierPlaintextRingElement> for LargeBiPrimeSizedNumber {
 #[allow(unused_imports)]
 pub mod test_exports {
     use crypto_bigint::NonZero;
-    use rstest::rstest;
-
     pub use decryption_key_share::test_exports::*;
+    use rstest::rstest;
 
     use super::*;
 
