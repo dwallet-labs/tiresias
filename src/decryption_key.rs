@@ -7,6 +7,7 @@ use homomorphic_encryption::{
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
     GroupsPublicParametersAccessors,
 };
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use subtle::{Choice, CtOption};
 
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
 
 /// A paillier decryption key.
 /// Holds both the `secret_key` and its corresponding `encryption_key`
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DecryptionKey {
     pub encryption_key: EncryptionKey,
     secret_key: PaillierModulusSizedNumber,
@@ -101,6 +102,31 @@ impl AdditivelyHomomorphicDecryptionKey<PLAINTEXT_SPACE_SCALAR_LIMBS, Encryption
 impl AsRef<EncryptionKey> for DecryptionKey {
     fn as_ref(&self) -> &EncryptionKey {
         &self.encryption_key
+    }
+}
+
+impl Serialize for DecryptionKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        self.secret_key.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for DecryptionKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        let ser = LargeBiPrimeSizedNumber::deserialize(deserializer);
+        match ser {
+            Ok(secret_key) => Ok(DecryptionKey {
+                encryption_key: EncryptionKey::new(&PublicParameters::new(secret_key).unwrap()).unwrap(),
+                secret_key,
+            }),
+            Err(_) => Err(serde::de::Error::custom("failed to deserialize secret key")),
+        }
     }
 }
 
