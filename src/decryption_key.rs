@@ -18,7 +18,7 @@ use crate::{
 
 /// A paillier decryption key.
 /// Holds both the `secret_key` and its corresponding `encryption_key`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecryptionKey {
     pub encryption_key: EncryptionKey,
     secret_key: PaillierModulusSizedNumber,
@@ -119,12 +119,13 @@ impl<'de> Deserialize<'de> for DecryptionKey {
         where
             D: Deserializer<'de>,
     {
-        let ser = LargeBiPrimeSizedNumber::deserialize(deserializer);
+        let ser = PaillierModulusSizedNumber::deserialize(deserializer);
         match ser {
             Ok(secret_key) => Ok(DecryptionKey {
-                encryption_key: EncryptionKey::new(&PublicParameters::new(secret_key).unwrap()).unwrap(),
-                secret_key,
-            }),
+                        encryption_key: EncryptionKey {},
+                        secret_key,
+                    })
+                ,
             Err(_) => Err(serde::de::Error::custom("failed to deserialize secret key")),
         }
     }
