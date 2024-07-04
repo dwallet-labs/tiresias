@@ -1,7 +1,7 @@
 // Author: dWallet Labs, Ltd.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-use crypto_bigint::{rand_core::CryptoRngCore, NonZero};
+use crypto_bigint::{NonZero, rand_core::CryptoRngCore};
 use group::GroupElement;
 use homomorphic_encryption::{
     AdditivelyHomomorphicDecryptionKey, AdditivelyHomomorphicEncryptionKey,
@@ -10,9 +10,9 @@ use homomorphic_encryption::{
 use subtle::{Choice, CtOption};
 
 use crate::{
-    encryption_key::PublicParameters, CiphertextSpaceGroupElement, EncryptionKey,
+    CiphertextSpaceGroupElement, encryption_key::PublicParameters, EncryptionKey,
     LargeBiPrimeSizedNumber, LargePrimeSizedNumber, PaillierModulusSizedNumber,
-    PlaintextSpaceGroupElement, PLAINTEXT_SPACE_SCALAR_LIMBS,
+    PLAINTEXT_SPACE_SCALAR_LIMBS, PlaintextSpaceGroupElement,
 };
 
 /// A paillier decryption key.
@@ -24,7 +24,7 @@ pub struct DecryptionKey {
 }
 
 impl DecryptionKey {
-    /// Generates a new Paillier decryption key.
+    /// Generates a new Paillier Key Pair.
     pub fn generate(
         rng: &mut impl CryptoRngCore,
     ) -> crate::Result<(PublicParameters, DecryptionKey)> {
@@ -106,19 +106,20 @@ impl AsRef<EncryptionKey> for DecryptionKey {
 
 #[cfg(test)]
 mod tests {
-    use group::{secp256k1, GroupElement};
+    use group::{GroupElement, secp256k1};
     use homomorphic_encryption::{
         AdditivelyHomomorphicDecryptionKey, GroupsPublicParametersAccessors,
     };
     use rand_core::OsRng;
 
-    use super::*;
     use crate::{
-        encryption_key::PublicParameters,
+        CiphertextSpaceGroupElement,
+        CiphertextSpaceValue,
+        encryption_key::PublicParameters, LargeBiPrimeSizedNumber, PlaintextSpaceGroupElement,
         test_exports::{CIPHERTEXT, N, PLAINTEXT, SECRET_KEY},
-        CiphertextSpaceGroupElement, CiphertextSpaceValue, LargeBiPrimeSizedNumber,
-        PlaintextSpaceGroupElement,
     };
+
+    use super::*;
 
     #[test]
     fn decrypts() {
