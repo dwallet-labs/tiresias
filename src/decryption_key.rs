@@ -20,7 +20,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecryptionKey {
     pub encryption_key: EncryptionKey,
-    secret_key: PaillierModulusSizedNumber,
+    pub secret_key: PaillierModulusSizedNumber,
 }
 
 impl DecryptionKey {
